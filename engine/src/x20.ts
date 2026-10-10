@@ -17,18 +17,19 @@
 // instruction (they trap on hardware with the cache off); every site's new bytes are as long as its anchor.
 
 import { be32, concat, h, sha256, sum32, u32 } from './bytes.js';
-import { readBank, buildBank, freeFlash, E12B_FLASH, E12B_END } from './e12b.js';
-import { placeDsp2, type Dsp2Target } from './dsp2_place.js';
+import { readBank, buildBank, freeFlash, E12B_FLASH, E12B_END, PAD_WORDS, type Bank } from './e12b.js';
+import { placeDsp2, type Dsp2Placed, type Dsp2Target } from './dsp2_place.js';
 import { decodeLinear, scanCode, type CodeMem, type Insn } from './isa.js';
 import { nrv2bDecode } from './nrv2b.js';
-import type { CorePack, Pack, PackModel } from './packs.js';
+import type { CorePack, Pack, PackModel, PackTable } from './packs.js';
 import { needsUwSamples } from './packs.js';
-import { select, type Selected } from './selection.js';
+import { select, type Family, type IdMove, type Selected } from './selection.js';
 import { decodeSyx, encodeSyx, OS_START } from './syx.js';
 import { uclPack } from './ucl.js';
 import { cacheOpsIn, dsp2BootLoader, isCode, siteBytes, stageCode, windowA, writeList, x20Map } from './x20_cf.js';
 import { idAllowedOnX20, parseRecipe, type X20Recipe, type X20RecipeFile } from './x20_recipe.js';
 import { fromBase64 } from './bytes.js';
+import { decodeLayout, encodeLayout, LAYOUT_FORMAT, type IdSlot, type Layout, type MachinePlace } from './layout.js';
 
 export interface X20Options {
   /** a Machinedrum with the UW option (machines on 128 and up, and the UW-sample machines, need it) */
@@ -45,6 +46,12 @@ export interface X20Options {
    * runs); on hardware a big upload there makes the OS miss DSP2's startup messages.
    */
   dsp2Load?: 'preboot' | 'upload';
+  /**
+   * The user's layout (md-layout/1, base = the recipe's id): a mapped machine takes its map ID when X.20
+   * allows it (a usable ID, below 128 without UW, not taken) and its map category when that is one of
+   * X.20's menu families. Without one, IDs go bottom-up and families by the recipe's rules.
+   */
+  layout?: Layout;
 }
 
 export interface X20Report {
@@ -52,7 +59,14 @@ export interface X20Report {
   machines: { name: string; key: string; id: number; family: string; org: string; words: number }[];
   e12: { bank_end: string; words: number; stock_words: number; freed_words: number; flash_end: string; trimmed: number };
   dsp2: { capacity: number; demand: number; free: number; regions: [string, string][] };
-  flash: { chunks_pre: [string, number][]; chunks_post: [string, number][]; list: string; free_left: number };
+  flash: { chunks_pre: [string, number][]; chunks_post: [string, number][]; list: string; free_left: number;
+    /** E12B flash the trimmed bank leaves free, and what the machines' code, the list and the layout table take of it */
+    capacity: number; used: number; layout: string | null };
+  /** the layout the build carries (in E12B flash after the list) and X.20's menu families with the machines added to each */
+  layout: Layout;
+  menus: { name: string; machines: string[] }[];
+  /** machines the layout put on IDs X.20 cannot give them, and the IDs they took */
+  moves: IdMove[];
   stage: { boot_code: string; window: string; packed: number; room: number };
   gates: { name: string; ok: boolean; detail: string }[];
   notes: string[];
@@ -113,28 +127,66 @@ export function trimX20(samples: (number[] | null)[], pairs: [number, number][],
   return { out, trimmed };
 }
 
-/** X.20's menu family for a model: the recipe's per-pack map, its per-key-prefix map, else its default. */
-function menuFamily(R: X20Recipe, s: Selected): number {
+/** X.20's menu family for a model: the layout's category when it is one of X.20's families, else the recipe's
+ *  per-key-prefix map, its per-pack map, else its default. */
+export function menuFamilyName(R: X20Recipe, s: Selected, layout?: Layout): string {
+  const want = layout?.machines[s.m.key]?.category;
+  if (want !== undefined && R.families[want] !== undefined) return want;
   const byKey = R.file.key_menu ?? {};
   const pref = Object.keys(byKey).find((p) => s.m.key.startsWith(p));
-  const name = pref ? byKey[pref] : (R.file.pack_menu ?? {})[s.family] ?? (R.file.pack_menu ?? {})['*'] ?? 'GND';
+  return pref ? byKey[pref] : (R.file.pack_menu ?? {})[s.family] ?? (R.file.pack_menu ?? {})['*'] ?? 'GND';
+}
+
+function menuFamily(R: X20Recipe, s: Selected, layout?: Layout): number {
+  const name = menuFamilyName(R, s, layout);
   const f = R.families[name];
   if (f === undefined) throw new Error(`recipe ${R.id}: no menu family ${name}`);
   return f;
 }
 
-/** IDs bottom-up from the recipe's usable list (without UW: below 128 only), in catalog order. */
-function allocate(R: X20Recipe, models: { m: PackModel; family: string }[], uw: boolean): { sel: Selected[]; problems: string[] } {
-  const free = R.usable.filter((id) => uw || id < 128);
+/** Why a layout's ID cannot be used on X.20 for this machine, or null. */
+export function x20IdProblem(R: X20Recipe, id: number, uw: boolean): string | null {
+  if (!idAllowedOnX20(id)) return id > 191 ? 'X.20 keeps 192 and up for its user machines' : 'X.20 treats 96..123 as MIDI/control machines (silent)';
+  if ((R.file.ids.x20_own ?? []).includes(id)) return "it is one of X.20's own machines";
+  if (!R.usable.includes(id)) return 'X.20 has its own machine there';
+  if (!uw && id >= 128) return 'no IDs of 128 and up without UW';
+  return null;
+}
+
+/**
+ * IDs from the recipe's usable list (without UW: below 128 only), in catalog order. A layout's ID is
+ * kept when X.20 allows it and no machine before it took it; every other machine takes the lowest free
+ * one (bottom-up), and a mapped machine that could not keep its ID is listed as a move.
+ */
+export function allocateX20(R: X20Recipe, models: { m: PackModel; family: string }[], uw: boolean, layout?: Layout): { sel: Selected[]; moves: IdMove[]; problems: string[] } {
+  const allowed = R.usable.filter((id) => uw || id < 128);
   const problems: string[] = [];
-  const sel: Selected[] = [];
-  for (const { m, family } of models) {
-    const id = free.shift();
-    if (id === undefined) { problems.push(`no free machine ID left on ${R.name} for ${m.name.trim()}: untick a machine`); continue; }
-    sel.push({ m, family, id, preferred: m.id, mapped: false });
+  const moves: IdMove[] = [];
+  const got: (Selected | null)[] = models.map(() => null);
+  const taken = new Set<number>();
+  const why = new Map<number, string>();
+  if (layout) {
+    models.forEach(({ m, family }, i) => {
+      const want = layout.machines[m.key]?.id;
+      if (want === undefined) return;
+      const bad = x20IdProblem(R, want, uw) ?? (taken.has(want) ? 'another machine has it' : null);
+      if (bad) { why.set(i, bad); return; }
+      taken.add(want);
+      got[i] = { m, family, id: want, preferred: want, mapped: true };
+    });
   }
+  const free = allowed.filter((id) => !taken.has(id));
+  models.forEach(({ m, family }, i) => {
+    if (got[i]) return;
+    const id = free.shift();
+    if (id === undefined) { problems.push(`no free machine ID left on ${R.name} for ${m.name.trim()}: untick a machine`); return; }
+    const want = layout?.machines[m.key]?.id;
+    got[i] = { m, family, id, preferred: want ?? m.id, mapped: false };
+    if (want !== undefined) moves.push({ name: m.name, module: m.module, preferred: want, id, why: why.get(i) ?? 'its ID was not free' });
+  });
+  const sel = got.filter((s): s is Selected => !!s);
   for (const s of sel) if (!idAllowedOnX20(s.id)) throw new Error(`${s.m.name.trim()}: ID ${s.id} is one X.20 reserves`);
-  return { sel, problems };
+  return { sel, moves, problems };
 }
 
 /** A list entry (X.20's new-machine list format, 60 bytes): ID, name, knob labels, defaults, label mask. */
@@ -168,12 +220,18 @@ const chunkRaw = (blks: [number, number[]][]): Uint8Array =>
   concat(blks.flatMap(([a, ws]) => [be32(a), be32(ws.length), Uint8Array.from(ws.flatMap((w) => [(w >> 16) & 0xff, (w >> 8) & 0xff, w & 0xff]))]));
 
 /** NRV2B chunks of whole (sub)blocks, raw <= rawMax, laid into the flash spans from `cursor` on. */
-async function chunks(blks: [number, number[]][], spans: [number, number][], rawMax: number): Promise<{ at: number; packed: Uint8Array }[]> {
+async function chunks(blks: [number, number[]][], spans: [number, number][], rawMax: number, capacity: number): Promise<{ at: number; packed: Uint8Array }[]> {
   const words: [number, number][] = blks.flatMap(([a, ws]) => ws.map((w, k) => [a + k, w] as [number, number]));
   const out: { at: number; packed: Uint8Array }[] = [];
   let i = 0, si = 0, cur = spans.length ? spans[0][0] : 0;
   while (i < words.length) {
-    if (si >= spans.length) throw new Error(`the machines' code does not fit the flash the E12 trim frees: ${words.length - i} words left; trim harder or untick a machine`);
+    if (si >= spans.length) {
+      // every span is full: what is left, packed about as well as what went in so far
+      const packed = out.reduce((n, c) => n + c.packed.length, 0);
+      const ratio = i ? packed / (3 * i) : 0.6;
+      throw new X20FlashError(capacity + Math.ceil(3 * (words.length - i) * ratio), capacity,
+        `the machines' code does not fit the flash the E12 trim frees: ${words.length - i} words left; trim harder or untick a machine`);
+    }
     const room = spans[si][1] - cur;
     let n = Math.min(words.length - i, Math.floor(rawMax / 3) - 64);
     let pk: Uint8Array;
@@ -233,48 +291,198 @@ export function x20IsaGate(mem: CodeMem[], entries: number[], ours: (a: number) 
   return { insns, rejects };
 }
 
-export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, packs: Pack[], core: CorePack, opt: X20Options): Promise<{ output: Uint8Array; report: X20Report }> {
-  const R = parseRecipe(recipeFile);
-  if (await sha256(input) !== R.file.identify.syx_sha256) throw new Error(`not ${R.name} (the .syx hash differs): this recipe patches that exact file only`);
-  const notes: string[] = [];
-  const gates: X20Report['gates'] = [];
+/** Thrown when the machines' code, the new-machine list or the layout table do not fit the E12B flash the trim frees. */
+export class X20FlashError extends Error {
+  constructor(readonly used: number, readonly capacity: number, detail: string) {
+    super(detail);
+    this.name = 'X20FlashError';
+  }
+}
+
+/** The OS container of an X.20 file (its length checked) and its stock E12B bank. */
+export function readX20(input: Uint8Array, R: X20Recipe): { cont: Uint8Array; areaOff: number; bank0: ReturnType<typeof readBank> } {
   const container = decodeSyx(input);
   if (container.length !== R.file.identify.container_bytes) throw new Error(`${R.name}: container is ${container.length} bytes, expected ${R.file.identify.container_bytes}`);
   const cont = Uint8Array.from(container);
-  const at = (flash: number): number => flash - OS_START;
+  const areaOff = E12B_FLASH - OS_START;
+  return { cont, areaOff, bank0: readBank(cont.subarray(areaOff, areaOff + (E12B_END - E12B_FLASH))) };
+}
 
-  // ---- 1. E12B
-  const areaOff = at(E12B_FLASH);
-  const area = cont.subarray(areaOff, areaOff + (E12B_END - E12B_FLASH));
-  const bank0 = readBank(area);
-  const { out: trimmed, trimmed: nTrim } = trimX20(bank0.samples, R.e12.pairs, opt.trim);
-  const bank = buildBank(trimmed, bank0.names);
+/**
+ * The E12B bank at one trim: its samples, the DSP2 words it takes, where it now ends in DSP2, and what it
+ * frees. Encoding it for flash (buildBank) is left to the build: the plan, and the auto trim that plans at
+ * many thresholds, need the words only.
+ */
+export interface X20Trimmed {
+  trim: X20Options['trim'];
+  samples: (number[] | null)[];
+  names: Uint8Array[];
+  words: number;
+  bankEnd: number;
+  stockWords: number;
+  trimmed: number;
+}
+
+/** DSP2 words of a bank: per sample its 16-bit words and its silent pad (as buildBank lays it). */
+export const bankWords = (samples: (number[] | null)[]): number => samples.reduce((n, x) => n + (x ? Math.ceil(x.length / 2) + PAD_WORDS : 0), 0);
+
+export function trimX20Bank(R: X20Recipe, bank0: { names: Uint8Array[]; samples: (number[] | null)[] }, trim: X20Options['trim']): X20Trimmed {
+  const { out, trimmed } = trimX20(bank0.samples, R.e12.pairs, trim);
+  const words = bankWords(out);
   const dataStart = R.e12.table + 3 * R.e12.count;
-  const bankEnd = dataStart + bank.words;
-  const stockWords = R.e12.bankEnd - dataStart;
+  const bankEnd = dataStart + words;
   if (bankEnd > R.e12.bankEnd) throw new Error('E12: the re-encoded bank is longer than the stock one');
+  return { trim, samples: out, names: bank0.names, words, bankEnd, stockWords: R.e12.bankEnd - dataStart, trimmed };
+}
 
-  // ---- 2. machines: selection, IDs, DSP2 placement
+/** What a selection takes on X.20, without building: the plan the page's meters, layout editor and build share. */
+export interface X20Plan {
+  ok: boolean;
+  /** why it cannot be built, in words a user can act on */
+  problems: string[];
+  notes: string[];
+  /** the machines in list order (the catalog's), with their IDs */
+  sel: Selected[];
+  shared: PackTable[];
+  /** machines the layout put on IDs X.20 cannot give them, and where they went */
+  moves: IdMove[];
+  /** X.20's menu families in the recipe's order, each with the machines added to it */
+  menus: Family[];
+  /** the family each machine goes in, by key */
+  family: Record<string, string>;
+  /** the layout this build has: the map merged with every placement; null without a map */
+  layout: Layout | null;
+  /** the layout the build writes to flash (the map's, or the default one), with the UW answer */
+  table: Layout;
+  /** machines left out because they play UW samples (no UW) */
+  leftOut: string[];
+  workspace: boolean;
+  e12: { bankEnd: number; words: number; stockWords: number; freedWords: number; trimmed: number };
+  dsp2: { fits: boolean; capacity: number; demand: number; free: number; regions: [number, number][]; placed: Dsp2Placed };
+  /** machine IDs: taken by the selection, and the ones X.20 has for added machines (without UW: below 128) */
+  ids: { used: number; available: number };
+  /** the new-machine list: entries the selection adds, and its room */
+  list: { used: number; room: number };
+  /**
+   * The ColdFire machine records: X.20's own (at most its stock cap) plus one per added machine, against
+   * the cap the build raises. null when the recipe does not give X.20's stock cap.
+   */
+  records: { used: number; cap: number; stock: number } | null;
+}
+
+export function planX20(R: X20Recipe, t: X20Trimmed, packs: Pack[], opt: Omit<X20Options, 'trim'> & { link?: boolean }): X20Plan {
+  const notes: string[] = [];
+  const problems: string[] = [];
   const { fams, shared } = select(packs, { families: opt.families, exclude: opt.exclude });
   let models = fams.flatMap((f) => f.models.map((m) => ({ m, family: f.name })));
+  const leftOut: string[] = [];
   if (!opt.uw) {
     const out = models.filter(({ m }) => needsUwSamples(m));
-    if (out.length) notes.push(`left out (they play UW samples): ${out.map(({ m }) => m.name.trim()).join(', ')}`);
+    leftOut.push(...out.map(({ m }) => m.name.trim()));
+    if (out.length) notes.push(`left out (they play UW samples): ${leftOut.join(', ')}`);
     models = models.filter(({ m }) => !needsUwSamples(m));
   }
-  if (!models.length) throw new Error('No machines selected: tick at least one machine to build for X.20');
-  const problems: string[] = [];
-  const { sel, problems: idProblems } = allocate(R, models, opt.uw);
+  if (!models.length) problems.push('No machines selected: tick at least one machine to build for X.20');
+  const { sel, moves, problems: idProblems } = allocateX20(R, models, opt.uw, opt.layout);
   problems.push(...idProblems);
   const D = R.dsp2;
   const T: Dsp2Target = { name: R.name, dispatch: D.dispatch, workspace: D.workspace, bankEnd: R.e12.bankEnd, pi: D.pi,
     runtime: { ok: true } };
   const workspace = sel.some((s) => s.m.workspace);
   const firstEnd = workspace ? D.workspace.base : R.e12.bankEnd;
-  if (workspace && bankEnd > D.workspace.base) problems.push(`the machines' per-track workspace starts at ${h(D.workspace.base)} and the E12 bank ends at ${h(bankEnd)}: trim harder`);
-  const regions: [number, number][] = [[bankEnd, firstEnd], ...D.free];
-  const placed = placeDsp2(T, regions, sel, shared, { link: true, align: opt.align ?? false }, problems, notes);
-  if (problems.length) throw new Error(problems.join('\n'));
+  const wsProblem = workspace && t.bankEnd > D.workspace.base;
+  if (wsProblem) problems.push(`the machines' per-track workspace starts at ${h(D.workspace.base)} and the E12 bank ends at ${h(t.bankEnd)}: trim harder`);
+  const regions: [number, number][] = [[t.bankEnd, firstEnd], ...D.free];
+  const placed = placeDsp2(T, regions, sel, shared, { link: opt.link ?? false, align: opt.align ?? false }, problems, notes);
+  // the new-machine list (60-byte entries after X.20's own; its count is a moveq) and the records
+  const SL = R.ram.stockList;
+  const listRoom = Math.min(Math.floor(R.ram.listRoom / SL.entryBytes), 127) - SL.entries;
+  if (sel.length > listRoom) problems.push(`X.20's new-machine list has room for ${listRoom} added machines: untick ${sel.length - listRoom}`);
+  const stockCap = R.file.ram.stock_record_cap;
+  const records = stockCap === undefined ? null : { used: stockCap + sel.length, cap: R.ram.recordCap, stock: stockCap };
+  if (records && records.used > records.cap) {
+    problems.push(`X.20's own machines can fill up to ${records.stock} of the ${records.cap} machine records, which leaves room for ${records.cap - records.stock} added machines: untick ${records.used - records.cap}`);
+  }
+  // families and the layout
+  const familyNames = Object.keys(R.families);
+  const family: Record<string, string> = {};
+  for (const s of sel) family[s.m.key] = menuFamilyName(R, s, opt.layout);
+  const menus: Family[] = familyNames.map((name) => ({ name, models: sel.filter((s) => family[s.m.key] === name).map((s) => s.m) }));
+  const machines: Record<string, MachinePlace> = {};
+  if (opt.layout) {
+    // the map's other machines (not selected now) keep their places when they name an X.20 family
+    for (const [k, m] of Object.entries(opt.layout.machines)) if (R.families[m.category] !== undefined) machines[k] = { ...m };
+  }
+  const idOf = new Map(sel.map((s) => [s.m.key, s.id]));
+  for (const f of menus) f.models.forEach((m, i) => { machines[m.key] = { id: idOf.get(m.key)!, category: f.name, order: i }; });
+  const merged: Layout = { format: LAYOUT_FORMAT, base: R.id, categories: familyNames, machines };
+  const layout = opt.layout ? { ...merged, ...(opt.layout.uw === undefined ? {} : { uw: opt.layout.uw }) } : null;
+  const fits = placed.overflow === null && !wsProblem;
+  return {
+    ok: !problems.length, problems, notes, sel, shared, moves, menus, family, layout, table: { ...merged, uw: opt.uw }, leftOut, workspace,
+    e12: { bankEnd: t.bankEnd, words: t.words, stockWords: t.stockWords, freedWords: R.e12.bankEnd - t.bankEnd, trimmed: t.trimmed },
+    dsp2: { fits, capacity: placed.capacity, demand: placed.demand, free: placed.free, regions, placed },
+    ids: { used: sel.length, available: R.usable.filter((id) => opt.uw || id < 128).length },
+    list: { used: sel.length, room: listRoom },
+    records,
+  };
+}
+
+/**
+ * Every machine ID 0..191 as X.20 B has it, for the layout editor: the recipe's usable IDs are free;
+ * 96..123 are its MIDI/control range; the rest are its own machines.
+ */
+export function x20IdSlots(R: X20Recipe): IdSlot[] {
+  const own = new Set(R.file.ids.x20_own ?? []);
+  const usable = new Set(R.usable);
+  const out: IdSlot[] = [];
+  for (let id = 0; id < 192; id++) {
+    if (usable.has(id)) out.push({ id, state: 'free' });
+    else if (id >= 96 && id <= 123) out.push({ id, state: 'dead', why: `${R.name} treats 96..123 as MIDI/control machines: a model there plays nothing` });
+    else if (own.has(id)) out.push({ id, state: 'base', name: 'X.20', why: `${R.name}'s own machine (its DSP2 dispatch entries must stay)` });
+    else if (id >= 80 && id <= 85) out.push({ id, state: 'base', name: 'INP', why: `${R.name}'s INP machine: reusing 80..85 is not offered (the stock INP machine would stay in the menu on the same ID)` });
+    else out.push({ id, state: 'base', name: 'X.20', why: `${R.name}'s own machine` });
+  }
+  return out;
+}
+
+const MDLY = [0x4d, 0x44, 0x4c, 0x59];
+/**
+ * The layout table an X.20 build carries (in E12B flash, after the new-machine list), from the built
+ * .syx; null when there is none, or when the table found is not for one of these recipes' OS.
+ */
+export function findX20Layout(file: Uint8Array, recipeIds: string[]): Layout | null {
+  let cont: Uint8Array;
+  try { cont = decodeSyx(file); } catch { return null; }
+  const lo = E12B_FLASH - OS_START, hi = Math.min(cont.length, E12B_END - OS_START);
+  for (let e = hi; e >= lo + 20; e--) {
+    if (MDLY.some((v, i) => cont[e - 4 + i] !== v)) continue;
+    const n = u32(cont, e - 8);
+    if (n < 20 || e - n < lo || MDLY.some((v, i) => cont[e - n + i] !== v)) continue;
+    try {
+      const l = decodeLayout(cont.subarray(e - n, e));
+      if (recipeIds.includes(l.base)) return l;
+    } catch { /* not a table */ }
+  }
+  return null;
+}
+
+export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, packs: Pack[], core: CorePack, opt: X20Options): Promise<{ output: Uint8Array; report: X20Report }> {
+  const R = parseRecipe(recipeFile);
+  if (await sha256(input) !== R.file.identify.syx_sha256) throw new Error(`not ${R.name} (the .syx hash differs): this recipe patches that exact file only`);
+  const gates: X20Report['gates'] = [];
+  const { cont, areaOff, bank0 } = readX20(input, R);
+  const at = (flash: number): number => flash - OS_START;
+
+  // ---- 1. E12B, 2. machines: selection, IDs, DSP2 placement (planX20)
+  const t = trimX20Bank(R, bank0, opt.trim);
+  const { bankEnd, stockWords, trimmed: nTrim } = t;
+  const bank: Bank = buildBank(t.samples, t.names);
+  if (bank.words !== t.words) throw new Error(`E12: the bank takes ${bank.words} DSP2 words laid out, ${t.words} planned`);
+  const P = planX20(R, t, packs, { ...opt, link: true });
+  if (P.problems.length) throw new Error(P.problems.join('\n'));
+  const { sel, notes, dsp2: { regions, placed } } = P;
+  const D = R.dsp2;
 
   // ---- 3. DSP2 payload: code before DSP2 starts, dispatch words after
   const neighbour = x20NeighbourReads(placed, notes);
@@ -320,21 +528,30 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   // ---- flash: chunks, then our list entries, in the flash the bank frees
   const spans = freeFlash(bank).map(([a, b]) => [a, b] as [number, number]);
   const rawMax = Math.min(RAW_MAX_DEFAULT, R.ram.uploadBuffer[1] - R.ram.uploadBuffer[0]);
-  const preC = await chunks(pre, spans, rawMax);
-  const postC = await chunks(post, spans, rawMax);
+  const flashCapacity = spans.reduce((n, [a, b]) => n + b - a, 0);
+  const preC = await chunks(pre, spans, rawMax, flashCapacity);
+  const postC = await chunks(post, spans, rawMax, flashCapacity);
   const list = concat(sel.map(listEntry));
   const li = spans.findIndex(([a, b]) => b - ((a + 3) & ~3) >= list.length);
-  if (li < 0) throw new Error('no flash left for the new-machine list');
+  if (li < 0) throw new X20FlashError(flashCapacity + list.length, flashCapacity, 'no flash left for the new-machine list: trim harder or untick a machine');
   const listFlash = (spans[li][0] + 3) & ~3;
   spans[li] = [listFlash + list.length, spans[li][1]];
+  // the layout table (md-layout/1, the same table the 1.63-lineage bases carry), after the list: a later
+  // build restores IDs and families from this .syx
+  const table = encodeLayout(P.table);
+  const ti = spans.findIndex(([a, b]) => b - ((a + 3) & ~3) >= table.length);
+  if (ti < 0) throw new X20FlashError(flashCapacity + table.length, flashCapacity, 'no flash left for the layout table: trim harder or untick a machine');
+  const tableFlash = (spans[ti][0] + 3) & ~3;
+  spans[ti] = [tableFlash + table.length, spans[ti][1]];
   // the bank (free flash erased), then the chunks and the list in its free flash
   cont.set(bank.area.subarray(0, E12B_END - E12B_FLASH), areaOff);
   for (const c of [...preC, ...postC]) cont.set(c.packed, at(c.at));
   cont.set(list, at(listFlash));
+  cont.set(table, at(tableFlash));
 
   // ---- 4. ColdFire: window A, the OS writes, the stage code
   const M = x20Map(R, sel.length, bankEnd);
-  const ours = new Map(sel.map((s) => [s.id, menuFamily(R, s)] as [number, number]));
+  const ours = new Map(sel.map((s) => [s.id, menuFamily(R, s, opt.layout)] as [number, number]));
   const wa = windowA(R, M, ours, fromBase64(core.knob_callback), listFlash);
   if (wa.asm.bytes.length + R.ram.window[0] > R.ram.window[1]) throw new Error('window A overflows');
   const names: Record<string, number> = { STACK: M.stack, RECS: M.recs, CAP: M.cap, MENU: M.menu, M_U: M.mU, M_L: M.mL,
@@ -400,7 +617,11 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
       flash_end: h(E12B_FLASH + (bank.used - 1) * 0x10000 + bank.end), trimmed: nTrim },
     dsp2: { capacity: placed.capacity, demand: placed.demand, free: placed.free, regions: regions.map(([a, b]) => [h(a), h(b)] as [string, string]) },
     flash: { chunks_pre: preC.map((c) => [h(c.at), c.packed.length]), chunks_post: postC.map((c) => [h(c.at), c.packed.length]), list: h(listFlash),
-      free_left: spans.reduce((n, [a, b]) => n + Math.max(0, b - a), 0) },
+      free_left: spans.reduce((n, [a, b]) => n + Math.max(0, b - a), 0),
+      capacity: flashCapacity, used: used + table.length, layout: h(tableFlash) },
+    layout: P.table,
+    menus: P.menus.map((f) => ({ name: f.name, machines: f.models.map((m) => m.name.trim()) })),
+    moves: P.moves,
     stage: { boot_code: `${h(R.ram.bootCode[0])}..${h(R.ram.bootCode[0] + st.asm.bytes.length)}`, window: `${h(R.ram.window[0])}..${h(R.ram.window[0] + wa.asm.bytes.length)}`,
       packed: packed.length, room },
     gates, notes: [...notes, `${used} bytes of E12B flash used for the machines`],

@@ -30,7 +30,8 @@
     "midi_chroma",
     "pitch_labels",
     "parity",
-    "x20"
+    "x20",
+    "x20_flow"
   ],
   "legacy": [],
   "alignment": []

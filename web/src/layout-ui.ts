@@ -11,14 +11,26 @@
 //
 // Until the user changes something, no map is passed to the engine: the build carries the default
 // layout's table, and a map equal to it builds the same bytes.
+//
+// On MDX X.20 B (setX20) the categories are X.20's own menu families, fixed: machines move between them,
+// but no category is added, renamed, deleted or reordered, and the order within a family is not set
+// (the recipe sets each machine's family only). The ID map shows the recipe's usable IDs as free.
 
 import type { Base } from '../../engine/src/bases.js';
 import type { Firmware } from '../../engine/src/container.js';
 import {
   baseFamilies, defaultLayout, describeCharset, fingerprint, idSlots, menuLimits, nameProblem, parseLayout,
-  type BaseFamily, type IdSlot, type Layout,
+  type BaseFamily, type IdSlot, type Layout, type MenuLimits,
 } from '../../engine/src/layout.js';
 import type { Plan } from '../../engine/src/plan.js';
+
+/** What the editor reads of a plan: the 1.63-lineage plan, or the X.20 plan (engine/src/x20.ts planX20). */
+export type EditorPlan = Pick<Plan, 'sel' | 'menus' | 'moves' | 'layout'>;
+
+/** An OS whose categories are its own fixed menu families (MDX X.20 B). */
+export interface FixedFamilies { id: string; name: string; families: string[]; slots: IdSlot[]; why: string }
+
+
 import { drawMenuLcd } from './lcd.js';
 import { describeModel } from './catalog.js';
 import { needsUwSamples } from '../../engine/src/packs.js';
@@ -105,9 +117,14 @@ export class LayoutEditor {
   private moveWhy = new Map<string, string>();
   private needsUw = new Set<string>();
   private base: Base | null = null;
+  /** MDX X.20 B: fixed categories (its menu families) */
+  private fixed: FixedFamilies | null = null;
+  private get baseId(): string { return this.fixed?.id ?? this.base!.id; }
+  private get baseName(): string { return this.fixed?.name ?? this.base!.name; }
+  private limits(): MenuLimits { return menuLimits(this.base!); }
   private slots: IdSlot[] = [];
   private stock: BaseFamily[] = [];
-  private plan: Plan | null = null;
+  private plan: EditorPlan | null = null;
   private eff: Layout | null = null;
   private names = new Map<string, string>();
   private blurbs = new Map<string, string>();
@@ -135,18 +152,35 @@ export class LayoutEditor {
    * has it free; the others move to free IDs, and the Models step lists each move.
    */
   private rebase(): void {
-    if (!this.map || !this.base || this.map.base === this.base.id) return;
+    if (!this.map || (!this.base && !this.fixed) || this.map.base === this.baseId) return;
     const was = this.map.base;
-    this.map = { ...this.map, base: this.base.id };
-    if (was) this.say(`The layout was made for ${was}; it is applied to ${this.base.name}. Machines keep their IDs where ${this.base.name} has them free; any that move are listed on the Models step. Reset to default to drop it.`, 'info');
+    this.map = { ...this.map, base: this.baseId };
+    if (was) this.say(`The layout was made for ${was}; it is applied to ${this.baseName}. Machines keep their IDs where ${this.baseName} has them free; any that move are listed on the Models step. Reset to default to drop it.`, 'info');
   }
 
   /** A base was loaded: its IDs and its own categories. A map made for another base is applied to it. */
   setBase(fw: Firmware | null, base: Base | null): void {
+    this.fixed = null;
     this.base = base;
     this.slots = fw && base ? idSlots(fw, base) : [];
     this.stock = fw && base ? baseFamilies(fw, base) : [];
     this.rebase();
+  }
+
+  /** MDX X.20 B was loaded: its menu families are the categories, its IDs the recipe's. */
+  setX20(f: FixedFamilies): void {
+    this.base = null;
+    this.fixed = f;
+    this.slots = f.slots;
+    this.stock = [];
+    this.rebase();
+  }
+
+  /** Another file is being loaded: X.20's fixed families and IDs no longer apply (a 1.63-lineage base keeps its own until setBase). */
+  leaveX20(): void {
+    if (!this.fixed) return;
+    this.fixed = null;
+    this.slots = [];
   }
 
   /** A map read from a file or a patched OS: it becomes the user's. */
@@ -163,9 +197,9 @@ export class LayoutEditor {
 
   mapForPlan(): Layout | undefined { return this.map ?? undefined; }
 
-  render(p: Plan | null): void {
+  render(p: EditorPlan | null): void {
     this.plan = p;
-    if (!p || !this.base) { this.root.hidden = true; return; }
+    if (!p || (!this.base && !this.fixed)) { this.root.hidden = true; return; }
     // A refused plan can leave a selected model without an ID. Keep selection
     // and capacity warnings usable until the user removes enough models.
     const placed = new Map(p.sel.map(s => [s.m.key, s.id]));
@@ -180,7 +214,7 @@ export class LayoutEditor {
     this.preferred = new Map(p.sel.map((s) => [s.m.key, s.preferred]));
     this.moveWhy = new Map(p.moves.flatMap((mv) => p.sel.filter((s) => s.m.name.trim() === mv.name.trim()).map((s) => [s.m.key, mv.why] as [string, string])));
     this.needsUw = new Set(p.sel.filter((s) => needsUwSamples(s.m)).map((s) => s.m.key));
-    this.eff = p.layout ?? defaultLayout(this.base, p.menus, (k) => placed.get(k)!);
+    this.eff = p.layout ?? defaultLayout({ id: this.baseId }, p.menus, (k) => placed.get(k)!);
     this.draw();
   }
 
@@ -235,7 +269,7 @@ export class LayoutEditor {
   }
 
   private rename(from: string, to: string): string | null {
-    const lim = menuLimits(this.base!);
+    const lim = this.limits();
     const why = nameProblem(to, lim, this.stock.map((f) => f.name));
     if (why) return why;
     if (to !== from && this.eff!.categories.includes(to)) return `there is already a category ${to}`;
@@ -259,7 +293,8 @@ export class LayoutEditor {
 
   private draw(): void {
     const l = this.eff!;
-    const lim = menuLimits(this.base!);
+    const fixed = this.fixed;
+    const lim = fixed ? null : this.limits();
     const fp = el('span', { class: 'lay-fp', title: 'Layout fingerprint: two people with the same fingerprint have the same IDs and menu', ...(this.map ? { 'data-custom': '' } : {}) }, '…');
     void fingerprint(l).then((f) => { fp.textContent = `${this.map ? 'Custom' : 'Default'} layout ${f}`; fp.dataset.fp = f; });
     const exp = el('button', { type: 'button', id: 'lay-export' }, 'Save layout');
@@ -272,23 +307,25 @@ export class LayoutEditor {
     const head = el('div', { class: 'section-head' }, el('h2', { id: 'layout-title' }, 'Arrange categories'),
       el('div', { class: 'lay-actions' }, exp, el('label', { class: 'btn' }, 'Load layout', imp), reset));
     const intro = el('p', { class: 'fine' }, 'Arrange the machine menu. Save your layout to reuse it.');
-    const limits = el('p', { class: 'lay-limits fine' },
-      `Category names can use up to ${lim.nameShown} characters. Drag machines or use the lists and arrows to arrange them.`);
+    const limits = el('p', { class: 'lay-limits fine', id: 'lay-limits' }, fixed
+      ? `On ${fixed.name} the categories are its own menu families. Move a machine to another family by dragging it or with its family list. Not available here: ${fixed.why}.`
+      : `Category names can use up to ${lim!.nameShown} characters. Drag machines or use the lists and arrows to arrange them.`);
 
     // categories
-    const menu = el('div', { class: 'lay-menu' },
+    const menu = fixed ? el('div', { class: 'lay-menu' }, el('h3', {}, `${fixed.name} menu families (your machines join them)`)) : el('div', { class: 'lay-menu' },
       el('h3', {}, 'Built-in categories (read-only)'),
       el('div', { class: 'lay-stock' }, ...this.stock.map((f) => shownStock(this.stock, this.noUw).includes(f)
         ? el('span', { title: f.machines.map((m) => m.name).join(' ') }, `${f.name} ${f.machines.length}`)
         : el('span', { 'data-hidden': '', title: `${f.name}: hidden on a Machinedrum without UW; your categories take its place` }, `${f.name} ${f.machines.length}`))),
       el('h3', {}, 'Your categories, in menu order'));
     l.categories.forEach((c, ci) => menu.append(this.catCard(l, c, ci)));
-    const add = el('button', { type: 'button', class: 'lay-add', id: 'lay-new' }, '+ New category');
+    const add = el('button', { type: 'button', class: 'lay-add', id: 'lay-new', ...(fixed ? { disabled: '', title: `Not available on ${fixed.name}: its menu families are fixed` } : {}) }, fixed ? `+ New category (not available on ${fixed.name})` : '+ New category');
     add.addEventListener('click', () => this.edit((x) => {
+      if (fixed) return `!Not available on ${fixed.name}: its menu families are fixed.`;
       let n = 1;
       while (x.categories.includes(`NW${n}`)) n++;
       // the engine's count (plan.ts): the categories the unit shows against the menu's limit
-      if (shownStock(this.stock, this.noUw).length + x.categories.length >= lim.maxFamilies) return `!The menu takes ${lim.maxFamilies} categories.`;
+      if (shownStock(this.stock, this.noUw).length + x.categories.length >= lim!.maxFamilies) return `!The menu takes ${lim!.maxFamilies} categories.`;
       x.categories.push(`NW${n}`);
       this.previewCategory = `NW${n}`;
       return `Category NW${n} added: rename it, then drag machines into it.`;
@@ -316,7 +353,7 @@ export class LayoutEditor {
     const legend = el('div', { class: 'lay-legend' },
       el('span', {}, el('i', { style: 'background:#fff' }), 'free'), el('span', {}, el('i', { style: 'background:#e8eef7' }), 'yours'),
       el('span', {}, el('i', { style: 'background:#dbe7ff;border-color:#1e3f8a' }), 'yours, off its usual ID'),
-      el('span', {}, el('i', { style: 'background:var(--chip)' }), `${this.base!.name}'s own`),
+      el('span', {}, el('i', { style: 'background:var(--chip)' }), `${this.baseName}'s own`),
       el('span', {}, el('i', { style: 'background:repeating-linear-gradient(135deg,#f3f4f5 0 3px,#e6e9eb 3px 6px)' }), 'MIDI range, no sound'),
       this.noUw ? el('span', {}, el('i', { style: 'background:repeating-linear-gradient(45deg,#f6efe9 0 3px,#eadbd0 3px 6px)' }), '128 and up: not usable without UW') : '');
     const grid = el('div', { class: 'lay-grid' }, menu, this.menuPreview(l));
@@ -359,7 +396,8 @@ export class LayoutEditor {
         ? `Machine menu preview. ${selected.name}: ${selected.machines.join(', ')}.`
         : `Machine menu preview. ${selected?.name ?? 'Category'} is empty and will not appear in the menu.`);
       caption.textContent = selected?.machines.length
-        ? `${selected.name}: ${selected.machines.length} selectable machines, in menu order. Screen illustration; use the lists above to browse.`
+        ? `${selected.name}: ${selected.machines.length} selectable machines, in menu order. Screen illustration; use the lists above to browse.` +
+          (this.fixed ? ` Only your machines are shown; ${this.fixed.name}'s own machines in ${selected.name} are listed on the unit too.` : '')
         : 'Add a machine to this category to make it appear in the menu.';
     };
     const changeCategory = () => {
@@ -389,7 +427,8 @@ export class LayoutEditor {
 
   private catCard(l: Layout, c: string, ci: number): HTMLElement {
     const keys = this.inCat(l, c);
-    const lim = menuLimits(this.base!);
+    if (this.fixed) return this.fixedCard(l, c, keys);
+    const lim = this.limits();
     const name = el('input', { value: c, maxlength: String(lim.nameShown), 'aria-label': `Category name ${c}`, title: `Allowed: ${describeCharset(lim.charset)}`, spellcheck: 'false', 'data-cat': c }) as HTMLInputElement;
     name.addEventListener('input', () => {
       const v = name.value.toUpperCase() === name.value ? name.value : name.value.toUpperCase();
@@ -431,6 +470,33 @@ export class LayoutEditor {
     card.addEventListener('dragover', (e) => { if (this.drag) { e.preventDefault(); card.setAttribute('data-over', ''); } });
     card.addEventListener('dragleave', (e) => { if (!card.contains(e.relatedTarget as Node)) card.removeAttribute('data-over'); });
     card.addEventListener('drop', (e) => { e.preventDefault(); const d = this.drag; this.drag = null; if (d) this.place(d, c, null); });
+    return card;
+  }
+
+  /** A fixed family (X.20 B): its name, its machines, a family list per machine; no rename, reorder or delete. */
+  private fixedCard(l: Layout, c: string, keys: string[]): HTMLElement {
+    const f = this.fixed!;
+    const header = el('header', {}, el('span', { class: 'mname', 'data-cat': c }, c), el('span', { class: 'count' }, `${keys.length} machine${keys.length === 1 ? '' : 's'}`));
+    const ol = el('ol', { 'aria-label': `Machines in ${c}` });
+    for (const k of keys) {
+      const nm = this.names.get(k)!;
+      const fam = el('select', { 'aria-label': `Family of ${nm}`, class: 'lay-family', 'data-key': k }) as HTMLSelectElement;
+      for (const x of f.families) { const o = el('option', { value: x }, x) as HTMLOptionElement; o.selected = x === c; fam.append(o); }
+      fam.addEventListener('change', () => this.place(k, fam.value, null));
+      const li = el('li', { draggable: 'true', 'data-key': k },
+        el('span', { class: 'grip', 'aria-hidden': 'true' }, '⋮⋮'),
+        el('span', {}, el('span', { class: 'mname' }, nm)),
+        el('span', { class: 'blurb', title: this.blurbs.get(k) ?? '' }, this.blurbs.get(k) ?? ''), fam);
+      li.addEventListener('dragstart', (e) => { this.start(e, k); li.setAttribute('data-drag', ''); });
+      li.addEventListener('dragend', () => { li.removeAttribute('data-drag'); this.drag = null; });
+      ol.append(li);
+    }
+    if (!keys.length) ol.append(el('li', { class: 'lay-empty' }, `None of your machines. Drag one here to put it in ${c}.`));
+    const card = el('section', { class: 'lay-cat', 'data-cat': c }, header, ol);
+    card.addEventListener('dragover', (e) => { if (this.drag) { e.preventDefault(); card.setAttribute('data-over', ''); } });
+    card.addEventListener('dragleave', (e) => { if (!card.contains(e.relatedTarget as Node)) card.removeAttribute('data-over'); });
+    card.addEventListener('drop', (e) => { e.preventDefault(); const d = this.drag; this.drag = null; if (d) this.place(d, c, null); });
+    void l;
     return card;
   }
 

@@ -186,9 +186,30 @@ What a build changes (engine/src/x20.ts):
 - Added machines go into X.20's own menu families (analog drums in TRX, FM
   voices in EFM, effects in NFX, the rest in GND).
 
-Not available on X.20 yet: the room meters and sample swapping in the browser,
-restoring a layout (machine IDs are assigned fresh, bottom-up), MIDI chromatic
-input, pitch note names and the unmute fix. DSP1 is not patched: X.20's DSP1
+On the page an X.20 B file goes through the same steps as the other bases. Its
+plan (`planX20`, the same selection, trim and DSP2 placement the build does,
+without packing) drives the meters: DSP2 words at the chosen E12 trim, machine IDs
+(the recipe's usable ones; below 128 without UW), the new-machine list, and the
+machine records (at most X.20's stock cap of 159 for its own machines, plus one
+per added machine, against the 200 the build allows). Firmware storage is the
+E12B flash the trim frees, checked by a background build as on the other bases.
+Auto trim finds the gentlest threshold whose placement fits.
+
+The layout editor shows X.20's menu families (GND, TRX, EFM, NFX) as fixed
+categories: a machine moves between them, but categories cannot be added,
+renamed or reordered, and the order within a family is not set (the recipe sets
+each machine's family only). IDs follow the layout where X.20 gives them out (a
+usable ID, below 128 without UW, not taken); the others move to the lowest free
+one and the page lists the move. Every build carries its layout as the same
+md-layout/1 table the 1.63-lineage bases use, in E12B flash after the
+new-machine list, so dropping a Kitbasher X.20 build restores its IDs and
+families; layout files and projects (which name X.20 B by its file hashes) save
+and load as on the other bases.
+
+Not available on X.20 (shown turned off on the page, with the reason): sample
+swapping, MIDI chromatic input, pitch note names and the unmute fix. Reusing the
+stock INP IDs 80..85 is not offered: the VALID hook decides per ID, so it cannot
+hide the stock INP machine on an ID while one of ours takes it. DSP1 is not patched: X.20's DSP1
 bootstrap runs a `PFLUSH` on an `ELD` with its instruction cache off, which is an
 illegal instruction on real hardware, so any DSP1 change needs another route.
 

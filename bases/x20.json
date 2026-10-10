@@ -49,6 +49,7 @@
   "menu": "0x2fd000",
   "records": "0x2fd100",
   "record_cap": 200,
+  "stock_record_cap": 159,
   "stack_bottom": "0x2fe800",
   "list": "0x2ce300",
   "list_room": 3816,

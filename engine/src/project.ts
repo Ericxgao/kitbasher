@@ -4,6 +4,7 @@
 // deflated, base64) and never the stock samples or the OS itself.
 
 import type { Base } from './bases.js';
+import type { X20RecipeFile } from './x20_recipe.js';
 import { fromBase64, sha256, toBase64 } from './bytes.js';
 import { parseLayout, type Layout } from './layout.js';
 import { MAX_12, MIN_12 } from './samples.js';
@@ -72,14 +73,19 @@ export interface Project {
   pitchLabels?: true;
 }
 
+/** An OS built by a fixed recipe (MDX X.20, engine/src/x20_recipe.ts): named by its file's hashes. */
+export function osOfRecipe(f: X20RecipeFile): ProjectOs {
+  return { base: f.id, name: f.name, tag: 'recipe', coldfire_sha256: f.identify.syx_sha256, dsp2_sha256: f.identify.stage_sha256, dsp1_sha256: '' };
+}
+
 export function osOf(base: Base): ProjectOs {
   const i = base.identify;
   return { base: base.id, name: base.name, tag: i.tag, coldfire_sha256: i.coldfire_sha256, dsp2_sha256: i.dsp2_sha256, dsp1_sha256: i.dsp1_sha256 };
 }
 
 /** Why this project cannot be used with this OS, or null. */
-export function osProblem(os: ProjectOs, base: Base): string | null {
-  const have = osOf(base);
+export function osProblem(os: ProjectOs, base: Base | ProjectOs): string | null {
+  const have = 'identify' in base ? osOf(base) : base;
   if (os.base !== have.base) return `this project was made for ${os.name || os.base}, and the loaded OS is ${base.name}`;
   for (const k of ['tag', 'coldfire_sha256', 'dsp2_sha256', 'dsp1_sha256'] as const) {
     if (os[k] !== have[k]) return `this project was made for a different ${os.name || os.base} file (its ${k.replace('_sha256', '')} does not match the loaded OS)`;

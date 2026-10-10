@@ -41,6 +41,8 @@ export interface X20RecipeFile {
   ram: {
     os_image: [Hex, Hex]; boot_code: [Hex, Hex]; window: [Hex, Hex];
     menu: Hex; records: Hex; record_cap: number; stack_bottom: Hex;
+    /** X.20's own record cap (an upper bound on the records its own machines take): the page's records meter */
+    stock_record_cap?: number;
     list: Hex; list_room: number; upload_buffer: [Hex, Hex];
     stock_list: { at: Hex; entries: number; entry_bytes: number };
     handler_table: { at: Hex; classes: number };
@@ -152,6 +154,8 @@ export function checkRecipe(r: X20Recipe): void {
   if (r.ram.records + r.ram.recordCap * 24 > r.ram.stackBottom) bad('the record table runs into the stack region');
   if (r.ram.menu + r.ram.menuFields.usrCount - r.ram.menuFields.indexEntries + r.ram.recordCap + 4 > r.ram.records) bad('the menu struct runs into the records');
   if (r.ram.recordCap > 0xff) bad('the menu frame keeps one byte per record below 0x100');
+  const stockCap = r.file.ram.stock_record_cap;
+  if (stockCap !== undefined && (!Number.isInteger(stockCap) || stockCap < 0 || stockCap > r.ram.recordCap)) bad(`the stock record cap ${stockCap} must lie in 0..${r.ram.recordCap}`);
   if (r.ram.bootCode[0] !== r.loader.stage2 + r.loader.stage2Bytes) bad('the boot code must follow the loader');
   if (r.ram.window[0] < r.ram.bootCode[1] || r.ram.window[1] > r.ram.menu) bad('the window must lie between the boot code and the menu struct');
   for (const id of r.usable) if (!Number.isInteger(id) || id < 0 || id >= r.dsp2.relocated.entries) bad(`ID ${id} is outside the dispatch tables`);
