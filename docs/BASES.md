@@ -161,9 +161,13 @@ What a build changes (engine/src/x20.ts):
 
 - **INTERNAL (E12) samples** are trimmed with the usual rule and re-encoded in
   X.20's E12B flash format; the DSP2 memory and flash they free hold the
-  machines. **Replacing INTERNAL samples is turned off** on the patched OS (its
-  flash file system refuses to erase or write the E12B bank, and DSP2 writes into
-  the bank are refused), because the machines' code lives in that space.
+  machines. **Sample swaps** from the Samples step go into the bank before it is
+  trimmed and encoded, with the same rules as on the other bases
+  ([E12 samples](SAMPLES.md#x20-b)). Once flashed, the patched OS refuses to
+  rewrite the bank itself (its flash file system refuses to erase or write the
+  E12B bank, and DSP2 writes into the bank are refused), because the machines'
+  code lives in the space the trim frees: SDS into INTERNAL and the Sample
+  Manager's INTERNAL actions fail with X.20's own error.
 - **User machines (USR) keep working.** X.20 reserves machine IDs 194..209 for
   its 16 user-machine slots, and a built-in machine on 192 or 193 freezes the OS
   when assigned, and it treats 96..123 as MIDI/control machines (a model there
@@ -206,8 +210,8 @@ new-machine list, so dropping a Kitbasher X.20 build restores its IDs and
 families; layout files and projects (which name X.20 B by its file hashes) save
 and load as on the other bases.
 
-Not available on X.20 (shown turned off on the page, with the reason): sample
-swapping, MIDI chromatic input, pitch note names and the unmute fix. Reusing the
+Not available on X.20 (shown turned off on the page, with the reason): MIDI
+chromatic input, pitch note names and the unmute fix. Reusing the
 stock INP IDs 80..85 is not offered: the VALID hook decides per ID, so it cannot
 hide the stock INP machine on an ID while one of ours takes it. DSP1 is not patched: X.20's DSP1
 bootstrap runs a `PFLUSH` on an `ELD` with its instruction cache off, which is an

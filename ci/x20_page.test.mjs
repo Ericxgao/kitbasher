@@ -16,7 +16,7 @@ test('X.20: no separate build panel; a recognised file continues into the normal
   const onFile = slice('async function onFile(', 'async function onPackFiles(');
   const branch = onFile.slice(onFile.indexOf('if (recipe) {'), onFile.indexOf('let parsed = readFirmware(bytes);'));
   assert.match(branch, /layoutEd\.setX20\(/);
-  assert.match(branch, /samples\.setBank\(null, `Sample swapping is not available on/);
+  assert.match(branch, /try \{ samples\.setBank\(x20E12Bank\(R, bank0\)\); \}/);          // the Samples step works on X.20 too
   assert.match(branch, /refresh\(\);\n\s+if \(gate\(uwAnswer, true\)\.ok\) showStep\(2\);/);
   assert.match(branch, /untested on hardware/);
   // the steps and Next buttons accept an X.20 file as loaded, and still need the plan to fit
@@ -50,11 +50,20 @@ test('X.20: the build takes the user\'s choices (UW answer, unticked machines, l
   assert.match(dl, /needsUwAnswer\(\)/);
 });
 
+test('X.20: swapped samples reach the plan, the build and the Samples step\'s badges', () => {
+  assert.match(slice('function x20Trimmed(', 'function planX20For('), /trimX20Bank\(x20R!, x20Bank!, \{ db: opt\.db, minSeconds: opt\.minSeconds, cap: opt\.cap \}, samples\.edits\(\)\)/);
+  assert.match(slice('function buildWith(', 'function showStorage('), /samples: samples\.edits\(\) \}\)\.then\(\(r\): X20Built/);
+  assert.match(app, /onChange: \(\) => \{ trims\.clear\(\); x20Trims\.clear\(\); refresh\(\); \}/);
+  assert.match(app, /x20Plan && sameEdits\(x20Plan\.bank\.edits, samples\.edits\(\)\) \? \{ report: x20Plan\.bank\.report, end: x20Plan\.bank\.bankEnd \}/);
+  assert.doesNotMatch(app, /sample swapping is not available on \$\{x20/);
+});
+
 test('X.20: what it does not have is shown turned off with the reason, not left out', () => {
   assert.match(html, /<p id="x20-unavailable" class="fine" hidden><\/p>/);
   const off = slice('const X20_OFF =', ';\nconst X20_FIXED_WHY');
-  for (const f of ['unmute-latency fix', 'MIDI chromatic note input', 'pitch note names', 'replacing INTERNAL \\(E12\\) samples', 'INP IDs 80\\.\\.85'])
+  for (const f of ['unmute-latency fix', 'MIDI chromatic note input', 'pitch note names', 'INP IDs 80\\.\\.85'])
     assert.match(off, new RegExp(f));
+  assert.doesNotMatch(off, /INTERNAL|E12/);                     // sample swapping is offered on X.20
   const sync = slice('function syncChromaOption(', 'function syncMeters(');
   assert.match(sync, /box\.disabled = !!x20;/);
   assert.match(sync, /\$\('midi-chroma-option'\)\.hidden = !x20 && /);

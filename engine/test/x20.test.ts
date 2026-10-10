@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { idAllowedOnX20, parseRecipe, recipeFor, type X20RecipeFile } from '../src/x20_recipe.js';
 import { cacheOpsIn, dsp2BootLoader, isCode, siteBytes, stageCode, windowA, writeList, x20Map, evalExpr } from '../src/x20_cf.js';
-import { buildX20, trimX20, x20IsaGate, x20NeighbourReads, NEIGHBOUR_1X, NEIGHBOUR_X20 } from '../src/x20.js';
+import { buildX20, readX20, trimX20, trimX20Bank, x20E12Bank, x20IsaGate, x20NeighbourReads, NEIGHBOUR_1X, NEIGHBOUR_X20 } from '../src/x20.js';
 import { anchorMismatches, preloadConflicts, relocationAudit } from '../src/x20_audit.js';
 import { buildBank, decode as e12Decode, encode as e12Encode, freeFlash, readBank, ENTRIES } from '../src/e12b.js';
 import { decodeLinear } from '../src/isa.js';
@@ -113,6 +113,53 @@ test('x20: the E12 trim keeps short samples, cuts the quiet tail of long ones wi
   assert.equal(out[2], null);
   const paired = trimX20([enc(long), enc(long)], [[0, 1]], { db: -30, minSeconds: 0.5, cap: 0.01 });
   assert.equal(paired.out[0]!.length, paired.out[1]!.length);
+});
+
+test('x20: the trim with sample edits -- kept-whole entries, and a swapped first sample padded to its partner, not cutting it', () => {
+  const tail = new Array(34).fill(0);
+  const enc = (x: number[]): number[] => [...x.map((v) => v & 0xfff), ...tail];
+  const first = Array.from({ length: 44100 }, (_, k) => (k < 2000 ? 1000 : 0));      // trims to 2256
+  const partner = Array.from({ length: 44100 }, (_, k) => (k < 10000 ? 1000 : 0));   // trims to 10256 alone
+  const opt = { db: -30, minSeconds: 0.5, cap: null };
+  // stock: the first sample's trim cuts its partner
+  const stock = trimX20([enc(first), enc(partner)], [[0, 1]], opt);
+  assert.equal(stock.out[1]!.length, 2256 + 34);
+  assert.equal(stock.report[1].for_partner, 0);
+  // the partner kept whole: not cut, and the first is padded to it
+  const kept = trimX20([enc(first), enc(partner)], [[0, 1]], opt, new Set([1]));
+  assert.equal(kept.out[1]!.length, 44100 + 34);
+  assert.equal(kept.out[0]!.length, 44100 + 34);
+  assert.equal(kept.report[0].padded_for, 1);
+  // a swapped first sample never cuts its partner: the partner keeps its own trim, the first is padded to it
+  const swapped = trimX20([enc(first), enc(partner)], [[0, 1]], opt, new Set(), new Set([0]));
+  assert.equal(swapped.out[1]!.length, 10256 + 34);
+  assert.equal(swapped.report[1].for_partner, undefined);
+  assert.equal(swapped.out[0]!.length, 10256 + 34);
+  assert.equal(swapped.report[0].padded_for, 1);
+  // no sets: the stock trim, sample for sample
+  assert.deepEqual(trimX20([enc(first), enc(partner)], [[0, 1]], opt, new Set(), new Set()).out, stock.out);
+});
+
+test('x20: swapped samples go in before the trim -- cut to the stock length with a fade, padded to whole words; a swap equal to stock is stock', () => {
+  const tail = new Array(34).fill(0);
+  const stockX = Array.from({ length: 2000 }, (_, k) => ((k * 37) % 401) - 200);
+  const bank0 = { names: Array.from({ length: 21 }, () => new Uint8Array(4)), samples: Array.from({ length: 21 }, () => [...stockX.map((v) => v & 0xfff), ...tail]) };
+  const trim = { db: -40, minSeconds: 5, cap: null };            // nothing is long enough to trim
+  const plain = trimX20Bank(R, bank0, trim);
+  assert.equal(plain.edits, null);
+  const longer = Array.from({ length: 5000 }, () => 1000), odd = Array.from({ length: 999 }, () => -7);
+  const t = trimX20Bank(R, bank0, trim, { swaps: new Map<number, number[]>([[3, longer], [4, odd], [5, stockX]]), noTrim: new Set() });
+  assert.deepEqual(t.capped, [3]);
+  assert.equal(t.samples[3]!.length, 2000 + 34);
+  assert.equal(t.samples[3]![0], 1000);
+  assert.equal(t.samples[3]![1999], 4);                          // the last of the 256-sample fade: 1000 / 256, rounded
+  assert.equal(t.samples[4]!.length, 1000 + 34);                 // 999 samples padded to whole words
+  assert.equal(t.samples[4]![0], -7 & 0xfff);
+  assert.deepEqual(t.samples[5], plain.samples[5]);
+  assert.ok(t.words < plain.words);
+  for (const i of [0, 1, 2, 6, 20]) assert.deepEqual(t.samples[i], plain.samples[i]);
+  assert.throws(() => trimX20Bank(R, bank0, trim, { swaps: new Map([[21, [1]]]), noTrim: new Set() }), /no INTERNAL entry 21/);
+  assert.throws(() => trimX20Bank(R, bank0, trim, { swaps: new Map([[0, [4000]]]), noTrim: new Set() }), /12-bit/);
 });
 
 test('x20: the build refuses any file but the one the recipe names', async () => {
@@ -255,4 +302,38 @@ test('firmware: X.20 B builds the bundled catalog, deterministically, with every
   const stock = readBank(area);
   const again = buildBank(stock.samples, stock.names);
   assert.ok(again.entries.every((e, i) => e.bytes === stock.directory.entries[i].bytes && e.crcIn === stock.directory.entries[i].crcIn));
+});
+
+test('firmware: X.20 B sample swap -- the bank map, and a swapped entry built into E12B while every other entry is the unswapped build\'s', { skip: fwSkip }, async (t) => {
+  let syx: Uint8Array | null = null;
+  for (const f of readdirSync(FW!).filter((n) => /\.syx$/i.test(n))) {
+    const b = readFileSync(join(FW!, f));
+    if (recipeFor([file()], await sha256(b))) { syx = b; break; }
+  }
+  if (!syx) { t.skip('no X.20 B .syx in MD_FIRMWARE_DIR'); return; }
+  const { bank0 } = readX20(syx, R);
+  const bank = x20E12Bank(R, bank0);
+  assert.equal(bank.entries.length, 21);
+  assert.equal(bank.machines.length, 16);
+  assert.equal(bank.entries[0].start, 0x103dba);
+  assert.equal(bank.entries[17].start, 0x12af33);                 // HT, where X.20's DSP2 stage lays it
+  assert.equal(bank.entries[17].samples, 11914 - 34);
+  assert.deepEqual(bank.machines.find((m) => m.id === 50), { id: 50, name: 'E12-HT', family: 'E12', entries: [17] });
+  assert.deepEqual(bank.entries[12].machines.map((m) => m.name).sort(), ['E12-RS', 'E12-SD']);
+  assert.throws(() => x20E12Bank(R, { ...bank0, names: bank0.names.map((n, i) => (i === 3 ? new Uint8Array([0x58, 0x58, 0x20, 0x20]) : n)) }), /not the recipe's/);
+  const { packs, core } = loadPacks([join(ROOT, 'catalog')]);
+  const modules = [...new Set(packs.flatMap((p) => p.models.map((m) => m.module)))];
+  const opt = { uw: true, trim: { db: -30, minSeconds: 0.5, cap: 0.55 }, exclude: modules.slice(1) };
+  const sweep = Array.from({ length: 11025 }, (_, k) => Math.round(1800 * Math.sin(2 * Math.PI * 300 * (10 ** (k / 11025) - 1) * 11025 / 44100 / Math.LN10)));
+  const plain = await buildX20(syx, file(), packs, core, opt);
+  const swapped = await buildX20(syx, file(), packs, core, { ...opt, samples: { swaps: new Map([[17, sweep]]), noTrim: new Set([17]) } });
+  assert.ok(swapped.report.gates.every((g) => g.ok));
+  assert.deepEqual(swapped.report.e12.edits, { swapped: [17], capped: [], no_trim: [17] });
+  assert.equal(plain.report.e12.edits, undefined);
+  const { decodeSyx, OS_START } = await import('../src/syx.js');
+  const read = (o: Uint8Array) => readBank(decodeSyx(o).subarray(0x90000 - OS_START, 0xf0000 - OS_START));
+  const a = read(plain.output), b = read(swapped.output);
+  const want = [...sweep.map((v) => v & 0xfff), 0, ...new Array(34).fill(0)];          // 11025 samples padded to whole words, then the silent tail
+  assert.deepEqual(b.samples[17], want);
+  for (let i = 0; i < 21; i++) if (i !== 17) assert.deepEqual(b.samples[i], a.samples[i], `entry ${i}`);
 });

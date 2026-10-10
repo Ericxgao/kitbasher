@@ -44,7 +44,7 @@ import { parseLayout, type Layout } from '../../engine/src/layout.js';
 import { num } from '../../engine/src/bytes.js';
 import { select } from '../../engine/src/selection.js';
 import { parseRecipe, recipeFor, type X20Recipe, type X20RecipeFile } from '../../engine/src/x20_recipe.js';
-import { buildX20, findX20Layout, planX20, readX20, trimX20Bank, x20IdSlots, X20FlashError, type X20Plan, type X20Report, type X20Trimmed } from '../../engine/src/x20.js';
+import { buildX20, findX20Layout, planX20, readX20, trimX20Bank, x20E12Bank, x20IdSlots, X20FlashError, type X20Plan, type X20Report, type X20Trimmed } from '../../engine/src/x20.js';
 import { sha256 } from '../../engine/src/bytes.js';
 
 interface Data { bases: BaseSet; packs: Pack[]; core: CorePack | null; source: { commit: string } }
@@ -100,8 +100,7 @@ type X20Built = { output: Uint8Array; report: X20Report; x20: true };
 type AnyBuild = BuildResult | X20Built;
 /** what X.20 B does not have, and why: shown where the option would be */
 const X20_OFF = 'Not available on MDX OS X.20 B: the unmute-latency fix, MIDI chromatic note input and pitch note names ' +
-  '(the recipe does not patch X.20\'s sequencer, MIDI input or parameter display), and replacing INTERNAL (E12) samples ' +
-  '(the machines\' code lives in the space the trim frees, and the patched OS refuses to rewrite that bank). ' +
+  '(the recipe does not patch X.20\'s sequencer, MIDI input or parameter display). ' +
   'Reusing the stock INP IDs 80..85 is not offered either: the stock INP machine would stay in the menu on the same ID.';
 const X20_FIXED_WHY = 'new, renamed or reordered categories, and the order of machines within a family (the recipe sets each machine\'s family only)';
 /** an OS is loaded: a 1.63-lineage base or an X.20 recipe file */
@@ -375,7 +374,7 @@ function planFor(exclude: string[], opt = trimOptions()): Plan {
 function x20Trimmed(opt: TrimOptions): X20Trimmed {
   const key = `${opt.db}|${opt.minSeconds}|${opt.cap}`;
   let t = x20Trims.get(key);
-  if (!t) { t = trimX20Bank(x20R!, x20Bank!, { db: opt.db, minSeconds: opt.minSeconds, cap: opt.cap }); x20Trims.set(key, t); }
+  if (!t) { t = trimX20Bank(x20R!, x20Bank!, { db: opt.db, minSeconds: opt.minSeconds, cap: opt.cap }, samples.edits()); x20Trims.set(key, t); }
   return t;
 }
 
@@ -558,7 +557,8 @@ function refreshX20(minAutoDb: number | null): void {
   $('make-room-help').textContent = !p.dsp2.fits
     ? trimMode() === 'auto' ? 'Still too large. Remove models or lower At most.' : 'Remove models or choose Auto trim.'
     : 'Remove models.';
-  $('download-summary').textContent = `${p.sel.length} models for ${x20R!.name}. Untested on hardware: back up first and keep the stock ${x20R!.name} file to reflash.`;
+  const swapped = samples.state.swaps.size;
+  $('download-summary').textContent = `${p.sel.length} models for ${x20R!.name}.${swapped ? ` ${swapped} sample${swapped === 1 ? '' : 's'} replaced.` : ''} Untested on hardware: back up first and keep the stock ${x20R!.name} file to reflash.`;
   const needs = p.sel.flatMap(s => needLines(s.m));
   $('download-needs').hidden = !needs.length;
   $('ids-warning').hidden = layoutEd.restoredFrom !== null;
@@ -614,7 +614,8 @@ async function onFile(f: File): Promise<void> {
       x20 = recipe; x20R = R; x20Bank = bank0;
       input = bytes; inputName = f.name;
       layoutEd.setX20({ id: R.id, name: R.name, families: Object.keys(R.families), slots: x20IdSlots(R), why: X20_FIXED_WHY });
-      samples.setBank(null, `Sample swapping is not available on ${R.name}: the patched OS refuses to rewrite its INTERNAL (E12) bank, because the machines' code lives in the space the trim frees. The trim on the Models step still applies.`);
+      try { samples.setBank(x20E12Bank(R, bank0)); }
+      catch (e) { samples.setBank(null, `Sample swapping is not available for this file: ${(e as Error).message}`); }
       $('firmware-info').textContent = `${R.name}: a public beta OS. Kitbasher patches this exact file with a fixed recipe. ` +
         `${recipe.qualification.level === 'hardware-proven' ? '' : 'Untested on hardware: back up first and keep the stock X.20 B file to reflash. '}` +
         'User machines (USR) keep working. ' + X20_OFF;
@@ -759,7 +760,7 @@ function buildWith(trim: TrimOptions): Promise<AnyBuild> {
   const uw = uwForBuild(uwAnswer);
   if (x20) {
     return buildX20(input!, x20, data.packs, data.core!, { uw, exclude: excludes(), layout: layoutEd.mapForPlan(),
-      trim: { db: trim.db, minSeconds: trim.minSeconds, cap: trim.cap } }).then((r): X20Built => ({ ...r, x20: true }));
+      trim: { db: trim.db, minSeconds: trim.minSeconds, cap: trim.cap }, samples: samples.edits() }).then((r): X20Built => ({ ...r, x20: true }));
   }
   return build(input!, base!, data.packs, data.core!,
     { exclude: excludes(), trim, allowIdMove: allowIdMove(), uw, layout: layoutEd.mapForPlan(), samples: samples.edits(), ...firmwareOptions() }, trimmed(trim));
@@ -1030,7 +1031,7 @@ function applyProject(p: Project, name: string): boolean {
   const problem = osProblem(p.os, x20 ? osOfRecipe(x20) : base!);
   const count = samples.bank?.entries.length ?? 0;
   const bad = [...p.swaps.keys(), ...p.noTrim].filter((e) => e >= count);
-  const why = problem ?? (x20 && (p.swaps.size || p.noTrim.size) ? `sample swapping is not available on ${x20.name}` : null) ?? (!samples.bank && (p.swaps.size || p.noTrim.size)
+  const why = problem ?? (!samples.bank && (p.swaps.size || p.noTrim.size)
     ? "this OS's E12 samples could not be read, so a project with sample changes cannot be used with it"
     : bad.length ? `this OS has no E12 sample ${bad[0]}` : null);
   if (why) {
@@ -1039,7 +1040,7 @@ function applyProject(p: Project, name: string): boolean {
     return false;
   }
   samples.setState({ swaps: new Map(p.swaps), noTrim: new Set(p.noTrim), sources: new Map(p.sources), notes: new Map() });
-  trims.clear();
+  trims.clear(); x20Trims.clear();
   const radio = document.querySelector<HTMLInputElement>(`input[name=e12][value=${p.trim.mode === 'manual' ? 'trim' : p.trim.mode}]`);
   if (radio) radio.checked = true;
   $<HTMLInputElement>('db').value = String(p.trim.db);
@@ -1090,10 +1091,11 @@ async function main(): Promise<void> {
   $('models-next').addEventListener('click', () => void onBuild('categories'));
   $('categories-next').addEventListener('click', () => showStep(5));
   samples = new SamplesStep($('samples-panel'), {
-    onChange: () => { trims.clear(); refresh(); },
+    onChange: () => { trims.clear(); x20Trims.clear(); refresh(); },
     saveKit: () => void saveProject(),
     loadKit: (f) => void onProjectFile(f),
-    laid: () => (current && fw && sameEdits(current.trim.edits, samples.edits()) ? { report: current.trim.report, end: current.trim.end } : null),
+    laid: () => (current && fw && sameEdits(current.trim.edits, samples.edits()) ? { report: current.trim.report, end: current.trim.end }
+      : x20Plan && sameEdits(x20Plan.bank.edits, samples.edits()) ? { report: x20Plan.bank.report, end: x20Plan.bank.bankEnd } : null),
   });
   samples.render();
   const projectFile = $<HTMLInputElement>('project-file');

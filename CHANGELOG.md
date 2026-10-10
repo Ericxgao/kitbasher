@@ -5,6 +5,14 @@ All notable changes to Kitbasher are recorded here. The format follows
 
 ## Unreleased
 
+### Added
+
+- **E12 sample swapping on MDX X.20 B.** The Samples step works on an X.20 B
+  file as on the other bases: swaps go into the bank before the trim, with the
+  same caps, pair padding and "Don't trim" rule, and the meters and the build use
+  the swapped bank. The machine map comes from the recipe; the bank's entry
+  names are checked against it when the file is read.
+
 ### Changed (breaking)
 
 - X.13 is no longer supported.

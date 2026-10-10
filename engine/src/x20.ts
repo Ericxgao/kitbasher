@@ -30,6 +30,8 @@ import { cacheOpsIn, dsp2BootLoader, isCode, siteBytes, stageCode, windowA, writ
 import { idAllowedOnX20, parseRecipe, type X20Recipe, type X20RecipeFile } from './x20_recipe.js';
 import { fromBase64 } from './bytes.js';
 import { decodeLayout, encodeLayout, LAYOUT_FORMAT, type IdSlot, type Layout, type MachinePlace } from './layout.js';
+import { capSamples, NO_EDITS, type BankEntry, type E12Bank, type E12Machine, type SampleEdits } from './samples.js';
+import type { TrimEntry } from './e12.js';
 
 export interface X20Options {
   /** a Machinedrum with the UW option (machines on 128 and up, and the UW-sample machines, need it) */
@@ -52,12 +54,16 @@ export interface X20Options {
    * X.20's menu families. Without one, IDs go bottom-up and families by the recipe's rules.
    */
   layout?: Layout;
+  /** the user's E12 samples (engine/src/samples.ts): swapped entries and entries the trim leaves whole */
+  samples?: SampleEdits;
 }
 
 export interface X20Report {
   base: string;
   machines: { name: string; key: string; id: number; family: string; org: string; words: number }[];
-  e12: { bank_end: string; words: number; stock_words: number; freed_words: number; flash_end: string; trimmed: number };
+  e12: { bank_end: string; words: number; stock_words: number; freed_words: number; flash_end: string; trimmed: number;
+    /** present only with sample edits: the swapped entries, those cut to their stock length, and those kept whole */
+    edits?: { swapped: number[]; capped: number[]; no_trim: number[] } };
   dsp2: { capacity: number; demand: number; free: number; regions: [string, string][] };
   flash: { chunks_pre: [string, number][]; chunks_post: [string, number][]; list: string; free_left: number;
     /** E12B flash the trimmed bank leaves free, and what the machines' code, the list and the layout table take of it */
@@ -75,8 +81,14 @@ export interface X20Report {
 const SR = 44100, FADE = 256, LEN_EXTRA = 34;
 const RAW_MAX_DEFAULT = 0x2b000;
 
-/** The E12 trim (the 1.63-lineage rule, on X.20's decoded samples): per entry the new 12-bit samples. */
-export function trimX20(samples: (number[] | null)[], pairs: [number, number][], opt: X20Options['trim']): { out: (number[] | null)[]; trimmed: number } {
+/**
+ * The E12 trim (the 1.63-lineage rule, on X.20's decoded samples): per entry the new 12-bit samples, and per
+ * entry a report row as engine/src/e12.ts trimBank gives it. `noTrim` and `swapped` as there: entries in
+ * `noTrim` keep their length (and the pair rule does not shorten them); a swapped first sample never cuts its
+ * partner and is padded to it instead. With neither set this is the stock X.20 trim, sample for sample.
+ */
+export function trimX20(samples: (number[] | null)[], pairs: [number, number][], opt: X20Options['trim'],
+  noTrim: ReadonlySet<number> = new Set(), swapped: ReadonlySet<number> = new Set()): { out: (number[] | null)[]; trimmed: number; report: TrimEntry[] } {
   const thr = 10 ** (opt.db / 20);
   const sgn = (v: number): number => (v >= 2048 ? v - 4096 : v);
   const xs = samples.map((s) => {
@@ -84,11 +96,11 @@ export function trimX20(samples: (number[] | null)[], pairs: [number, number][],
     if (s.length < LEN_EXTRA || s.slice(s.length - LEN_EXTRA).some((v) => v !== 0)) throw new Error('E12B: an entry without its silent tail');
     return s.slice(0, s.length - LEN_EXTRA).map(sgn);
   });
-  const keeps = xs.map((x) => {
+  const keeps = xs.map((x, i) => {
     if (!x) return 0;
     const n = x.length;
     let keep = n;
-    if (n / SR >= opt.minSeconds) {
+    if (!noTrim.has(i) && n / SR >= opt.minSeconds) {
       const limit = Math.max(...x.map(Math.abs)) * thr;
       let q = n;
       for (let k = n - 1; k >= 0; k--) { if (Math.abs(x[k]) < limit) q = k; else break; }
@@ -99,15 +111,23 @@ export function trimX20(samples: (number[] | null)[], pairs: [number, number][],
   });
   const wo = (k: number): number => (k + 1) >> 1;
   const padTo = xs.map(() => 0);
+  const forPartner: (number | undefined)[] = xs.map(() => undefined);
+  const paddedFor: (number | undefined)[] = xs.map(() => undefined);
   for (let changed = true; changed;) {
     changed = false;
     for (const [a, b] of pairs) {
-      if (xs[a] && xs[b] && keeps[a] < xs[a]!.length && wo(keeps[b]) > wo(keeps[a])) { keeps[b] = keeps[a]; changed = true; }
+      if (!xs[a] || !xs[b] || keeps[a] >= xs[a]!.length) continue;   // first sample untrimmed: stock behaviour
+      if (swapped.has(a) || noTrim.has(b)) continue;                    // the user's first / a partner kept whole: padded below
+      if (wo(keeps[b]) > wo(keeps[a])) { keeps[b] = keeps[a]; forPartner[b] = a; changed = true; }
     }
   }
-  for (const [a, b] of pairs) if (xs[a] && xs[b] && wo(keeps[b]) > wo(Math.max(keeps[a], padTo[a]))) padTo[a] = 2 * wo(keeps[b]);
+  for (const [a, b] of pairs) {
+    if (xs[a] && xs[b] && wo(keeps[b]) > wo(Math.max(keeps[a], padTo[a]))) { padTo[a] = 2 * wo(keeps[b]); paddedFor[a] = b; }
+  }
   const rhe = (v: number): number => { const f = Math.floor(v), d = v - f; return d > 0.5 || (d === 0.5 && f % 2 !== 0) ? f + 1 : f; };
+  const r3 = (v: number): number => Math.round(v * 1000) / 1000;
   let trimmed = 0;
+  const report: TrimEntry[] = [];
   const out = xs.map((x, i) => {
     if (!x) return null;
     const n = x.length, keep = keeps[i];
@@ -122,9 +142,45 @@ export function trimX20(samples: (number[] | null)[], pairs: [number, number][],
       while (y.length < padTo[i]) y.push(0);
       if (y.length % 2) y.push(0);
     }
+    const row: TrimEntry = { entry: i, seconds: r3(n / SR), kept: r3(y.length / SR), words: wo(n), new_words: wo(y.length) };
+    if (forPartner[i] !== undefined) row.for_partner = forPartner[i];
+    if (paddedFor[i] !== undefined) row.padded_for = paddedFor[i];
+    report.push(row);
     return [...y.map((v) => v & 0xfff), ...new Array(LEN_EXTRA).fill(0)];
   });
-  return { out, trimmed };
+  return { out, trimmed, report };
+}
+
+/**
+ * The stock E12B bank as the Samples step shows it (engine/src/samples.ts E12Bank): every entry, its samples
+ * and the machines that play it. Which machine plays which entry is the recipe's (read from X.20's DSP2
+ * dispatch, bases/x20.json e12.machines); the entry names in E12B must be the recipe's, or this throws. Start
+ * addresses are where X.20's DSP2 stage lays the stock bank (each entry: its data words, the 34-sample silent
+ * tail, the pad).
+ */
+export function x20E12Bank(R: X20Recipe, bank0: { names: Uint8Array[]; samples: (number[] | null)[] }): E12Bank {
+  const E = R.e12;
+  const names = bank0.names.map((n) => String.fromCharCode(...n).trim());
+  if (names.length !== E.count || E.names.length !== E.count || names.some((n, i) => n !== E.names[i])) {
+    throw new Error(`${R.name}: the INTERNAL bank's entries are not the recipe's (${names.join(' ')})`);
+  }
+  for (const m of E.machines) for (const e of m.entries) if (!Number.isInteger(e) || e < 0 || e >= E.count) throw new Error(`${R.name}: ${m.name} plays no entry ${e}`);
+  const machines: E12Machine[] = E.machines.map((m) => ({ id: m.id, name: m.name, family: 'E12', entries: [...m.entries] }));
+  const sgn = (v: number): number => (v >= 2048 ? v - 4096 : v);
+  let start = E.table + 3 * E.count;
+  const entries: BankEntry[] = bank0.samples.map((s, i) => {
+    if (!s) throw new Error(`${R.name}: INTERNAL entry ${i} (${names[i]}) is empty`);
+    const n = s.length - LEN_EXTRA, words = Math.ceil(n / 2);
+    const e: BankEntry = {
+      entry: i, start, words, samples: 2 * words, data: Int16Array.from(s.slice(0, n).map(sgn)),
+      machines: machines.filter((m) => m.entries.includes(i)),
+      pairs: E.pairs.flatMap(([a, b]): { partner: number; first: boolean }[] => (a === i ? [{ partner: b, first: true }] : b === i ? [{ partner: a, first: false }] : [])),
+    };
+    start += Math.ceil(s.length / 2) + PAD_WORDS;
+    return e;
+  });
+  if (start !== E.bankEnd) throw new Error(`${R.name}: the INTERNAL bank lays out to ${h(start)}, not ${h(E.bankEnd)}`);
+  return { entries, machines, pairs: E.pairs, stockWords: E.bankEnd - (E.table + 3 * E.count) };
 }
 
 /** X.20's menu family for a model: the layout's category when it is one of X.20's families, else the recipe's
@@ -321,18 +377,48 @@ export interface X20Trimmed {
   bankEnd: number;
   stockWords: number;
   trimmed: number;
+  /** per entry, as engine/src/e12.ts trimBank reports it (the Samples step's badges) */
+  report: TrimEntry[];
+  /** the sample edits this bank was laid with (null: stock), and the swaps cut to their stock length */
+  edits: SampleEdits | null;
+  capped: number[];
 }
 
 /** DSP2 words of a bank: per sample its 16-bit words and its silent pad (as buildBank lays it). */
 export const bankWords = (samples: (number[] | null)[]): number => samples.reduce((n, x) => n + (x ? Math.ceil(x.length / 2) + PAD_WORDS : 0), 0);
 
-export function trimX20Bank(R: X20Recipe, bank0: { names: Uint8Array[]; samples: (number[] | null)[] }, trim: X20Options['trim']): X20Trimmed {
-  const { out, trimmed } = trimX20(bank0.samples, R.e12.pairs, trim);
+/**
+ * The bank at one trim, with the user's samples in place first (as engine/src/plan.ts does on the 1.63
+ * lineage): a swap is cut to its entry's stock length (fading the last 256 samples out), padded to whole
+ * words, and then trimmed like any sample unless the entry is in `noTrim`. A swap equal to the stock data
+ * is stock. The bank never grows past its stock footprint.
+ */
+export function trimX20Bank(R: X20Recipe, bank0: { names: Uint8Array[]; samples: (number[] | null)[] }, trim: X20Options['trim'],
+  edits: SampleEdits = NO_EDITS): X20Trimmed {
+  let samples = bank0.samples;
+  const capped: number[] = [], swapped = new Set<number>();
+  if (edits.swaps.size) {
+    samples = bank0.samples.slice();
+    for (const [i, s] of edits.swaps) {
+      const stock = Number.isInteger(i) ? bank0.samples[i] : undefined;
+      if (!stock) throw new Error(`no INTERNAL entry ${i}`);
+      const c = capSamples(s, stock.length - LEN_EXTRA);
+      if (c.capped) capped.push(i);
+      const y = c.data.map((v) => v & 0xfff);
+      if (y.length % 2) y.push(0);
+      const next = [...y, ...new Array(LEN_EXTRA).fill(0)];
+      if (next.length !== stock.length || next.some((v, k) => v !== stock[k])) { samples[i] = next; swapped.add(i); }
+    }
+  }
+  for (const i of edits.noTrim) if (!Number.isInteger(i) || !bank0.samples[i]) throw new Error(`no INTERNAL entry ${i}`);
+  const { out, trimmed, report } = trimX20(samples, R.e12.pairs, trim, edits.noTrim, swapped);
   const words = bankWords(out);
   const dataStart = R.e12.table + 3 * R.e12.count;
   const bankEnd = dataStart + words;
   if (bankEnd > R.e12.bankEnd) throw new Error('E12: the re-encoded bank is longer than the stock one');
-  return { trim, samples: out, names: bank0.names, words, bankEnd, stockWords: R.e12.bankEnd - dataStart, trimmed };
+  const edited = edits.swaps.size > 0 || edits.noTrim.size > 0;
+  return { trim, samples: out, names: bank0.names, words, bankEnd, stockWords: R.e12.bankEnd - dataStart, trimmed, report,
+    edits: edited ? { swaps: new Map(edits.swaps), noTrim: new Set(edits.noTrim) } : null, capped: capped.sort((a, b) => a - b) };
 }
 
 /** What a selection takes on X.20, without building: the plan the page's meters, layout editor and build share. */
@@ -358,6 +444,8 @@ export interface X20Plan {
   leftOut: string[];
   workspace: boolean;
   e12: { bankEnd: number; words: number; stockWords: number; freedWords: number; trimmed: number };
+  /** the bank this plan was made with (its trim, sample edits and per-entry report) */
+  bank: X20Trimmed;
   dsp2: { fits: boolean; capacity: number; demand: number; free: number; regions: [number, number][]; placed: Dsp2Placed };
   /** machine IDs: taken by the selection, and the ones X.20 has for added machines (without UW: below 128) */
   ids: { used: number; available: number };
@@ -421,6 +509,7 @@ export function planX20(R: X20Recipe, t: X20Trimmed, packs: Pack[], opt: Omit<X2
   return {
     ok: !problems.length, problems, notes, sel, shared, moves, menus, family, layout, table: { ...merged, uw: opt.uw }, leftOut, workspace,
     e12: { bankEnd: t.bankEnd, words: t.words, stockWords: t.stockWords, freedWords: R.e12.bankEnd - t.bankEnd, trimmed: t.trimmed },
+    bank: t,
     dsp2: { fits, capacity: placed.capacity, demand: placed.demand, free: placed.free, regions, placed },
     ids: { used: sel.length, available: R.usable.filter((id) => opt.uw || id < 128).length },
     list: { used: sel.length, room: listRoom },
@@ -475,7 +564,7 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   const at = (flash: number): number => flash - OS_START;
 
   // ---- 1. E12B, 2. machines: selection, IDs, DSP2 placement (planX20)
-  const t = trimX20Bank(R, bank0, opt.trim);
+  const t = trimX20Bank(R, bank0, opt.trim, opt.samples ?? NO_EDITS);
   const { bankEnd, stockWords, trimmed: nTrim } = t;
   const bank: Bank = buildBank(t.samples, t.names);
   if (bank.words !== t.words) throw new Error(`E12: the bank takes ${bank.words} DSP2 words laid out, ${t.words} planned`);
@@ -614,7 +703,8 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
     base: R.id,
     machines: placed.machines.map((m) => ({ name: m.name.trim(), key: m.key, id: m.id, family: m.family, org: h(m.org), words: m.total })),
     e12: { bank_end: h(bankEnd), words: bank.words, stock_words: stockWords, freed_words: R.e12.bankEnd - bankEnd,
-      flash_end: h(E12B_FLASH + (bank.used - 1) * 0x10000 + bank.end), trimmed: nTrim },
+      flash_end: h(E12B_FLASH + (bank.used - 1) * 0x10000 + bank.end), trimmed: nTrim,
+      ...(t.edits ? { edits: { swapped: [...t.edits.swaps.keys()].sort((a, b) => a - b), capped: t.capped, no_trim: [...t.edits.noTrim].sort((a, b) => a - b) } } : {}) },
     dsp2: { capacity: placed.capacity, demand: placed.demand, free: placed.free, regions: regions.map(([a, b]) => [h(a), h(b)] as [string, string]) },
     flash: { chunks_pre: preC.map((c) => [h(c.at), c.packed.length]), chunks_post: postC.map((c) => [h(c.at), c.packed.length]), list: h(listFlash),
       free_left: spans.reduce((n, [a, b]) => n + Math.max(0, b - a), 0),

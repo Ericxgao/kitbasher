@@ -51,7 +51,9 @@ export interface X20RecipeFile {
   hooks: { VALID: Hex; FAM: Hex; CLS: Hex; GUARD: Hex; COPYLIST_READS: Hex; ERGUARD: { resume: Hex; context: Hex } };
   host: { dsp2: Hex; upload_vector: Hex };
   flash_alias: Hex;
-  e12: { table: Hex; count: number; bank_end: Hex; pairs: [number, number][] };
+  e12: { table: Hex; count: number; bank_end: Hex; pairs: [number, number][];
+         /** the E12B entries' names in order (checked when the bank is read) and the E12 machines with the entries they play */
+         names: string[]; machines: { id: number; name: string; entries: number[] }[]; machines_evidence?: string };
   dsp2: {
     free: [Hex, Hex][];
     dispatch: { init: Hex; trigger: Hex; render: Hex; entries: number };
@@ -89,7 +91,7 @@ export interface X20Recipe {
   hooks: { VALID: number; FAM: number; CLS: number; GUARD: number; COPYLIST_READS: number; erguard: { resume: number; context: number } };
   host: { dsp2: number; uploadVector: number };
   flashAlias: number;
-  e12: { table: number; count: number; bankEnd: number; pairs: [number, number][] };
+  e12: { table: number; count: number; bankEnd: number; pairs: [number, number][]; names: string[]; machines: { id: number; name: string; entries: number[] }[] };
   dsp2: { free: [number, number][]; dispatch: Table; relocated: Table; workspace: { base: number; slice: number };
           pi: PiSlices; usrBankEnd: number; boot: { receiver: number; wiper: number; save: number; saveEnd: number; rdy: number } };
   usable: number[];
@@ -124,7 +126,7 @@ export function parseRecipe(f: X20RecipeFile): X20Recipe {
       erguard: { resume: num(f.hooks.ERGUARD.resume), context: num(f.hooks.ERGUARD.context) } },
     host: { dsp2: num(f.host.dsp2), uploadVector: num(f.host.upload_vector) },
     flashAlias: num(f.flash_alias),
-    e12: { table: num(f.e12.table), count: f.e12.count, bankEnd: num(f.e12.bank_end), pairs: f.e12.pairs },
+    e12: { table: num(f.e12.table), count: f.e12.count, bankEnd: num(f.e12.bank_end), pairs: f.e12.pairs, names: f.e12.names, machines: f.e12.machines },
     dsp2: { free: D.free.map(([a, b]) => [num(a), num(b)] as [number, number]), dispatch: table(D.dispatch), relocated: table(D.dispatch_relocated),
       workspace: { base: num(D.workspace.base), slice: num(D.workspace.slice) },
       pi: { ids: D.pi.ids, inits: D.pi.inits.map(num), ws: num(D.pi.ws), slice: num(D.pi.slice), track: num(D.pi.track) },
