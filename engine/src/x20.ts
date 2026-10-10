@@ -597,7 +597,7 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   while ((len - L.header) % 16) len++;
   const stage = img.slice(0, len);
   stage.set(be32((len - L.header) / 4), L.copyLongsAt);
-  const packed = await uclPack(stage, Number(process.env.KB_STAGE_LEVEL ?? 10));
+  const packed = await uclPack(stage, Number((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.KB_STAGE_LEVEL ?? 10));
   const back = nrv2bDecode(packed).out;
   if (back.length !== stage.length || back.some((b, k) => b !== stage[k])) throw new Error('stage image NRV2B round trip');
   const room = L.payloadFlash - L.slot0Flash;
