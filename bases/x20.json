@@ -2,7 +2,7 @@
  "format": "md-recipe/1",
  "id": "x20",
  "name": "MDX OS X.20 B",
- "about": "The Machinedrum SPS-1 UW community OS X.20 B (by jmamma). Its loader decodes the OS at boot, so the build never reads the OS image: it re-packs the loader's stage image with a boot routine that writes the sites below once the loader has decoded the OS. The anchors (the bytes X.20 B has at each site) are checked offline against a decoded X.20 B (engine/test/x20_recipe.test.ts with KB_X20_OS); the build only accepts the exact X.20 B file (identify.syx_sha256). Addresses, anchors and hashes only: no firmware bytes.",
+ "about": "The Machinedrum SPS-1 UW community OS X.20 B (by jmamma). Its loader decodes the OS at boot, so the build never reads the OS image: it re-packs the loader's stage image with a boot routine that writes the sites below once the loader has decoded the OS. The anchors (the bytes X.20 B has at each site) are checked offline against a decoded X.20 B (engine/test/x20.test.ts with KB_X20_OS); the build only accepts the exact X.20 B file (identify.syx_sha256). Addresses, anchors and hashes only: no firmware bytes.",
  "identify": {
   "syx_sha256": "dae8210a03f91135c1ce20c741ea32c9b572686f066bb5db99cf8a1c52f381cc",
   "container_bytes": 966656,
@@ -10,8 +10,8 @@
  },
  "qualification": {
   "level": "emulator-gated",
-  "by": "Emulator: boots; every bundled machine plays (or is silent for want of UW samples or input audio) without stopping the OS; a USR machine installs through the Machine Manager",
-  "unproven": "Not yet run on a Machinedrum. The DSP2 pre-boot load the build uses runs only on hardware (the emulator was given the post-start upload)"
+  "by": "Emulator, with the post-start upload (--dsp2-load upload): boots; every bundled machine plays or is silent only for want of UW samples or input audio; the OS never stops; a USR machine installs through the Machine Manager",
+  "unproven": "Untested on hardware. The default pre-boot DSP2 load has not run anywhere for this build: the emulator cannot run it, and it is checked only offline"
  },
  "loader": {
   "stage2": "0x2f8000",
@@ -243,6 +243,16 @@
     192,
     255
    ]
+  ],
+  "x20_own": [
+   1,
+   4,
+   5,
+   7,
+   8,
+   9,
+   86,
+   87
   ]
  },
  "families": {
@@ -296,7 +306,8 @@
    "0x1a76",
    "0x1a77",
    "0x07e8",
-   "0x0ee8"
+   "0x0ee8",
+   "0x0800"
   ],
   "constants": [
    "0x9e",
@@ -344,7 +355,10 @@
    "0x280f18": "low word of $2d17ec",
    "0x280fb8": "low word of $2d17ec",
    "0x29146a": "low word of $2d17ec",
-   "0x2a87a0": "low word of $2d17ec"
+   "0x2a87a0": "low word of $2d17ec",
+   "0x2148a0": "a ring buffer passed as an argument (its own fields $800..$824), not the globals base",
+   "0x21490c": "the same ring buffer, not the globals base",
+   "0x2abbe4": "$800(a5): a5 is the base patched at 0x2abbe0 to the moved records"
   }
  },
  "sites": [

@@ -51,7 +51,7 @@ export interface X20Report {
   base: string;
   machines: { name: string; key: string; id: number; family: string; org: string; words: number }[];
   e12: { bank_end: string; words: number; stock_words: number; freed_words: number; flash_end: string; trimmed: number };
-  dsp2: { capacity: number; demand: number; free: number };
+  dsp2: { capacity: number; demand: number; free: number; regions: [string, string][] };
   flash: { chunks_pre: [string, number][]; chunks_post: [string, number][]; list: string; free_left: number };
   stage: { boot_code: string; window: string; packed: number; room: number };
   gates: { name: string; ok: boolean; detail: string }[];
@@ -194,6 +194,30 @@ async function chunks(blks: [number, number[]][], spans: [number, number][], raw
   return out;
 }
 
+/**
+ * A machine that reads the previous track's output as the other of two ping-pong buffers
+ * (`move y:>md_output,a / eor #$20,a / move a1,r0`, as on 1.63 and X.14) reads the wrong buffer on X.20,
+ * which rotates four output buffers through the slot ring y:$7e0..$7ef: y:$7f0 holds the current
+ * slot's address and each slot is [current, previous, 2 back, 3 back], so the previous track's buffer
+ * is y:(y:$7f0 + 1). The four words are rewritten in the linked code (the base-neutral pack is untouched):
+ * `move y:>$7f0,r0 / move (r0)+ / move y:(r0),r0` (the DSP56300 interlocks the AGU use of r0).
+ */
+export const NEIGHBOUR_1X = [0x5ef000, 0x000140, 0x016083, 0x219000];
+export const NEIGHBOUR_X20 = [0x68f000, 0x0007f0, 0x205800, 0x68e000];
+export function x20NeighbourReads(placed: { records: [number, number[]][]; machines: { org: number; words: number; name: string }[] }, notes: string[]): string[] {
+  const out: string[] = [];
+  for (const m of placed.machines) {
+    const rec = placed.records.find(([a, ws]) => a === m.org && ws.length === m.words);
+    if (!rec) continue;
+    const ws = rec[1];
+    for (let k = 0; k + 4 <= ws.length; k++) {
+      if (NEIGHBOUR_1X.every((w, j) => ws[k + j] === w)) { ws.splice(k, 4, ...NEIGHBOUR_X20); out.push(`${m.name.trim()} (+${k})`); k += 3; }
+    }
+  }
+  void notes;
+  return out;
+}
+
 /** ISA_A over everything the build adds to the ColdFire: our routines from their entries, and every OS site's code bytes. */
 export function x20IsaGate(mem: CodeMem[], entries: number[], ours: (a: number) => boolean, siteCode: { at: number; bytes: Uint8Array }[]): { insns: number; rejects: Insn[] } {
   const r = scanCode(mem, entries, ours);
@@ -238,6 +262,7 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
     if (out.length) notes.push(`left out (they play UW samples): ${out.map(({ m }) => m.name.trim()).join(', ')}`);
     models = models.filter(({ m }) => !needsUwSamples(m));
   }
+  if (!models.length) throw new Error('No machines selected: tick at least one machine to build for X.20');
   const problems: string[] = [];
   const { sel, problems: idProblems } = allocate(R, models, opt.uw);
   problems.push(...idProblems);
@@ -252,13 +277,21 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   if (problems.length) throw new Error(problems.join('\n'));
 
   // ---- 3. DSP2 payload: code before DSP2 starts, dispatch words after
+  const neighbour = x20NeighbourReads(placed, notes);
+  if (neighbour.length) notes.push(`the previous track's output read for X.20's four rotating buffers in ${neighbour.join(', ')}`);
   const mem = new Map<number, number>();
   const dispatchSpan = (t: { init: number; trigger: number; render: number }, k: 'init' | 'trigger' | 'render', a: number): boolean =>
     a > t[k] && a <= t[k] + D.dispatch.entries;
   for (const [a, ws] of placed.records) ws.forEach((w, k) => mem.set(a + k, w));
+  const x20Own = new Set(R.file.ids.x20_own ?? []);
   for (const [a, w] of [...mem]) {
     for (const k of ['init', 'trigger', 'render'] as const) {
-      if (dispatchSpan(D.dispatch, k, a)) mem.set(D.relocated[k] + (a - D.dispatch[k]), w);
+      if (!dispatchSpan(D.dispatch, k, a)) continue;
+      const id = a - D.dispatch[k] - 1;
+      mem.set(D.relocated[k] + (a - D.dispatch[k]), w);
+      // X.20's own machines (its stock tables hold other code for them): the relocated tables only --
+      // writing their stock-table entries hangs DSP2 at boot
+      if (x20Own.has(id)) mem.delete(a);
     }
   }
   mem.set(D.usrBankEnd, bankEnd);                       // the user machines' SAMPLE_INFO: where the INTERNAL bank ends
@@ -278,7 +311,9 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   const upload = opt.dsp2Load === 'upload';
   if (upload) notes.push('DSP2 load: upload after DSP2 starts (emulator only; not for hardware)');
   const pre: [number, number[]][] = upload ? [] : [[boot.wiper.addr, boot.wiper.words], ...all.filter(([a]) => inRegions(a))];
-  const post = upload ? all : all.filter(([a]) => !inRegions(a));
+  // dispatch words last: an entry must never point at code that is not in DSP2 yet (the P-I clean stub
+  // the stock P-I inits are redirected to lives in the second region, above the dispatch tables)
+  const post = (upload ? all : all.filter(([a]) => !inRegions(a))).sort(([x], [y]) => Number(!inRegions(x) && x !== D.usrBankEnd) - Number(!inRegions(y) && y !== D.usrBankEnd) || x - y);
   for (const [a, ws] of pre) if (a < boot.wiper.addr + boot.wiper.words.length && boot.wiper.addr < a + ws.length && a !== boot.wiper.addr)
     throw new Error('a machine overlaps the boot loader\'s wiper');
 
@@ -315,7 +350,7 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   const st = stageCode(R, writeList(writes), preC.map((c) => R.flashAlias + c.at), postC.map((c) => R.flashAlias + c.at), wa, boot.receiver);
 
   // ---- gate: ISA_A over everything the ColdFire runs that the build adds
-  const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM'].map((n) => wa.asm.labels[n])];
+  const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM'].map((n) => wa.asm.labels[n]), wa.knobcb];
   const codeMem: CodeMem[] = [{ what: 'boot code', ram: R.ram.bootCode[0], bytes: st.asm.bytes }, { what: 'window A', ram: R.ram.window[0], bytes: wa.asm.bytes }];
   const inOurs = (a: number): boolean => codeMem.some((m) => a >= m.ram && a < m.ram + m.bytes.length);
   const isa = x20IsaGate(codeMem, entries, inOurs, [...siteCode, ...st.sites.map((s) => ({ at: s.at, bytes: s.bytes }))]);
@@ -345,7 +380,7 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   while ((len - L.header) % 16) len++;
   const stage = img.slice(0, len);
   stage.set(be32((len - L.header) / 4), L.copyLongsAt);
-  const packed = await uclPack(stage, 10);
+  const packed = await uclPack(stage, Number(process.env.KB_STAGE_LEVEL ?? 10));
   const back = nrv2bDecode(packed).out;
   if (back.length !== stage.length || back.some((b, k) => b !== stage[k])) throw new Error('stage image NRV2B round trip');
   const room = L.payloadFlash - L.slot0Flash;
@@ -363,7 +398,7 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
     machines: placed.machines.map((m) => ({ name: m.name.trim(), key: m.key, id: m.id, family: m.family, org: h(m.org), words: m.total })),
     e12: { bank_end: h(bankEnd), words: bank.words, stock_words: stockWords, freed_words: R.e12.bankEnd - bankEnd,
       flash_end: h(E12B_FLASH + (bank.used - 1) * 0x10000 + bank.end), trimmed: nTrim },
-    dsp2: { capacity: placed.capacity, demand: placed.demand, free: placed.free },
+    dsp2: { capacity: placed.capacity, demand: placed.demand, free: placed.free, regions: regions.map(([a, b]) => [h(a), h(b)] as [string, string]) },
     flash: { chunks_pre: preC.map((c) => [h(c.at), c.packed.length]), chunks_post: postC.map((c) => [h(c.at), c.packed.length]), list: h(listFlash),
       free_left: spans.reduce((n, [a, b]) => n + Math.max(0, b - a), 0) },
     stage: { boot_code: `${h(R.ram.bootCode[0])}..${h(R.ram.bootCode[0] + st.asm.bytes.length)}`, window: `${h(R.ram.window[0])}..${h(R.ram.window[0] + wa.asm.bytes.length)}`,

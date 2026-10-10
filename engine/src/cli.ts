@@ -18,12 +18,6 @@
 //   --trim-cap <s>       and cut to at most this long (default 0.55; 0 = no cap)
 //   --report <file>      write the build report as JSON
 //   --gate-report <file> write the compact report the emulator gates read
-//
-// MDX X.20 B (bases/x20.json, engine/src/x20.ts) is recognised by its .syx hash and built with a fixed
-// recipe: --uw/--no-uw, --families, --exclude, --trim-db/--trim-min/--trim-cap, --cache-align and --report
-// apply; the layout, restore, chroma and pitch-label options do not yet. The output is a .syx.
-//   --dsp2-load upload   emulator only: the machines' code goes to DSP2 after it starts (default preboot:
-//                        through DSP2's bootstrap, the way real hardware needs it)
 //   --no-dyn-labels      static knob labels even where the base supports dynamic ones
 //   --no-dsp1            no DSP1 drive even where the base supports it
 //   --ctr-control-all    narrow the one gate that keeps FUNC + knob (control all) from reaching a
@@ -112,6 +106,12 @@
 //   --discover <file>    what discovery finds in a base, feature by feature (no build; --report writes it as JSON)
 //
 // The output has the input's shape: a .syx for a .syx, a flash image for a flash image.
+//
+// MDX X.20 B (bases/x20.json, engine/src/x20.ts) is recognised by its .syx hash and built with a fixed
+// recipe: --uw/--no-uw, --families, --exclude, --trim-db/--trim-min/--trim-cap, --cache-align and --report
+// apply; the layout, restore, chroma and pitch-label options do not yet. The output is a .syx.
+//   --dsp2-load upload   emulator only: the machines' code goes to DSP2 after it starts (default preboot:
+//                        through DSP2's bootstrap, the way real hardware needs it)
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

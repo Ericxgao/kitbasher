@@ -5,8 +5,9 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { idAllowedOnX20, parseRecipe, recipeFor, type X20RecipeFile } from '../src/x20_recipe.js';
 import { cacheOpsIn, dsp2BootLoader, isCode, siteBytes, stageCode, windowA, writeList, x20Map, evalExpr } from '../src/x20_cf.js';
-import { buildX20, trimX20, x20IsaGate } from '../src/x20.js';
-import { anchorMismatches, relocationAudit } from '../src/x20_audit.js';
+import { buildX20, trimX20, x20IsaGate, x20NeighbourReads, NEIGHBOUR_1X, NEIGHBOUR_X20 } from '../src/x20.js';
+import { anchorMismatches, preloadConflicts, relocationAudit } from '../src/x20_audit.js';
+import { buildBank, decode as e12Decode, encode as e12Encode, freeFlash, readBank, ENTRIES } from '../src/e12b.js';
 import { decodeLinear } from '../src/isa.js';
 import { loadPacks } from '../src/node.js';
 import { sha256 } from '../src/bytes.js';
@@ -55,7 +56,7 @@ test('x20: recipe expressions', () => {
 
 test('x20: every site is as long as its anchor, and every code site decodes as ISA_A (no move #imm,(d16,An))', () => {
   const M = x20Map(R, 25, 0x124c06);
-  const wa = windowA(R, M, new Map([[6, 0], [42, 10]]), new Uint8Array(64), 0xe6868);
+  const wa = windowA(R, M, new Map([[6, 0], [42, 10]]), Buffer.from('4e75'.repeat(32), 'hex'), 0xe6868);
   const names: Record<string, number> = { STACK: M.stack, RECS: M.recs, CAP: M.cap, MENU: M.menu, M_U: M.mU, M_L: M.mL,
     LIST: M.list, LIST_N: M.listN, BANK_END: 0x124c06, HTAB: wa.htab };
   const code: { at: number; bytes: Uint8Array }[] = [];
@@ -70,7 +71,7 @@ test('x20: every site is as long as its anchor, and every code site decodes as I
   const st = stageCode(R, writeList(writes), [0x100ca2dc], [0x100cfe18], wa, boot.receiver);
   const mem = [{ what: 'boot code', ram: R.ram.bootCode[0], bytes: st.asm.bytes }, { what: 'window A', ram: R.ram.window[0], bytes: wa.asm.bytes }];
   const ours = (a: number): boolean => mem.some((m) => a >= m.ram && a < m.ram + m.bytes.length);
-  const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM'].map((n) => wa.asm.labels[n])];
+  const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM'].map((n) => wa.asm.labels[n]), wa.knobcb];
   const r = x20IsaGate(mem, entries, ours, [...code, ...st.sites]);
   assert.deepEqual(r.rejects.map((i) => `${i.at.toString(16)} ${i.why}`), []);
   assert.ok(r.insns > 300);
@@ -119,6 +120,76 @@ test('x20: the build refuses any file but the one the recipe names', async () =>
   await assert.rejects(buildX20(new Uint8Array(100), file(), packs, core, { uw: true, trim: { db: -30, minSeconds: 0.5, cap: 0.55 } }), /hash differs/);
 });
 
+test('x20: the new-machine list copy refuses an empty selection (its do-while count would wrap and overwrite RAM)', () => {
+  assert.throws(() => windowA(R, x20Map(R, 0, 0x124c06), new Map(), new Uint8Array(4), 0xe6868), /at least one machine/);
+  assert.doesNotThrow(() => windowA(R, x20Map(R, 1, 0x124c06), new Map([[6, 0]]), new Uint8Array(4), 0xe6868));
+});
+
+test('x20: the dispatch upload waits for the pre-boot load to complete (pre_done = 2); the flag is set after the port check', () => {
+  const wa = windowA(R, x20Map(R, 1, 0x124c06), new Map([[6, 0]]), new Uint8Array(4), 0xe6868);
+  const code = (pre: number[]): string[] => {
+    const st = stageCode(R, writeList([]), pre, [0x100cfe18], wa, dsp2BootLoader(R).receiver);
+    const L = st.asm.listing;
+    const at = (n: string): number => L.findIndex((l) => l.at === st.asm.labels[n]);
+    return [...L.slice(at('UPLOAD'), at('UPLOAD') + 6).map((l) => l.text), '|', ...L.slice(at('DSP2PRE'), at('DSP2PRE') + 10).map((l) => l.text)];
+  };
+  const c = code([0x100ca2dc]);
+  assert.deepEqual(c.slice(2, 6), ['move.l @pre_done,d0', 'moveq #2,d1', 'cmp.l d1,d0', 'bne.w up_end']);
+  const pre = c.slice(c.indexOf('|'));
+  assert.ok(pre.indexOf(`cmpi.l #${R.host.dsp2},d0`) < pre.indexOf('move.l d0,@pre_done'));
+  // without a pre-boot load (the emulator's post-start upload) nothing gates the upload
+  assert.ok(!code([]).slice(0, 6).includes('move.l @pre_done,d0'));
+});
+
+test('e12b: a synthetic bank round-trips through the encoder, the bank layout and the reader', () => {
+  const tone = (n: number, f: number): number[] => Array.from({ length: n }, (_, k) => Math.round(1500 * Math.sin(k * f)) & 0xfff);
+  const samples: (number[] | null)[] = Array.from({ length: ENTRIES }, (_, i) =>
+    i === 3 ? null : i === 5 ? new Array(300).fill(0x7ff) : [...tone(500 + 137 * i, 0.01 * (i + 1)), ...new Array(34).fill(0)]);
+  for (const x of samples) if (x) assert.deepEqual(e12Decode(e12Encode(x), x.length), x);
+  const names = Array.from({ length: ENTRIES }, (_, i) => Uint8Array.from(Buffer.from(('S' + i).padEnd(4).slice(0, 4))));
+  const bank = buildBank(samples, names);
+  assert.deepEqual(readBank(bank.area).samples, samples);
+  assert.ok(freeFlash(bank).length > 0 && freeFlash(bank).every(([a, b]) => b > a));
+});
+
+test('x20: nothing written after the pre-boot load may land on the machines or the boot loader', () => {
+  const B = R.dsp2.boot, be = R.e12.table + 3 * R.e12.count;
+  const regions: [number, number][] = [[be, R.e12.bankEnd], ...R.dsp2.free];
+  assert.deepEqual(preloadConflicts(R, [[0x100000, 0x1025c4], [0x1028c0, 0x135205], [0x146000, 0x147bff], [0x147e00, 0x147f07]], be, regions), []);
+  assert.equal(preloadConflicts(R, [[B.wiper + 4, B.wiper + 4]], be, regions).length, 1);
+  assert.equal(preloadConflicts(R, [[0x147c10, 0x147c20]], be, regions).length, 1);
+});
+
+test('x20: a ping-pong neighbour read (md_output XOR $20) is rewritten for X.20\'s four rotating buffers; nothing else is', () => {
+  const code = [0x000000, ...NEIGHBOUR_1X, 0x0c0000, ...NEIGHBOUR_1X];
+  const placed = { records: [[0x120000, [...code]] as [number, number[]]], machines: [{ org: 0x120000, words: code.length, name: 'FX   ' }] };
+  assert.deepEqual(x20NeighbourReads(placed, []), ['FX (+1)', 'FX (+6)']);
+  assert.deepEqual(placed.records[0][1], [0x000000, ...NEIGHBOUR_X20, 0x0c0000, ...NEIGHBOUR_X20]);
+  const other = { records: [[0x120000, [0x5ef000, 0x000140, 0x016084, 0x219000]] as [number, number[]]], machines: [{ org: 0x120000, words: 4, name: 'X' }] };
+  assert.deepEqual(x20NeighbourReads(other, []), []);
+  // the bundled ladder filter reads its neighbour that way, and its pack keeps the base-neutral form
+  const { packs } = loadPacks([join(ROOT, 'catalog')]);
+  const ladder = packs.flatMap((p) => p.models).find((m) => m.name.trim() === 'NFX4P')!;
+  const b = Buffer.from(ladder.code.words, 'base64');
+  const w = Array.from({ length: b.length / 3 }, (_, k) => b[3 * k] | (b[3 * k + 1] << 8) | (b[3 * k + 2] << 16));
+  assert.deepEqual(w.slice(222, 226), NEIGHBOUR_1X);
+});
+
+test('x20: the applier leaves the boot code in X.20\'s heap as zeros before entering the OS', () => {
+  const wa = windowA(R, x20Map(R, 1, 0x124c06), new Map([[6, 0]]), new Uint8Array(4), 0xe6868);
+  const st = stageCode(R, writeList([]), [0x100ca2dc], [0x100cfe18], wa, dsp2BootLoader(R).receiver);
+  const t = st.asm.listing.map((l) => l.text);
+  const k = t.indexOf('jsr @UPLOAD');
+  assert.deepEqual(t.slice(k + 1, k + 8), ['lea @ap_end,a0', `move.l #${R.ram.bootCode[1]},d1`, 'clr.l (a0)+', 'move.l a0,d0', 'cmp.l d1,d0', 'bcs.b ap_z', `jmp ${'0x' + R.loader.handoff.enter.toString(16)}.l`]);
+  assert.ok(st.asm.labels.ap_end > st.asm.labels.APPLIER && st.asm.labels.ap_end < R.ram.bootCode[1]);
+});
+
+test('x20: X.20\'s own machines are never usable IDs', () => {
+  const f = file();
+  f.ids.usable = [...f.ids.usable, 86];
+  assert.throws(() => parseRecipe(f), /reserves|X\.20's own/);
+});
+
 // ---- offline, against a decoded X.20 B OS image (KB_X20_OS; never committed)
 
 const OS = process.env.KB_X20_OS;
@@ -137,6 +208,16 @@ test('x20 recipe: relocation audit -- every reference to what the recipe moves i
   f.sites = f.sites.filter((s) => s.group !== 'usr');
   const r = relocationAudit(parseRecipe(f), os, spec);
   assert.ok(r.unexplained.length >= 10, r.unexplained.join('\n'));
+});
+
+const MAP = process.env.KB_X20_DSP_MAP;
+const mapSkip = !MAP || !existsSync(MAP) ? 'KB_X20_DSP_MAP is not set to the decoded X.20 B DSP write map' : false;
+
+test('x20: X.20 B\'s own DSP2 load (the decoded write map) never lands on the pre-loaded machines or the boot loader', { skip: mapSkip }, () => {
+  const m = JSON.parse(readFileSync(MAP!, 'utf8')) as { dsp2: Record<string, { ranges: [string, string, number][] }> };
+  const w = ['P', 'X', 'Y'].flatMap((k) => m.dsp2[k].ranges.map(([a, b]) => [parseInt(a, 16), parseInt(b, 16)] as [number, number])).filter(([a]) => a >= 0x100000);
+  const worst = R.e12.table + 3 * R.e12.count;            // no trim frees more than this
+  assert.deepEqual(preloadConflicts(R, w, worst, [[worst, R.e12.bankEnd], ...R.dsp2.free]), []);
 });
 
 // ---- with firmware (MD_FIRMWARE_DIR holding the X.20 B .syx; skipped without it)
@@ -161,4 +242,17 @@ test('firmware: X.20 B builds the bundled catalog, deterministically, with every
   assert.equal(new Set(a.report.machines.map((m) => m.id)).size, a.report.machines.length);
   const noUw = await buildX20(syx, file(), packs, core, { ...opt, uw: false });
   assert.ok(noUw.report.machines.every((m) => m.id < 128));
+  // no machine: refused before anything is laid out
+  await assert.rejects(buildX20(syx, file(), packs, core, { ...opt, families: [] }), /No machines selected/);
+  // one machine
+  const modules = [...new Set(packs.flatMap((p) => p.models.map((m) => m.module)))];
+  const one = await buildX20(syx, file(), packs, core, { ...opt, exclude: modules.slice(1) });
+  assert.equal(one.report.machines.length, 1);
+  assert.ok(one.report.gates.every((g) => g.ok));
+  // the stock E12 bank, read and encoded again, is the same bytes: the encoder is the stock one
+  const { decodeSyx, OS_START } = await import('../src/syx.js');
+  const area = decodeSyx(syx).subarray(0x90000 - OS_START, 0xf0000 - OS_START);
+  const stock = readBank(area);
+  const again = buildBank(stock.samples, stock.names);
+  assert.ok(again.entries.every((e, i) => e.bytes === stock.directory.entries[i].bytes && e.crcIn === stock.directory.entries[i].crcIn));
 });

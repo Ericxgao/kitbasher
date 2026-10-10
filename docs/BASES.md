@@ -178,7 +178,11 @@ What a build changes (engine/src/x20.ts):
   dispatch words go after DSP2 starts, through the OS's own block write.
   Uploading all the code after DSP2 starts makes the OS miss DSP2's startup
   messages on hardware; `--dsp2-load upload` does it anyway, for the emulator
-  only (whose DSP does not run code written through X memory).
+  only (whose DSP does not run code written through X memory). If the pre-boot
+  load fails (a timeout, a checksum mismatch), the dispatch words are not written
+  either, so the OS boots with its stock machines rather than jumping into
+  missing code. **This path is untested on hardware for the public build**; it is
+  checked offline against X.20 B's own DSP load map.
 - Added machines go into X.20's own menu families (analog drums in TRX, FM
   voices in EFM, effects in NFX, the rest in GND).
 

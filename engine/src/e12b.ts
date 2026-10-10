@@ -20,8 +20,8 @@
 // 2 p1 - p2. A block's bits, header included, are at most 0x608. p1 and p2 carry across blocks.
 // Samples are 12-bit; the decoder packs two per 24-bit DSP word, the first in the high half.
 //
-// The encoder reproduces the stock bank byte for byte (engine/test/e12b.test.ts checks it against
-// an X.20 file when one is given): a constant block is always 0xf1; otherwise the fewest bits wins,
+// The encoder reproduces the stock bank byte for byte (engine/test/x20.test.ts checks a synthetic
+// round trip, and the stock bank when MD_FIRMWARE_DIR holds the X.20 B file): a constant block is always 0xf1; otherwise the fewest bits wins,
 // ties going to raw, then order 0 with k 0..11, then order 1, then order 2.
 
 export const E12B_FLASH = 0x90000;

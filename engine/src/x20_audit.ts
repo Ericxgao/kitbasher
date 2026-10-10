@@ -68,6 +68,16 @@ export function relocationAudit(R: X20Recipe, os: Uint8Array, spec: AuditSpec): 
   const consts = new Set(spec.constants.map((d) => parseInt(d, 16)));
   const seen = new Set<number>();
   const unexplained: string[] = [];
+  /** whether the word at `a` is a (d16,An) displacement: the source operand's (right after the opcode),
+   *  or a MOVE's destination's (its last word); immediates and absolute addresses are not */
+  const isD16 = (a: number): boolean => {
+    const s = insnOf(a), n = lenAt.get(s) ?? 2;
+    if (s === a) return false;
+    const op = (os[s - OS_BASE] << 8) | os[s - OS_BASE + 1];
+    const src = (op >> 3) & 7, move = (op >> 12) >= 1 && (op >> 12) <= 3, dst = (op >> 6) & 7;
+    if (a === s + 2 && src === 5) return true;
+    return move && dst === 5 && a === s + n - 2;
+  };
   const hit = (kind: string, at: number): void => {
     const s = insnOf(at);
     if (seen.has(s)) return;
@@ -86,10 +96,37 @@ export function relocationAudit(R: X20Recipe, os: Uint8Array, spec: AuditSpec): 
       if (s < OS_BASE + o) hit('cap constant', OS_BASE + o);
     }
     const w = (os[o] << 8) | os[o + 1];
-    if (disps.has(w) && o >= 2) {
-      const s = insnOf(OS_BASE + o);
-      if (s < OS_BASE + o) hit('base displacement', OS_BASE + o);
-    }
+    // any operand word for the field offsets (an addi #$19a8 to the base counts too); for $800, a value
+    // common in other structs and immediates, only a (d16,An) displacement
+    if (disps.has(w) && o >= 2 && insnOf(OS_BASE + o) < OS_BASE + o && (w !== 0x800 || isD16(OS_BASE + o))) hit('base displacement', OS_BASE + o);
   }
   return { checked: seen.size, unexplained };
+}
+
+/**
+ * The pre-boot load, checked offline. The machines' code goes into DSP2 before DSP2's own loader runs,
+ * so nothing that loader writes afterwards may land on it. `written` is the map of DSP2 external memory
+ * X.20 B's own load writes (decoded offline from the release: [lo, hi] inclusive). Its E12 bank
+ * ([table, stock bank end)) is rewritten at boot from the trimmed bank, which ends at `bankEnd`; every
+ * other write it makes must miss the machines' regions and the boot loader (wiper and save area).
+ */
+export function preloadConflicts(R: X20Recipe, written: [number, number][], bankEnd: number, regions: [number, number][]): string[] {
+  const out: string[] = [];
+  const e12: [number, number] = [R.e12.table, R.e12.bankEnd];
+  const B = R.dsp2.boot;
+  const keep: [number, number, string][] = [...regions.map(([a, b]) => [a, b, 'machines'] as [number, number, string]),
+    [B.wiper, B.saveEnd, 'boot loader wiper/save area']];
+  if (bankEnd > e12[1] || bankEnd < e12[0]) out.push(`bank end ${bankEnd.toString(16)} outside the stock E12 bank`);
+  for (const [lo, hiIncl] of written) {
+    const hi = hiIncl + 1;
+    // the parts of this write outside the E12 bank (the bank itself is rewritten from the trimmed one)
+    const parts: [number, number][] = [];
+    if (lo < e12[0]) parts.push([lo, Math.min(hi, e12[0])]);
+    if (hi > e12[1]) parts.push([Math.max(lo, e12[1]), hi]);
+    for (const [a, b] of parts) for (const [ka, kb, what] of keep)
+      if (a < kb && ka < b) out.push(`X.20's load writes ${a.toString(16)}..${(b - 1).toString(16)}, over the ${what} at ${ka.toString(16)}..${(kb - 1).toString(16)}`);
+  }
+  // the trimmed bank's own writes end where the machines begin
+  for (const [ka, kb, what] of keep) if (e12[0] < kb && ka < bankEnd) out.push(`the trimmed E12 bank (to ${bankEnd.toString(16)}) overlaps the ${what}`);
+  return out;
 }

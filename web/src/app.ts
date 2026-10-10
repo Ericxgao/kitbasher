@@ -478,13 +478,15 @@ async function onFile(f: File): Promise<void> {
   try {
     let bytes: Uint8Array = new Uint8Array(await f.arrayBuffer());
     // MDX X.20 and later: a fixed recipe for that exact file, found by its hash
+    $('x20-result').replaceChildren();
+    if (x20Url) { URL.revokeObjectURL(x20Url); x20Url = null; }
     x20 = recipeFor(data.bases.recipes, await sha256(bytes));
     $('x20-panel').hidden = !x20;
     if (x20) {
       if (request !== fileRequest) return;
       input = bytes; inputName = f.name;
       $('x20-info').textContent = `${x20.name}: a public beta OS. Kitbasher patches this exact file with a fixed recipe. ` +
-        `${x20.qualification.level === 'hardware-proven' ? '' : `${x20.qualification.unproven ?? "Not yet tested on a Machinedrum"}. `}` +
+        `${x20.qualification.level === 'hardware-proven' ? '' : 'Untested on hardware: back up first and keep the stock X.20 B file to reflash. '}` +
         'It builds the ticked machines with the default sample trim; the room meters, sample swapping and the menu editor are not available for it yet. ' +
         'User machines (USR) keep working; replacing the INTERNAL (E12) samples is turned off on this OS.';
       status(`Loaded ${f.name} (${x20.name}). Answer the UW question, then build.`, 'ok');

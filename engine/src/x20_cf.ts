@@ -103,7 +103,8 @@ export function windowA(R: X20Recipe, M: X20Map, ours: Map<number, number>, knob
   I('moveq', '#0', 'd0'); I('rts');
   a.label('guard_ok'); I('move.l', 'a2', '-(a7)'); I('tst.l', '12(a7)'); I('jmp', `${h(H.GUARD)}.l`);
   // flash file system erase (ctx, ...): refused for the E12B instance only (its spare sectors hold the
-  // machines' code); the +Drive machine banks erase as stock
+  // machines' code); the +Drive machine banks erase as stock. X.20's erase and program routines return
+  // 0 for a failure (their callers test for non-zero), so d0 = 0 reports the refusal as one.
   a.label('ERGUARD');
   I('move.l', '4(a7)', 'd0'); I('cmpi.l', `#${H.erguard.context}`, 'd0'); I('bne.b', 'er_stock'); I('moveq', '#0', 'd0'); I('rts');
   a.label('er_stock'); I('lea', '-16(a7)', 'a7'); I('movem.l', 'd2-d4/a2', '(a7)'); I('jmp', `${h(H.erguard.resume)}.l`);
@@ -114,6 +115,9 @@ export function windowA(R: X20Recipe, M: X20Map, ours: Map<number, number>, knob
   I('lea', '-12(a7)', 'a7'); I('movem.l', 'd1/a0-a1', '(a7)');
   I('lea', `${h(SL.at)}.l`, 'a0'); I('lea', `${h(M.list)}.l`, 'a1'); I('move.l', `#${SL.entries * SL.entryBytes / 4}`, 'd1');
   a.label('cl_stock'); I('move.l', '(a0)+', '(a1)+'); I('subq.l', '#1', 'd1'); I('bne.b', 'cl_stock');
+  // a do-while: with no machine of ours the count would wrap and overwrite RAM, so the count is checked
+  // here, at build time (and the build refuses an empty selection before this, x20.ts)
+  if (M.listN <= SL.entries) throw new Error('the new-machine list needs at least one machine of ours');
   I('lea', `${h(R.flashAlias + listFlash)}.l`, 'a0'); I('move.l', `#${(M.listN - SL.entries) * SL.entryBytes / 4}`, 'd1');
   a.label('cl_ours'); I('move.l', '(a0)+', '(a1)+'); I('subq.l', '#1', 'd1'); I('bne.b', 'cl_ours');
   I('movem.l', '(a7)', 'd1/a0-a1'); I('lea', '12(a7)', 'a7'); I('move.l', `${h(H.COPYLIST_READS)}.l`, 'd0'); I('rts');
@@ -215,7 +219,14 @@ export function stageCode(R: X20Recipe, list: Uint8Array, preChunks: number[], p
   s.label('ap_h'); S('move.l', '(a0)+', '(a1)+'); S('subq.l', '#1', 'd0'); S('bne.b', 'ap_h');
   S('move.l', `#${wa.knobcb}`, 'd0'); S('move.l', 'd0', '(a1)');
   S('jsr', '@UPLOAD');
+  // The boot code lies in X.20's heap, which the OS uses without clearing: leave it as zeros (everything
+  // after this routine's last instruction, to the heap's end), or what the boot code leaves behind
+  // steers the OS (an unrelated byte change here froze the boot)
+  S('lea', '@ap_end', 'a0'); S('move.l', `#${R.ram.bootCode[1]}`, 'd1');
+  s.label('ap_z'); S('clr.l', '(a0)+'); S('move.l', 'a0', 'd0'); S('cmp.l', 'd1', 'd0'); S('bcs.b', 'ap_z');
   S('jmp', `${h(R.loader.handoff.enter)}.l`);
+  s.align(4);
+  s.label('ap_end');
   // HI08 (DSP2): TRDY set and no host command pending; TXDE. d4 counts down to a timeout.
   let n = 0;
   const drain = (): void => {
@@ -238,6 +249,9 @@ export function stageCode(R: X20Recipe, list: Uint8Array, preChunks: number[], p
   };
   s.label('UPLOAD');
   S('lea', '-32(a7)', 'a7'); S('movem.l', 'd2-d7/a2-a3', '(a7)');
+  // the dispatch words point into code the pre-boot load put in DSP2: unless that load completed
+  // (pre_done = 2), write none of them -- DSP2 would jump into memory that holds no code
+  if (preChunks.length) { S('move.l', '@pre_done', 'd0'); S('moveq', '#2', 'd1'); S('cmp.l', 'd1', 'd0'); S('bne.w', 'up_end'); }
   S('lea', '@chunks', 'a3');
   s.label('up_chunk'); S('move.l', '(a3)+', 'd0'); S('beq.w', 'up_end');
   S('move.l', 'd0', 'a0'); S('lea', `${h(BUF)}.l`, 'a1'); S('bsr.w', 'NRV2B'); S('move.l', 'a1', 'd7');
@@ -281,9 +295,10 @@ export function stageCode(R: X20Recipe, list: Uint8Array, preChunks: number[], p
   s.label('DSP2PRE');
   S('lea', '-52(a7)', 'a7'); S('movem.l', 'd0-d7/a0-a3/a5', '(a7)');
   S('tst.l', '@pre_done'); S('bne.w', 'pre_out');
-  S('moveq', '#1', 'd0'); S('move.l', 'd0', '@pre_done');
   S('move.l', '84(a7)', 'a5');
   S('move.l', 'a5', 'd0'); S('cmpi.l', `#${HP}`, 'd0'); S('bne.w', 'pre_out');
+  // DSP2's port: tried once from here on (1 = started, 2 = completed; UPLOAD checks for 2)
+  S('moveq', '#1', 'd0'); S('move.l', 'd0', '@pre_done');
   if (preChunks.length) {
     S('move.l', '#0x454c44', 'd1'); S('bsr.w', 'TX1'); S('tst.l', 'd4'); S('beq.w', 'pre_out');
     S('move.l', `#${rx.length}`, 'd1'); S('bsr.w', 'TX1'); S('tst.l', 'd4'); S('beq.w', 'pre_out');

@@ -5,7 +5,7 @@
 // The recipe therefore names its OS file by SHA-256 and lists, for every place the build changes,
 // the address and the bytes X.20 B has there (the anchor). The build (engine/src/x20.ts) accepts only
 // the file whose hash the recipe names, so the anchors are checked offline, against a decoded X.20 B
-// (engine/test/x20_recipe.test.ts, KB_X20_OS). Addresses, anchors and hashes only: the recipe holds no
+// (engine/test/x20.test.ts, KB_X20_OS). Addresses, anchors and hashes only: the recipe holds no
 // firmware bytes, and the build reads none it does not need from the user's own file (the loader's
 // stage image and the E12B sample bank).
 
@@ -60,7 +60,7 @@ export interface X20RecipeFile {
     runtime: { abi: string; evidence: string };
     boot_loader: { about?: string; receiver: Hex; wiper: Hex; save: Hex; save_end: Hex; rdy: Hex };
   };
-  ids: { usable: number[]; not_usable: Record<string, string>; forbidden?: [number, number][] };
+  ids: { usable: number[]; not_usable: Record<string, string>; forbidden?: [number, number][]; x20_own?: number[] };
   families: Record<string, number>;
   /** X.20 menu family by pack family ('*': the rest), and by model key prefix (wins over the pack's) */
   pack_menu?: Record<string, string>;
@@ -156,6 +156,7 @@ export function checkRecipe(r: X20Recipe): void {
   if (r.ram.window[0] < r.ram.bootCode[1] || r.ram.window[1] > r.ram.menu) bad('the window must lie between the boot code and the menu struct');
   for (const id of r.usable) if (!Number.isInteger(id) || id < 0 || id >= r.dsp2.relocated.entries) bad(`ID ${id} is outside the dispatch tables`);
   for (const id of r.dsp2.pi.ids) if (r.usable.includes(id)) bad(`P-I ID ${id} is listed as usable`);
+  for (const id of r.file.ids.x20_own ?? []) if (r.usable.includes(id)) bad(`ID ${id} is one of X.20's own machines`);
   // X.20's user-machine IDs: a built-in machine on one of them freezes the OS when it is assigned
   for (const id of r.usable) if (!idAllowedOnX20(id)) bad(`ID ${id} is one X.20 reserves (96..123 MIDI/control machines: silent; 192 and up user machines: freezes the OS)`);
   for (const [lo, hi] of r.file.ids.forbidden ?? []) for (const id of r.usable) if (id >= lo && id <= hi) bad(`ID ${id} is in the recipe's forbidden range ${lo}..${hi}`);
