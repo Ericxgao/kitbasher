@@ -5,6 +5,7 @@ import { BrowserMdsTransport } from './mds-midi.js';
 interface CatalogEntry extends Omit<MdsMachine, 'bytes'> {
   packageBytes: number; channel: 'core' | 'community' | 'local'; author: string; summary: string;
   source: string | null; project: string | null; license: string; notes: string; sha256: string; url: string;
+  hardware?: 'uw' | 'all';
 }
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') { const n = document.createElement(tag); n.textContent = text; if (className) n.className = className; return n; }
@@ -63,7 +64,8 @@ function render() {
   for (const e of shown) {
     const selected = selection.findIndex(m => m.contentId === e.contentId), row = node('tr'); row.dataset.selected = String(selected >= 0);
     const nameCell = node('td'), name = button(e.alias, () => details(e)); name.className = 'machine-name';
-    nameCell.append(name, node('span', e.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()), 'machine-subtitle'));
+    nameCell.append(name, node('span', e.summary, 'machine-subtitle'));
+    if (e.hardware) nameCell.append(node('span', e.hardware === 'uw' ? 'UW required' : 'UW + non-UW', 'machine-subtitle'));
     const collection = node('td', e.channel === 'local' ? 'Local' : e.channel === 'core' ? 'Core' : 'Community');
     const memory = node('td', number(e.words), 'numeric'); memory.title = `${number(e.packageBytes)} package bytes · ${e.cycles} declared clocks/block`;
     const pick = node('td'), b = button(selected < 0 ? 'Add' : 'Added', () => selected < 0 ? add(e) : remove(selected), selected < 0 ? `Add ${e.alias}` : `Remove ${e.alias}`); b.className = 'pick-button'; b.setAttribute('aria-pressed', String(selected >= 0)); pick.append(b);
@@ -121,6 +123,7 @@ function details(e: CatalogEntry) {
   body.append(dl, node('h3', 'Controls')); const controls = node('div', '', 'mds-controls');
   for (const p of e.parameters) controls.append(node('div', `${p.name} · ${p.min}–${p.max} · default ${p.default}`, 'mds-control')); body.append(controls);
   if (e.notes) body.append(node('p', e.notes));
+  if (e.hardware) body.append(node('p', e.hardware === 'uw' ? 'Requires a Machinedrum UW, as specified by the author.' : 'Supports UW and non-UW Machinedrums, as specified by the author.'));
   if (e.tonal) body.append(node('p', 'Tonal machine with pitch control.'));
   if (e.neighbour) body.append(node('p', 'Neighbour machine: processes audio from preceding tracks.'));
   if (e.stereoPair) body.append(node('p', 'Supports stereo pairing when the same installed machine is assigned to adjacent tracks. Pan the tracks apart for stereo.'));

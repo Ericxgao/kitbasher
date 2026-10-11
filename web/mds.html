@@ -13,16 +13,16 @@
 <body class="bench mds-page"><main>
   <header class="page-head"><a class="brand" href="index.html">Kitbasher</a><button type="button" id="theme-toggle" class="theme-toggle">Dark mode</button></header>
   <nav class="site-nav" aria-label="Main navigation"><a href="index.html">Firmware builder</a><a href="mds.html" aria-current="page">MDS machines</a></nav>
-  <div class="mds-intro"><div><h1>Your next machine bank.</h1><p>Core and community synthesis for Machinedrum X.20. Pick your machines, arrange their slots, and make them yours.</p></div></div>
+  <h1 class="sr-only">MDS machines</h1>
   <p id="mds-status" role="status" aria-live="polite">Loading the machine library…</p>
   <div class="mds-workspace">
     <section class="mds-library" aria-labelledby="library-title">
       <div class="mds-section-head"><h2 id="library-title">Machine library <span id="catalog-count"></span></h2><label class="mds-file">Import .syx / .mds<input type="file" id="import-machines" accept=".syx,.mds" multiple></label></div>
       <div class="mds-filters"><label class="mds-search">Find a machine<input id="machine-search" type="search" placeholder="Search name, family or author"></label><label>Collection<select id="collection-filter"><option value="all">Core + community</option><option value="core">Core</option><option value="community">Community</option><option value="local">Local imports</option></select></label><label>Sort by<select id="machine-sort"><option value="curated">Curated order</option><option value="name">Name</option><option value="smallest">Smallest first</option><option value="cpu">Lowest CPU cost</option></select></label></div>
       <div class="mds-family-bar"><label>Family<select id="family-filter"><option value="all">All families</option></select></label><button type="button" id="add-family" disabled>Add family</button></div>
-      <div class="mds-table-wrap"><table class="mds-table"><thead><tr><th scope="col">Machine</th><th scope="col">Collection</th><th scope="col" class="numeric">DSP words</th><th scope="col"><span class="sr-only">Selection</span></th></tr></thead><tbody id="machine-list"></tbody></table></div>
+      <div class="mds-table-wrap" tabindex="0" role="region" aria-label="Available machines"><table class="mds-table"><thead><tr><th scope="col">Machine</th><th scope="col">Collection</th><th scope="col" class="numeric">DSP words</th><th scope="col"><span class="sr-only">Selection</span></th></tr></thead><tbody id="machine-list"></tbody></table></div>
       <p id="empty-library" hidden>No machines match. Try another family or search.</p>
-      <details class="mds-about"><summary>About this library &amp; contributing machines</summary><p>Releases are curated and pinned to exact files. Core machines come from the X.20 USR collection; community entries link to their available source. Local imports stay in your browser and are not published.</p><p><a href="https://github.com/etcetc000/kitbasher/blob/main/mds/README.md" target="_blank" rel="noopener">Add or update a machine</a> · <a href="https://github.com/jmamma/MDS" target="_blank" rel="noopener">MDS documentation</a></p></details>
+      <details class="mds-about"><summary>About &amp; contribute</summary><p>Releases are curated and pinned to exact files. Core machines come from the X.20 USR collection; community entries link to their available source. Local imports stay in your browser and are not published.</p><p><a href="https://github.com/etcetc000/kitbasher/blob/main/mds/README.md" target="_blank" rel="noopener">Add or update a machine</a> · <a href="https://github.com/jmamma/MDS" target="_blank" rel="noopener">MDS documentation</a> &middot; <a href="https://github.com/etcetc000/kitbasher">Kitbasher source</a></p><p>MDS v1 for X.20. Machine packages run on the device DSP; install releases from authors you trust.</p></details>
     </section>
     <aside class="mds-bank" aria-labelledby="bank-title">
       <div class="mds-section-head"><h2 id="bank-title">Your bank</h2><span id="selection-count">0 selected</span></div>
@@ -45,7 +45,6 @@
       </div>
     </aside>
   </div>
-  <footer class="footer-note">MDS v1 for X.20. Machine packages run on the device DSP; install releases from authors you trust. <a href="https://github.com/etcetc000/kitbasher">Kitbasher source</a>.</footer>
 </main>
 <dialog id="machine-details" aria-labelledby="detail-title"><div class="mds-dialog-head"><h2 id="detail-title"></h2><button type="button" id="close-details" aria-label="Close machine details">Close</button></div><div id="detail-body"></div></dialog>
 <script type="module" src="mds.js"></script>
