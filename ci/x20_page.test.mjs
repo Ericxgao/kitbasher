@@ -17,7 +17,7 @@ test('X.20: no separate build panel; a recognised file continues into the normal
   const branch = onFile.slice(onFile.indexOf('if (recipe) {'), onFile.indexOf('let parsed = readFirmware(bytes);'));
   assert.match(branch, /layoutEd\.setX20\(/);
   assert.match(branch, /try \{ samples\.setBank\(x20E12Bank\(R, bank0\)\); \}/);          // the Samples step works on X.20 too
-  assert.match(branch, /refresh\(\);\n\s+if \(gate\(uwAnswer, true\)\.ok\) showStep\(2\);/);
+  assert.match(branch, /refresh\(\);\n\s+if \(gate\(uwAnswer, true\)\.ok\) showStep\(3\);/);
   assert.match(branch, /untested on hardware/);
   // the steps and Next buttons accept an X.20 file as loaded, and still need the plan to fit
   assert.match(app, /const loaded = \(\): boolean => !!fw \|\| !!x20;/);

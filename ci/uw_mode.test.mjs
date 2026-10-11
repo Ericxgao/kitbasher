@@ -28,7 +28,7 @@ test('the page asks on step 1 with nothing pre-selected, and every way forward g
   assert.deepEqual(radios.map((r) => r[1]), ['yes', 'no']);
   assert.ok(radios.every((r) => !/checked/.test(r[2])), 'no answer is pre-selected');
   assert.doesNotMatch(html, /Not sure/);
-  // how to check: one small line, always visible, the same words as HOW_TO_CHECK
+  // Optional help keeps the same hardware identification instructions.
   assert.ok(q[0].includes(`<p class="fine" id="uw-help">${U.HOW_TO_CHECK}</p>`));
   assert.match(html, /id="firmware-next" class="wizard-primary" disabled/);
   // showStep refuses any step past the first, and the Next button follows the same gate
@@ -36,7 +36,8 @@ test('the page asks on step 1 with nothing pre-selected, and every way forward g
   assert.match(show, /n > 1 && needsUwAnswer\(\)/);
   const needs = app.slice(app.indexOf('function needsUwAnswer('), app.indexOf('async function onBuild('));
   assert.match(needs, /gate\(uwAnswer, !!fw\)/);
-  assert.match(app, /\$\('firmware-next'\)\.toggleAttribute\('disabled', !asked\.ok/);
+  assert.match(app, /\$\('firmware-next'\)\.toggleAttribute\('disabled', !uiReady \|\| building\)/);
+  assert.match(app, /if \(!loaded\(\)\) \{ \$\('file'\)\.click\(\); return; \} showStep\(3\)/);
 });
 
 test('answers are saved in files; nothing pre-fills the answer, not storage and not a file', () => {
@@ -79,7 +80,7 @@ test('the build and download refuse without an answer, whatever path reached the
   assert.match(app, /current\?\.ok \|\| !gate\(uwAnswer, true\)\.ok\) \{/);
   assert.match(app, /a\.addEventListener\('click', \(e\) => \{ if \(needsUwAnswer\(\)\) e\.preventDefault\(\); \}\);/);
   // the auto-advance after an OS load goes through the gate
-  assert.match(app, /if \(fw && gate\(uwAnswer, true\)\.ok\) showStep\(2\);/);
+  assert.match(app, /if \(fw && gate\(uwAnswer, true\)\.ok\) showStep\(3\);/);
 });
 
 const STOCK = ['GND', 'TRX', 'EFM', 'E12', 'P-I', 'INP', 'MID', 'CTR', 'ROM', 'RAM'];

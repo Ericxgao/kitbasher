@@ -5,8 +5,8 @@
 // re-plans the build
 // (engine/src/plan.ts: the same placement the build does, without packing). Users can select
 // freely; a selection that does not fit prompts for removing models or trimming samples.
-// Continuing from Models also runs a full build in memory to check compressed slot capacity
-// before the category step.
+// Build firmware checks compressed slot capacity and opens the download. Sample editing and
+// category arrangement are optional tools on the Machines page.
 //
 // MDX X.20 B (engine/src/x20.ts): recognised by its file hash and taken through the same steps. Its
 // plan (planX20) drives the meters (DSP2 words at the chosen trim, machine IDs, the new-machine list,
@@ -26,7 +26,7 @@ import type { TrimOptions } from '../../engine/src/e12.js';
 import { checkPack, modelWords, needLines, needsUwSamples, type CorePack, type Pack, type PackModel } from '../../engine/src/packs.js';
 import { merged, plan, trimFor, MIDI_CHROMA_CHANNEL, type Plan, type Trimmed } from '../../engine/src/plan.js';
 import { drawLcd } from './lcd.js';
-import { categories, describeModel } from './catalog.js';
+import { categories, describeModel, shortSoundLabel } from './catalog.js';
 import { addScreenHelp } from './screen-help.js';
 import { findLayout, fingerprint } from '../../engine/src/layout.js';
 import { LayoutEditor } from './layout-ui.js';
@@ -71,6 +71,7 @@ async function loadData(): Promise<Data> {
 }
 
 let data: Data;
+let uiReady = false;
 let input: Uint8Array | null = null;
 let inputName = '';
 let fw: Firmware | null = null;
@@ -120,30 +121,41 @@ function clearDownload(): void {
 }
 
 function syncWizard(): void {
+  document.body.dataset.view = String(step);
   $('memory-trim-slot').hidden = step !== 3;
-  if (step > 2) $(`step-${step}`).querySelector('.wizard-actions')!.before($('room'));
-  $('room').hidden = !loaded() || step <= 2;
+  $('builder-room-anchor').after($('room'));
+  $('room').hidden = !loaded() || step !== 3;
   const ready = planReady() && !packedCapacityProblem;
   const asked = gate(uwAnswer, loaded());
-  $('firmware-next').toggleAttribute('disabled', !asked.ok || building);
+  $('firmware-next').toggleAttribute('disabled', !uiReady || building);
+  $('file').toggleAttribute('disabled', !uiReady || building);
+  $('project-file').toggleAttribute('disabled', !uiReady || building);
+  $('firmware-next').textContent = !loaded() ? 'Choose firmware' : !asked.ok ? 'Answer the UW question' : 'Choose machines';
+  $('firmware-loaded').hidden = !loaded();
+  $('firmware-loaded').textContent = loaded() ? `Loaded: ${inputName}` : '';
+  $('qualification-note').hidden = !x20;
+  $('qualification-note').textContent = x20 ? 'X.20 B builds are not yet tested on hardware. Keep your original firmware and a backup.' : '';
   $('samples-next').toggleAttribute('disabled', !loaded() || building);
   $('project-save').toggleAttribute('disabled', !loaded() || building);
-  $('models-next').toggleAttribute('disabled', !ready || building);
-  $('categories-next').toggleAttribute('disabled', !ready || building);
+  $('models-next').toggleAttribute('disabled', building);
+  $('models-next').textContent = building ? 'Building firmware…' : !boxes().some(i => i.checked) ? 'Choose machines' : !ready ? 'Make room' : 'Build firmware';
+  $('categories-next').toggleAttribute('disabled', building);
   $('build').toggleAttribute('disabled', !ready || building);
+  $('build').hidden = !!downloadUrl;
   document.querySelectorAll<HTMLButtonElement>('[data-step]').forEach(b => {
     const n = Number(b.dataset.step);
     b.disabled = building || (n > 1 && !asked.ok) || (n > 3 && !ready);
-    if (n === step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    if (n === ([2, 4].includes(step) ? 3 : step)) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
   });
   document.querySelectorAll<HTMLButtonElement>('[data-back]').forEach(b => { b.disabled = building; });
+  syncSelectionSummary();
 }
 
 function showStep(n: number): void {
   if (building || (n > 1 && !loaded()) || (n > 3 && (!planReady() || packedCapacityProblem))) return;
   // the UW question is answered before anything else
   if (n > 1 && needsUwAnswer()) return;
-  if (step <= 3 && n > 3 && !cachedBuild) { void onBuild(n === 4 ? 'categories' : 'download'); return; }
+  if ((n === 5 && !downloadUrl) || (step <= 3 && n === 4 && !cachedBuild)) { void onBuild(n === 4 ? 'categories' : 'download'); return; }
   step = n;
   for (let i = 1; i <= 5; i++) $(`step-${i}`).hidden = i !== n;
   if (n === 2) samples.render();             // the pads show the bank as the current plan lays it
@@ -156,11 +168,42 @@ function showStep(n: number): void {
 
 function status(msg: string, kind: 'info' | 'ok' | 'error' = 'info'): void {
   const s = $('status');
+  delete s.dataset.uwError;
   s.textContent = msg;
   s.dataset.kind = kind;
 }
 
 const boxes = (): HTMLInputElement[] => Array.from(document.querySelectorAll<HTMLInputElement>('#machines input[type=checkbox]'));
+
+function syncSelectionSummary(): void {
+  const chosen = boxes().filter(i => i.checked);
+  $('selection-empty').hidden = chosen.length > 0;
+  $('builder-selection').replaceChildren(...chosen.map(i => {
+    const name = i.dataset.name!;
+    const remove = el('button', { type: 'button', 'aria-label': `Remove ${name}`, ...(building ? { disabled: '' } : {}) }, '×');
+    remove.onclick = () => { i.checked = false; refresh(); };
+    return el('li', {}, name, remove);
+  }));
+  const meters = [...document.querySelectorAll<HTMLElement>('#room .meter')].filter(m => !m.hidden);
+  const over = !buildable() || packedCapacityProblem;
+  const pending = $('m-packed').dataset.state === 'pending';
+  const percent = Math.ceil(Math.max(0, ...meters.map(m => Number(m.dataset.percent ?? 0))));
+  const bar = $<HTMLProgressElement>('builder-space'); bar.value = Math.min(100, percent);
+  bar.setAttribute('aria-label', `${percent}% of available space used${pending ? '; final size is being checked' : ''}`);
+  $('simple-room-note').textContent = !chosen.length ? 'Choose your sounds' : over ? 'Selection needs attention' : pending ? 'Checking space…' : 'Your selection fits';
+  const shortened = (current?.trim.report ?? x20Plan?.bank.report ?? []).some(r => r.kept < r.seconds);
+  $('trim-note').hidden = !shortened;
+  $('trim-note').textContent = shortened ? 'Sample tails are shortened to make room. Change this in sample settings below.' : '';
+}
+
+function filterMachines(): void {
+  const search = $<HTMLInputElement>('model-search').value.toLowerCase(), category = $<HTMLSelectElement>('model-filter').value;
+  for (const family of document.querySelectorAll<HTMLElement>('#machines .family')) {
+    for (const row of family.querySelectorAll<HTMLElement>('.machine')) row.hidden = (category !== 'all' && family.dataset.category !== category) || !row.textContent!.toLowerCase().includes(search);
+    family.hidden = ![...family.querySelectorAll<HTMLElement>('.machine')].some(row => !row.hidden);
+  }
+  $('no-matches').hidden = [...document.querySelectorAll<HTMLElement>('#machines .family')].some(f => !f.hidden);
+}
 
 // "Does your Machinedrum have the UW option?" (web/src/uw-mode.ts): asked on the first step, which
 // the page does not leave without a Yes or a No clicked in this visit. Nothing is pre-selected and
@@ -180,6 +223,7 @@ function syncLayoutUw(): void {
 }
 /** Only the user's click on Yes or No sets the answer. */
 function setUwAnswer(a: UwAnswer): void {
+  if ($('status').dataset.uwError === 'true') status('');
   uwAnswer = a;
   for (const r of Array.from(document.querySelectorAll<HTMLInputElement>('input[name=uw]'))) r.checked = r.value === a;
   syncLayoutUw();
@@ -213,6 +257,8 @@ function adoptLayout(l: Layout, from: string, extra = ''): void {
   const baseId = x20?.id ?? base?.id;
   if (!l.base && baseId) l = { ...l, base: baseId };
   layoutEd.adopt(l, from);                              // its UW answer: layoutEd.onAdopt
+  const wanted = new Set(catalogModels().filter(m => m.key in l.machines || m.aliases?.some(k => k in l.machines)).map(m => m.module));
+  for (const i of boxes()) i.checked = wanted.has(i.dataset.module!) && !i.disabled;
   $('project-status').textContent = `Machine IDs restored from ${from}: ${Object.keys(l.machines).length} machines keep their IDs.${extra}`;
   refresh();
 }
@@ -244,6 +290,7 @@ function applyNoUw(): void {
 let inspected: PackModel | null = null;
 
 function inspectModel(m: PackModel, scroll = false): void {
+  if (scroll) $<HTMLDetailsElement>('inspector-disclosure').open = true;
   inspected = m;
   $('model-family').textContent = describeModel(m).category;
   $('model-name').textContent = m.name.trim();
@@ -263,6 +310,7 @@ function inspectModel(m: PackModel, scroll = false): void {
 }
 
 function renderMachines(): void {
+  const chosen = new Set(boxes().filter(i => i.checked).map(i => i.dataset.module));
   const box = $('machines');
   box.replaceChildren();
   const models = merged(data.packs).flatMap(f => f.models.map(m => ({ m, size: modelWords(m, f.shared) })));
@@ -271,16 +319,16 @@ function renderMachines(): void {
     const list = el('div', { class: 'machines' });
     const group = models.filter(({ m }) => describeModel(m).category === category);
     for (const { m, size } of group) {
-      // Every model starts selected; auto trim and the meters account for workspace memory.
+      // Choose sounds explicitly; rebuilding the catalog preserves existing selections.
       const requiresUW = needsUwSamples(m);
-      const cb = el('input', { type: 'checkbox', 'aria-label': `Include ${m.name.trim()}`, 'data-module': m.module, checked: '', ...(requiresUW ? { 'data-uw': '1' } : {}) }) as HTMLInputElement;
+      const cb = el('input', { type: 'checkbox', 'aria-label': `Include ${m.name.trim()}`, 'data-module': m.module, 'data-name': m.name.trim(), ...(chosen.has(m.module) ? { checked: '' } : {}), ...(requiresUW ? { 'data-uw': '1' } : {}) }) as HTMLInputElement;
       cb.addEventListener('change', () => { inspectModel(m); refresh(); });
       const labels = m.labels.filter(Boolean).join(' ');
       const info = el('button', { type: 'button', class: 'machine-info', 'aria-label': `Preview ${m.name.trim()}${requiresUW ? ', requires UW' : ''}`, 'aria-controls': 'inspector', 'aria-pressed': 'false' },
         el('span', { class: 'machine-heading' }, el('span', { class: 'mname' }, m.name.trim()),
           el('span', { class: 'model-size', title: `${size.toLocaleString('en')} words of DSP memory` }, wordsLabel(size)),
           requiresUW ? el('span', { class: 'uw-badge', title: 'Plays a sample from UW sample memory: not available on a Machinedrum without UW' }, 'needs UW') : ''),
-        el('span', { class: 'machine-description' }, describeModel(m).description));
+        el('span', { class: 'machine-description' }, shortSoundLabel(m.name, describeModel(m).description)));
       info.addEventListener('click', () => inspectModel(m, true));
       list.append(el('div', { class: 'machine', 'data-module': m.module, 'data-labels': labels, title: labels },
         cb, info));
@@ -290,10 +338,14 @@ function renderMachines(): void {
     // Keep the user's full selection visible; capacity prompts offer trimming or pruning.
     all.addEventListener('click', () => { tickAll(list); refresh(); });
     none.addEventListener('click', () => { list.querySelectorAll('input').forEach((i) => { (i as HTMLInputElement).checked = false; }); refresh(); });
-    box.append(el('section', { class: 'family', id: `category-${index}` },
+    box.append(el('section', { class: 'family', id: `category-${index}`, 'data-category': category },
       el('header', {}, el('h3', {}, category), el('span', { class: 'count' }, String(group.length)), all, none), list));
   }
   applyNoUw();
+  const categoryFilter = $<HTMLSelectElement>('model-filter'), previous = categoryFilter.value;
+  categoryFilter.replaceChildren(new Option('All sounds', 'all'), ...groups.map(c => new Option(c, c)));
+  categoryFilter.value = groups.includes(previous) ? previous : 'all';
+  filterMachines();
   if (models.length) inspectModel((models.find(({ m }) => m.module === inspected?.module) ?? models[0]).m);
 }
 
@@ -426,6 +478,7 @@ function updateTrimControls(): void {
 function meter(id: string, used: number, cap: number, unit: string, over: boolean): void {
   const m = $(id);
   const pct = cap > 0 ? Math.min(100, (100 * used) / cap) : 100;
+  m.dataset.percent = String(cap > 0 ? 100 * used / cap : 100);
   (m.querySelector('.fill') as HTMLElement).style.width = `${pct}%`;
   m.dataset.state = over ? 'over' : pct > 90 ? 'tight' : 'ok';
   m.title = `${fmt(used)} / ${fmt(cap)} ${unit}`;
@@ -442,6 +495,7 @@ function refresh(minAutoDb: number | null = null): void {
   cachedBuild = null;
   $('room').hidden = !fw;
   $('m-packed').dataset.state = 'pending';
+  $('m-packed').dataset.percent = '0';
   $('m-packed').removeAttribute('title');
   $('m-packed').querySelector('.num')!.textContent = 'Checking…';
   ($('m-packed').querySelector('.fill') as HTMLElement).style.width = '0';
@@ -628,7 +682,7 @@ async function onFile(f: File): Promise<void> {
       status(`Loaded ${f.name} (${R.name}, public beta; untested on hardware).`, 'ok');
       if (pendingProject) applyProject(pendingProject.project, pendingProject.name);
       refresh();
-      if (gate(uwAnswer, true).ok) showStep(2);
+      if (gate(uwAnswer, true).ok) showStep(3);
       else status(`Loaded ${f.name} (${R.name}, public beta; untested on hardware). ${gate(uwAnswer, true).why}`, 'info');
       return;
     }
@@ -638,7 +692,7 @@ async function onFile(f: File): Promise<void> {
       if (request !== fileRequest) return;
       adoptLayout(builtX20, f.name);
       const was = data.bases.recipes.find((r) => r.id === builtX20.base)!;
-      status(`That's a Kitbasher build for ${was.name}: layout restored. Now drop the stock ${was.name} file it was built on.`, 'ok');
+      status(`That's a Kitbasher build for ${was.name}: layout restored. Now drop the stock ${was.name} file it was built on.`, 'info');
       refresh();
       return;
     }
@@ -663,7 +717,7 @@ async function onFile(f: File): Promise<void> {
         const profile = (id: string | undefined) => data.bases.profiles.find((x) => x.id === id);
         const built = profile(got?.layout.base);
         const want = profile((built as { prepared?: { from?: string } } | undefined)?.prepared?.from) ?? built;
-        status(`That's a Kitbasher build: layout restored. Now drop the stock ${want?.name ?? 'OS'} it was built on.`, 'ok');
+        status(`That's a Kitbasher build: layout restored. Now drop the stock ${want?.name ?? 'OS'} it was built on.`, 'info');
         refresh();
         return;
       }
@@ -692,7 +746,7 @@ async function onFile(f: File): Promise<void> {
     status(`${f.name}: ${(e as Error).message}`, 'error');
   }
   refresh();
-  if (fw && gate(uwAnswer, true).ok) showStep(2);
+  if (fw && gate(uwAnswer, true).ok) showStep(3);
   else if (fw) status(`Loaded ${f.name}. ${gate(uwAnswer, true).why}`, 'info');
 }
 
@@ -775,6 +829,7 @@ function showStorage(result: AnyBuild): void {
   if ('x20' in result) {
     // X.20: the machines' code, the list and the layout table in the E12B flash the trim frees
     meter('m-packed', result.report.flash.used, result.report.flash.capacity, 'bytes', false);
+    syncWizard();
     return;
   }
   const report = result.report;
@@ -782,8 +837,10 @@ function showStorage(result: AnyBuild): void {
     meter('m-packed', report.dsp2.packed, report.dsp2.packed_capacity, 'bytes', false);
   } else {
     $('m-packed').dataset.state = 'ok';
+    $('m-packed').dataset.percent = '0';
     $('m-packed').querySelector('.num')!.textContent = 'Fits; this base allows the storage slot to grow';
   }
+  syncWizard();
 }
 
 function showStorageProblem(e: CompressedCapacityError | OsAreaCapacityError | X20FlashError): void {
@@ -799,6 +856,7 @@ function showStorageProblem(e: CompressedCapacityError | OsAreaCapacityError | X
   $('sample-options').hidden = false;
   $('make-room-help').textContent = trimMode() === 'auto'
     ? 'Still too large. Remove models or lower At most.' : 'Remove models or choose Auto trim.';
+  syncWizard();
 }
 
 /**
@@ -868,6 +926,7 @@ function needsUwAnswer(): boolean {
   const asked = x20 ? gate(uwAnswer, true) : gate(uwAnswer, !!fw);
   if (asked.ok) return false;
   status(asked.why!, 'error');
+  $('status').dataset.uwError = 'true';
   if (step !== 1) { step = 1; for (let i = 1; i <= 5; i++) $(`step-${i}`).hidden = i !== 1; syncWizard(); }
   $('uw-question').querySelector<HTMLInputElement>('input')?.focus();
   return true;
@@ -907,7 +966,7 @@ async function onBuild(destination: 'categories' | 'download' = 'download'): Pro
     const stem = inputName.replace(/\.(syx|bin)$/i, '');
     const name = `${stem}-models.syx`;
     downloadUrl = URL.createObjectURL(blob);
-    const a = el('a', { class: 'download', href: downloadUrl, download: name }, `Download ${name}`);
+    const a = el('a', { class: 'download', href: downloadUrl, download: name, title: name }, 'Download firmware');
     a.addEventListener('click', (e) => { if (needsUwAnswer()) e.preventDefault(); });
     $('result').replaceChildren(a, el('details', {}, el('summary', {}, 'Build details and checks'), reportView(report)));
     status(`Built in ${((performance.now() - t) / 1000).toFixed(1)} s.`, 'ok');
@@ -932,7 +991,7 @@ function downloadX20(result: X20Built, t: number): void {
   const blob = new Blob([result.output as Uint8Array<ArrayBuffer>], { type: 'application/octet-stream' });
   const name = `${inputName.replace(/\.(syx|bin)$/i, '')}-models.syx`;
   downloadUrl = URL.createObjectURL(blob);
-  const a = el('a', { class: 'download', href: downloadUrl, download: name }, `Download ${name}`);
+  const a = el('a', { class: 'download', href: downloadUrl, download: name, title: name }, 'Download firmware');
   a.addEventListener('click', (e) => { if (needsUwAnswer()) e.preventDefault(); });
   $('result').replaceChildren(a,
     el('p', { class: 'note', id: 'x20-untested' }, `Untested on hardware: ${x20R!.name} builds are checked by the gates below and in an emulator only. Back up first and keep the stock ${x20R!.name} file to reflash.`),
@@ -1018,7 +1077,7 @@ async function onProjectFile(f: File): Promise<void> {
     if (loaded()) {
       const problem = osProblem(p.os, x20 ? osOfRecipe(x20) : base!);
       if (problem) throw new Error(`${problem}. Load the ${p.os.name || p.os.base} file it was made with first.`);
-      if (applyProject(p, f.name)) { refresh(); showStep(2); }
+      if (applyProject(p, f.name)) { refresh(); showStep(3); }
     } else {
       pendingProject = { project: p, name: f.name };
       note.textContent = `${f.name} is ready: now load the ${p.os.name || p.os.base} file it was made with.`;
@@ -1075,7 +1134,7 @@ async function main(): Promise<void> {
   // Keep memory and sample controls together above the current step's actions.
   const trimSlot = el('div', { id: 'memory-trim-slot' });
   trimSlot.append($('make-room'));
-  $('room').append(trimSlot);
+  $('capacity-details').append(trimSlot);
   $('room').hidden = true;
   layoutEd = new LayoutEditor($('layout-anchor'), () => {
     refresh();
@@ -1092,10 +1151,21 @@ async function main(): Promise<void> {
   document.querySelectorAll<HTMLButtonElement>('[data-step], [data-back]').forEach(b => {
     b.addEventListener('click', () => showStep(Number(b.dataset.step ?? b.dataset.back)));
   });
-  $('firmware-next').addEventListener('click', () => showStep(2));
+  $('firmware-next').addEventListener('click', () => { if (!loaded()) { $('file').click(); return; } showStep(3); });
   $('samples-next').addEventListener('click', () => showStep(3));
-  $('models-next').addEventListener('click', () => void onBuild('categories'));
-  $('categories-next').addEventListener('click', () => showStep(5));
+  $('models-next').addEventListener('click', () => {
+    if (!boxes().some(i => i.checked)) { $('model-search').focus(); return; }
+    if (!planReady() || packedCapacityProblem) { $<HTMLDetailsElement>('capacity-details').open = true; $('capacity-details').scrollIntoView({ block: 'nearest' }); return; }
+    void onBuild('download');
+  });
+  $('categories-next').addEventListener('click', () => showStep(3));
+  $('model-search').addEventListener('input', filterMachines);
+  $('model-filter').addEventListener('change', filterMachines);
+  $('select-all-machines').addEventListener('click', () => { tickAll($('machines')); refresh(); });
+  $('clear-machines').addEventListener('click', () => { boxes().forEach(i => i.checked = false); refresh(); });
+  document.querySelector('.builder-tools')!.addEventListener('click', e => {
+    if ((e.target as HTMLElement).closest('button')) document.querySelector<HTMLDetailsElement>('.builder-tools')!.open = false;
+  });
   samples = new SamplesStep($('samples-panel'), {
     onChange: () => { trims.clear(); x20Trims.clear(); refresh(); },
     saveKit: () => void saveProject(),
@@ -1129,7 +1199,7 @@ async function main(): Promise<void> {
     status(`Could not load the machine packs: ${(e as Error).message}`, 'error');
     return;
   }
-  status(data.packs.length ? 'Waiting for your OS file.' : 'Load your OS file, then add model packs in the Models step.');
+  status(data.packs.length ? '' : 'Choose your firmware, then add model packs under Machines.');
   renderMachines();
   const drop = $('drop');
   const file = $('file') as HTMLInputElement;
@@ -1171,6 +1241,8 @@ async function main(): Promise<void> {
   $('pitch-labels').addEventListener('change', () => refresh());
   const packFiles = $('pack-files') as HTMLInputElement;
   packFiles.addEventListener('change', () => { if (packFiles.files?.length) void onPackFiles(Array.from(packFiles.files)); });
+  uiReady = true;
+  syncWizard();
 }
 
 void main();

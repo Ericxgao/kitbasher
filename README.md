@@ -30,23 +30,19 @@ Kitbasher is a community project. It is not affiliated with or endorsed by Elekt
    machine IDs are now given from the lowest free one (the same selection, OS,
    UW answer and menu layout always get the same IDs), and earlier builds used
    others. See [Machine IDs](docs/BASES.md#machine-ids).
-3. **Swap samples (optional).** The E12 machines appear as a grid of pads: click
-   one to hear it, drop a WAV or AIFF file on it to replace it, or drop several
-   files or a folder to fill the pads in order. A new sample can be as long as the
-   one it replaces; a longer file is cut to fit. See [E12 samples](docs/SAMPLES.md).
-4. **Pick models.** Browse by category (kicks, snares, hats, percussion, FM,
-   synths, wavetables, vocal, physical modeling, effects) and check the machines you want. Click a
-   model to see its screen and what every control does. The meters show how much
-   DSP memory, menu space and firmware storage your selection uses; if it does
-   not fit, the page trims the tails of the built-in E12 samples just enough to
-   make room, or you can keep them and choose fewer models.
-5. **Arrange and download.** Keep the default menu categories or rearrange them,
-   then download the new `.syx` file. **Save project** keeps your samples,
-   models and layout in a [project file](docs/PROJECT-FILE.md) for next time.
-6. **Send it.** Hold FUNCTION while powering on, choose [5 LT] MIDI UPGRADE, and
+3. **Choose machines.** Search or browse by sound type and select what you want.
+   Your selection and space estimate stay beside the list. Click a machine's
+   name for its screen preview. **Space & sample settings** contains detailed
+   meters and the choice to trim sample tails or keep the originals.
+   Under **Options**, you can edit [E12 samples](docs/SAMPLES.md) or arrange the
+   machine menu; both are optional.
+4. **Build and download.** Click **Build firmware**, then **Download firmware**
+   to save the new `.syx`. **Save for next time → Save project** keeps your samples,
+   machines and layout in a [project file](docs/PROJECT-FILE.md).
+5. **Send it.** Hold FUNCTION while powering on, choose [5 LT] MIDI UPGRADE, and
    send the file from a SysEx tool with a 20 ms gap between messages.
 
-On OS X.14 and OS 1.63 the Download step also offers **MIDI chromatic note
+On OS X.14 and OS 1.63, **Firmware options** on the Download step offers **MIDI chromatic note
 input** (off by default): notes on MIDI channel 5 (base channel + 4) play the
 selected track at pitch, record a pitch p-lock in live record, and p-lock every
 held step in grid record. See [MIDI chromatic note input](docs/MIDI-CHROMATIC.md).
