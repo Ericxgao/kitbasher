@@ -30,10 +30,9 @@ Kitbasher is a community project. It is not affiliated with or endorsed by Elekt
    machine IDs are now given from the lowest free one (the same selection, OS,
    UW answer and menu layout always get the same IDs), and earlier builds used
    others. See [Machine IDs](docs/BASES.md#machine-ids).
-3. **Choose machines.** Search or browse by sound type and select what you want.
-   Your selection and space estimate stay beside the list. Click a machine's
-   name for its screen preview. **Space & sample settings** contains detailed
-   meters and the choice to trim sample tails or keep the originals.
+3. **Choose machines.** Browse the model cards by category and select what you want.
+   Click a machine's name for its screen preview and control descriptions.
+   The memory meters and sample trimming controls are below the browser.
    Under **Options**, you can edit [E12 samples](docs/SAMPLES.md) or arrange the
    machine menu; both are optional.
 4. **Build and download.** Click **Build firmware**, then **Download firmware**

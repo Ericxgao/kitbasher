@@ -26,7 +26,7 @@ import type { TrimOptions } from '../../engine/src/e12.js';
 import { checkPack, modelWords, needLines, needsUwSamples, type CorePack, type Pack, type PackModel } from '../../engine/src/packs.js';
 import { merged, plan, trimFor, MIDI_CHROMA_CHANNEL, type Plan, type Trimmed } from '../../engine/src/plan.js';
 import { drawLcd } from './lcd.js';
-import { categories, describeModel, shortSoundLabel } from './catalog.js';
+import { categories, describeModel } from './catalog.js';
 import { addScreenHelp } from './screen-help.js';
 import { findLayout, fingerprint } from '../../engine/src/layout.js';
 import { LayoutEditor } from './layout-ui.js';
@@ -123,7 +123,7 @@ function clearDownload(): void {
 function syncWizard(): void {
   document.body.dataset.view = String(step);
   $('memory-trim-slot').hidden = step !== 3;
-  $('builder-room-anchor').after($('room'));
+  $('step-3').querySelector('.wizard-actions')!.before($('room'));
   $('room').hidden = !loaded() || step !== 3;
   const ready = planReady() && !packedCapacityProblem;
   const asked = gate(uwAnswer, loaded());
@@ -148,7 +148,6 @@ function syncWizard(): void {
     if (n === ([2, 4].includes(step) ? 3 : step)) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
   });
   document.querySelectorAll<HTMLButtonElement>('[data-back]').forEach(b => { b.disabled = building; });
-  syncSelectionSummary();
 }
 
 function showStep(n: number): void {
@@ -174,36 +173,6 @@ function status(msg: string, kind: 'info' | 'ok' | 'error' = 'info'): void {
 }
 
 const boxes = (): HTMLInputElement[] => Array.from(document.querySelectorAll<HTMLInputElement>('#machines input[type=checkbox]'));
-
-function syncSelectionSummary(): void {
-  const chosen = boxes().filter(i => i.checked);
-  $('selection-empty').hidden = chosen.length > 0;
-  $('builder-selection').replaceChildren(...chosen.map(i => {
-    const name = i.dataset.name!;
-    const remove = el('button', { type: 'button', 'aria-label': `Remove ${name}`, ...(building ? { disabled: '' } : {}) }, '×');
-    remove.onclick = () => { i.checked = false; refresh(); };
-    return el('li', {}, name, remove);
-  }));
-  const meters = [...document.querySelectorAll<HTMLElement>('#room .meter')].filter(m => !m.hidden);
-  const over = !buildable() || packedCapacityProblem;
-  const pending = $('m-packed').dataset.state === 'pending';
-  const percent = Math.ceil(Math.max(0, ...meters.map(m => Number(m.dataset.percent ?? 0))));
-  const bar = $<HTMLProgressElement>('builder-space'); bar.value = Math.min(100, percent);
-  bar.setAttribute('aria-label', `${percent}% of available space used${pending ? '; final size is being checked' : ''}`);
-  $('simple-room-note').textContent = !chosen.length ? 'Choose your sounds' : over ? 'Selection needs attention' : pending ? 'Checking space…' : 'Your selection fits';
-  const shortened = (current?.trim.report ?? x20Plan?.bank.report ?? []).some(r => r.kept < r.seconds);
-  $('trim-note').hidden = !shortened;
-  $('trim-note').textContent = shortened ? 'Sample tails are shortened to make room. Change this in sample settings below.' : '';
-}
-
-function filterMachines(): void {
-  const search = $<HTMLInputElement>('model-search').value.toLowerCase(), category = $<HTMLSelectElement>('model-filter').value;
-  for (const family of document.querySelectorAll<HTMLElement>('#machines .family')) {
-    for (const row of family.querySelectorAll<HTMLElement>('.machine')) row.hidden = (category !== 'all' && family.dataset.category !== category) || !row.textContent!.toLowerCase().includes(search);
-    family.hidden = ![...family.querySelectorAll<HTMLElement>('.machine')].some(row => !row.hidden);
-  }
-  $('no-matches').hidden = [...document.querySelectorAll<HTMLElement>('#machines .family')].some(f => !f.hidden);
-}
 
 // "Does your Machinedrum have the UW option?" (web/src/uw-mode.ts): asked on the first step, which
 // the page does not leave without a Yes or a No clicked in this visit. Nothing is pre-selected and
@@ -290,7 +259,6 @@ function applyNoUw(): void {
 let inspected: PackModel | null = null;
 
 function inspectModel(m: PackModel, scroll = false): void {
-  if (scroll) $<HTMLDetailsElement>('inspector-disclosure').open = true;
   inspected = m;
   $('model-family').textContent = describeModel(m).category;
   $('model-name').textContent = m.name.trim();
@@ -310,7 +278,6 @@ function inspectModel(m: PackModel, scroll = false): void {
 }
 
 function renderMachines(): void {
-  const chosen = new Set(boxes().filter(i => i.checked).map(i => i.dataset.module));
   const box = $('machines');
   box.replaceChildren();
   const models = merged(data.packs).flatMap(f => f.models.map(m => ({ m, size: modelWords(m, f.shared) })));
@@ -319,16 +286,16 @@ function renderMachines(): void {
     const list = el('div', { class: 'machines' });
     const group = models.filter(({ m }) => describeModel(m).category === category);
     for (const { m, size } of group) {
-      // Choose sounds explicitly; rebuilding the catalog preserves existing selections.
+      // Every model starts selected; auto trim and the meters account for workspace memory.
       const requiresUW = needsUwSamples(m);
-      const cb = el('input', { type: 'checkbox', 'aria-label': `Include ${m.name.trim()}`, 'data-module': m.module, 'data-name': m.name.trim(), ...(chosen.has(m.module) ? { checked: '' } : {}), ...(requiresUW ? { 'data-uw': '1' } : {}) }) as HTMLInputElement;
+      const cb = el('input', { type: 'checkbox', 'aria-label': `Include ${m.name.trim()}`, 'data-module': m.module, checked: '', ...(requiresUW ? { 'data-uw': '1' } : {}) }) as HTMLInputElement;
       cb.addEventListener('change', () => { inspectModel(m); refresh(); });
       const labels = m.labels.filter(Boolean).join(' ');
       const info = el('button', { type: 'button', class: 'machine-info', 'aria-label': `Preview ${m.name.trim()}${requiresUW ? ', requires UW' : ''}`, 'aria-controls': 'inspector', 'aria-pressed': 'false' },
         el('span', { class: 'machine-heading' }, el('span', { class: 'mname' }, m.name.trim()),
           el('span', { class: 'model-size', title: `${size.toLocaleString('en')} words of DSP memory` }, wordsLabel(size)),
           requiresUW ? el('span', { class: 'uw-badge', title: 'Plays a sample from UW sample memory: not available on a Machinedrum without UW' }, 'needs UW') : ''),
-        el('span', { class: 'machine-description' }, shortSoundLabel(m.name, describeModel(m).description)));
+        el('span', { class: 'machine-description' }, describeModel(m).description));
       info.addEventListener('click', () => inspectModel(m, true));
       list.append(el('div', { class: 'machine', 'data-module': m.module, 'data-labels': labels, title: labels },
         cb, info));
@@ -338,14 +305,10 @@ function renderMachines(): void {
     // Keep the user's full selection visible; capacity prompts offer trimming or pruning.
     all.addEventListener('click', () => { tickAll(list); refresh(); });
     none.addEventListener('click', () => { list.querySelectorAll('input').forEach((i) => { (i as HTMLInputElement).checked = false; }); refresh(); });
-    box.append(el('section', { class: 'family', id: `category-${index}`, 'data-category': category },
+    box.append(el('section', { class: 'family', id: `category-${index}` },
       el('header', {}, el('h3', {}, category), el('span', { class: 'count' }, String(group.length)), all, none), list));
   }
   applyNoUw();
-  const categoryFilter = $<HTMLSelectElement>('model-filter'), previous = categoryFilter.value;
-  categoryFilter.replaceChildren(new Option('All sounds', 'all'), ...groups.map(c => new Option(c, c)));
-  categoryFilter.value = groups.includes(previous) ? previous : 'all';
-  filterMachines();
   if (models.length) inspectModel((models.find(({ m }) => m.module === inspected?.module) ?? models[0]).m);
 }
 
@@ -478,7 +441,6 @@ function updateTrimControls(): void {
 function meter(id: string, used: number, cap: number, unit: string, over: boolean): void {
   const m = $(id);
   const pct = cap > 0 ? Math.min(100, (100 * used) / cap) : 100;
-  m.dataset.percent = String(cap > 0 ? 100 * used / cap : 100);
   (m.querySelector('.fill') as HTMLElement).style.width = `${pct}%`;
   m.dataset.state = over ? 'over' : pct > 90 ? 'tight' : 'ok';
   m.title = `${fmt(used)} / ${fmt(cap)} ${unit}`;
@@ -495,7 +457,6 @@ function refresh(minAutoDb: number | null = null): void {
   cachedBuild = null;
   $('room').hidden = !fw;
   $('m-packed').dataset.state = 'pending';
-  $('m-packed').dataset.percent = '0';
   $('m-packed').removeAttribute('title');
   $('m-packed').querySelector('.num')!.textContent = 'Checking…';
   ($('m-packed').querySelector('.fill') as HTMLElement).style.width = '0';
@@ -837,7 +798,6 @@ function showStorage(result: AnyBuild): void {
     meter('m-packed', report.dsp2.packed, report.dsp2.packed_capacity, 'bytes', false);
   } else {
     $('m-packed').dataset.state = 'ok';
-    $('m-packed').dataset.percent = '0';
     $('m-packed').querySelector('.num')!.textContent = 'Fits; this base allows the storage slot to grow';
   }
   syncWizard();
@@ -1134,7 +1094,7 @@ async function main(): Promise<void> {
   // Keep memory and sample controls together above the current step's actions.
   const trimSlot = el('div', { id: 'memory-trim-slot' });
   trimSlot.append($('make-room'));
-  $('capacity-details').append(trimSlot);
+  $('room').append(trimSlot);
   $('room').hidden = true;
   layoutEd = new LayoutEditor($('layout-anchor'), () => {
     refresh();
@@ -1154,15 +1114,11 @@ async function main(): Promise<void> {
   $('firmware-next').addEventListener('click', () => { if (!loaded()) { $('file').click(); return; } showStep(3); });
   $('samples-next').addEventListener('click', () => showStep(3));
   $('models-next').addEventListener('click', () => {
-    if (!boxes().some(i => i.checked)) { $('model-search').focus(); return; }
+    if (!boxes().some(i => i.checked)) { $('machines').focus(); $('machines').scrollIntoView({ block: 'start' }); return; }
     if (!planReady() || packedCapacityProblem) { $<HTMLDetailsElement>('capacity-details').open = true; $('capacity-details').scrollIntoView({ block: 'nearest' }); return; }
     void onBuild('download');
   });
   $('categories-next').addEventListener('click', () => showStep(3));
-  $('model-search').addEventListener('input', filterMachines);
-  $('model-filter').addEventListener('change', filterMachines);
-  $('select-all-machines').addEventListener('click', () => { tickAll($('machines')); refresh(); });
-  $('clear-machines').addEventListener('click', () => { boxes().forEach(i => i.checked = false); refresh(); });
   document.querySelector('.builder-tools')!.addEventListener('click', e => {
     if ((e.target as HTMLElement).closest('button')) document.querySelector<HTMLDetailsElement>('.builder-tools')!.open = false;
   });

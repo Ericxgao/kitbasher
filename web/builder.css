@@ -13,39 +13,9 @@ body.simple-builder .upload #drop{margin:18px 0;padding:24px}
 .simple-builder .uw-help{margin-top:12px}
 .simple-builder #firmware-next{width:100%;margin-top:18px}
 .simple-builder #qualification-note{color:var(--err)}
-.simple-builder #step-3 .workspace{grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:stretch}
-.simple-builder #step-3 .selection-panel{min-width:0;min-height:0;display:flex;flex-direction:column}
-.simple-builder #step-3 .section-head{display:flex;flex-direction:row;justify-content:space-between;margin-bottom:14px;align-items:center;flex-shrink:0}
-.simple-builder #step-3 h2{font-size:19px}
-.simple-builder .builder-filters{display:grid;grid-template-columns:minmax(100px,1fr) 180px;gap:12px;margin-bottom:12px}
-.builder-filters input,.builder-filters select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:10px;min-width:0;width:100%}
-.simple-builder #machines{min-height:0;overflow:auto;overscroll-behavior:contain;flex:1}
-.simple-builder .machines{grid-template-columns:1fr}
-body.simple-builder .machine{min-height:66px}
-body.simple-builder .machine-description{font-size:13px;line-height:1.4}
-.simple-builder .family header{position:sticky;top:0;background:var(--panel);z-index:1}
-.simple-builder .family header .link{display:none}
-.simple-builder .model-size{display:none}
-.simple-builder .builder-tools{position:relative;margin-left:auto}
-.simple-builder .builder-tools>div{position:absolute;right:0;top:26px;z-index:4;width:220px;display:grid;gap:6px;padding:12px;border:1px solid var(--line);background:var(--panel);box-shadow:0 4px 12px #0002}
+.simple-builder .builder-tools{position:relative;margin:0 0 16px;width:max-content}
+.simple-builder .builder-tools>div{position:absolute;left:0;top:26px;z-index:4;width:220px;display:grid;gap:6px;padding:12px;border:1px solid var(--line);background:var(--panel);box-shadow:0 4px 12px #0002}
 .simple-builder .builder-tools button{font:inherit;padding:9px;text-align:left;background:var(--panel);color:var(--ink);border:1px solid var(--line)}
-.simple-builder #machine-sidebar{position:static!important;min-height:0;display:flex;flex-direction:column;overflow:auto;border:1px solid var(--line);padding:18px;background:var(--panel);border-radius:4px}
-.simple-builder #selection-empty{margin-top:20px;color:var(--muted)}
-.simple-builder #builder-selection{list-style:none;padding:0;margin:14px 0;flex:1;min-height:60px;overflow:auto}
-.simple-builder #builder-selection li{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:8px 0;font-size:14px}
-.simple-builder #builder-selection button{font:inherit;border:0;background:none;color:var(--muted);padding:4px 8px;cursor:pointer}
-.simple-builder #machine-sidebar>details{flex-shrink:0;max-height:55%;overflow:auto;margin-top:12px}
-.simple-builder #machine-sidebar .inspector{padding:12px 0;border:0}
-.simple-builder #machine-sidebar .screen{max-width:260px}
-.simple-builder #machine-sidebar #room{border:0;border-top:1px solid var(--line);margin:16px 0 12px;padding:14px 0 0;flex-shrink:0}
-.simple-builder #machine-sidebar #models-next{width:100%;margin-top:6px;flex-shrink:0}
-.simple-builder #builder-space{display:block;width:100%;height:8px;margin:10px 0 12px;accent-color:var(--ink)}
-.simple-builder #capacity-details{margin-top:10px;max-height:280px;overflow:auto}
-.simple-builder #capacity-details .meters{grid-template-columns:1fr;gap:8px;margin:12px 0}
-.simple-builder #capacity-details p{margin:8px 0;font-size:12px}
-.simple-builder #trim-note{font-size:13px;margin:10px 0}
-.simple-builder #simple-room-note{font-weight:600}
-.simple-builder #room[data-state=over] #simple-room-note{color:var(--err)}
 .simple-builder #step-5{max-width:760px;margin:auto}
 .simple-builder #step-5>details{margin:22px 0}
 .simple-builder #step-5 .project-save{display:block}
@@ -55,21 +25,9 @@ body.simple-builder .machine-description{font-size:13px;line-height:1.4}
 .simple-builder #step-5 #result details{margin:14px 0}
 .simple-builder .footer-note{margin-top:20px}
 .simple-builder :is(summary,button,input,select):focus-visible{outline:2px solid #5484a3;outline-offset:3px}
-@media(min-width:900px) and (min-height:650px){
- .simple-builder[data-view="3"] main{height:100dvh;display:flex;flex-direction:column;padding-bottom:12px}
- .simple-builder[data-view="3"] main>header,.simple-builder[data-view="3"] main>nav{flex-shrink:0}
- .simple-builder[data-view="3"] #step-3{flex:1;min-height:0;display:flex;flex-direction:column}
- .simple-builder #step-3 .workspace{flex:1;min-height:0;grid-template-rows:minmax(0,1fr)}
- .simple-builder #step-3 .wizard-actions{margin:12px 0 0}
- .simple-builder[data-view="3"] .footer-note{margin-top:10px;max-height:80px;overflow:auto;flex-shrink:0}
-}
-@media(max-width:899px){
+body.simple-builder[data-view="3"] main{max-width:1180px}
+@media(max-width:760px){
  body.simple-builder main{padding:18px 16px}
- .simple-builder #step-3 .workspace{display:grid;grid-template-columns:1fr}
- .simple-builder #machines{max-height:55dvh;flex:none}
- .simple-builder #builder-selection{max-height:240px;flex:none}
- .simple-builder #machine-sidebar>details{max-height:none}
  .simple-builder .wizard-steps{gap:6px}
  .simple-builder .wizard-steps button{padding:10px;font-size:13px}
- .simple-builder .builder-filters{grid-template-columns:1fr 130px}
 }
