@@ -6,10 +6,13 @@ import { build } from 'esbuild';
 import { cpSync, mkdirSync, readdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildMdsCatalog } from './build-mds.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'web/dist');
 const CATALOG = join(ROOT, 'catalog');
+const mdsCatalog = await buildMdsCatalog(ROOT);
+const mdsBundle = await build({ entryPoints: [join(ROOT, 'web/src/mds-app.ts')], bundle: true, format: 'esm', platform: 'browser', target: 'es2022', minify: true, sourcemap: true, outfile: join(OUT, 'mds.js'), write: false, logLevel: 'warning' });
 
 // ---- the packs to bundle: every JSON file in catalog/, each of which must be an md-pack/1 pack
 const bundled = [];
@@ -67,9 +70,15 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(join(OUT, 'data/bases'), { recursive: true });
 mkdirSync(join(OUT, 'data/packs'), { recursive: true });
 for (const file of bundle.outputFiles) writeFileSync(file.path, file.contents);
+for (const file of mdsBundle.outputFiles) writeFileSync(file.path, file.contents);
 const html = readFileSync(join(ROOT, 'web/index.html'), 'utf8');
 const appStyles = readFileSync(join(ROOT, 'web/styles.css'), 'utf8');
 writeFileSync(join(OUT, 'index.html'), html.replace('<!-- app-styles -->', `<style>${appStyles}</style>`));
+writeFileSync(join(OUT, 'mds.html'), readFileSync(join(ROOT, 'web/mds.html'), 'utf8').replace('<!-- app-styles -->', `<style>${appStyles}</style>`));
+cpSync(join(ROOT, 'web/mds.css'), join(OUT, 'mds.css'));
+mkdirSync(join(OUT, 'data/mds'), { recursive: true });
+writeFileSync(join(OUT, 'data/mds/index.json'), JSON.stringify(mdsCatalog.index));
+for (const asset of mdsCatalog.assets) writeFileSync(join(OUT, 'data/mds', asset.file), asset.bytes);
 cpSync(join(ROOT, 'web/uw-samples.html'), join(OUT, 'uw-samples.html'));
 cpSync(join(ROOT, 'COPYING'), join(OUT, 'COPYING.txt'));
 // Sample metadata, and the sample files in catalog/uw/, served next to the page as uw-data/.
