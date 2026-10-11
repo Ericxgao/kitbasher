@@ -1,5 +1,6 @@
-; TR6 BD - Simple606-inspired MDS voice for X.20, version 1.1.
-; New layer controls preserve version 1.0 audio at their defaults.
+; TR6 BD - Simple606-inspired MDS voice for X.20, version 1.2.
+; XL: 0 = normal body decay; 127 = former XL-on decay. Captured on trigger.
+; Intermediate XL values blend the envelope poles; render is unchanged.
 ; CLIK: 0 = remove this layer; 127 = original layer level. Captured on trigger.
 ;
 ; MIT License
@@ -141,15 +142,20 @@ control_4_end:
     mpy y0,x0,a
     asl #2,a,a
     move a1,x:(r6+$e)
+    ; XL interpolates the body envelope pole once per trigger.
+    ; 128 uniformly spaced weights; both installed endpoints remain exact.
     move y:(r6+$5),a
-    tst a
-    jeq normal_decay
-    move x:(r6+$7),x0
-    jmp decay_ready
-normal_decay:
+    asr #7,a,a
+    add #>xl_weights,a
+    move a1,r0
+    move p:(r0),y0
     move x:(r6+$6),x0
-decay_ready:
-    move x0,x:(r6+$d)
+    move x:(r6+$7),a
+    sub x0,a
+    move a1,x1
+    mpyr x1,y0,a
+    add x0,a
+    move a1,x:(r6+$d)
     move #>$209422,x0
     move x0,x:(r6+$f)
     move #>$c8e99a,x0
@@ -397,3 +403,21 @@ control_4:
     .dc $469e0e,$2d91a7,$479fc9,$2d3f60,$48a185,$2ceed1,$49a340,$2c9fea
     .dc $4aa4fb,$2c529c,$4ba6b7,$2c06dc,$4ca872,$2bbc9a,$4daa2d,$2b73cb
     .dc $4eabe9,$2b2c64,$4fada4,$2ae657,$50af60,$2aa19c,$5231f9,$2a3ce3
+
+xl_weights:
+    .dc $000000,$010204,$020408,$03060c,$040810,$050a14,$060c18,$070e1c
+    .dc $081020,$091224,$0a1428,$0b162c,$0c1830,$0d1a34,$0e1c38,$0f1e3c
+    .dc $102040,$112244,$122448,$13264c,$142850,$152a54,$162c59,$172e5d
+    .dc $183061,$193265,$1a3469,$1b366d,$1c3871,$1d3a75,$1e3c79,$1f3e7d
+    .dc $204081,$214285,$224489,$23468d,$244891,$254a95,$264c99,$274e9d
+    .dc $2850a1,$2952a5,$2a54a9,$2b56ad,$2c58b1,$2d5ab5,$2e5cb9,$2f5ebd
+    .dc $3060c1,$3162c5,$3264c9,$3366cd,$3468d1,$356ad5,$366cd9,$376edd
+    .dc $3870e1,$3972e5,$3a74e9,$3b76ed,$3c78f1,$3d7af5,$3e7cf9,$3f7efd
+    .dc $408102,$418306,$42850a,$43870e,$448912,$458b16,$468d1a,$478f1e
+    .dc $489122,$499326,$4a952a,$4b972e,$4c9932,$4d9b36,$4e9d3a,$4f9f3e
+    .dc $50a142,$51a346,$52a54a,$53a74e,$54a952,$55ab56,$56ad5a,$57af5e
+    .dc $58b162,$59b366,$5ab56a,$5bb76e,$5cb972,$5dbb76,$5ebd7a,$5fbf7e
+    .dc $60c182,$61c386,$62c58a,$63c78e,$64c992,$65cb96,$66cd9a,$67cf9e
+    .dc $68d1a2,$69d3a6,$6ad5ab,$6bd7af,$6cd9b3,$6ddbb7,$6eddbb,$6fdfbf
+    .dc $70e1c3,$71e3c7,$72e5cb,$73e7cf,$74e9d3,$75ebd7,$76eddb,$77efdf
+    .dc $78f1e3,$79f3e7,$7af5eb,$7bf7ef,$7cf9f3,$7dfbf7,$7efdfb,$7fffff
