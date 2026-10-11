@@ -1,0 +1,274 @@
+{
+  "schema": "spsx.mds.machine/1",
+  "id": "org.kitbasher.tr6.cp-inspired",
+  "category": "TR6",
+  "category_order": 8,
+  "short_label": "CP",
+  "display_name": "TR6 CP INSPIRED",
+  "tonal": false,
+  "neighbour": false,
+  "stereo_pair": false,
+  "retrigger": "restart",
+  "params": [
+    {
+      "name": "DEC",
+      "default": 102,
+      "min": 0,
+      "max": 127,
+      "transform": "raw14",
+      "control": "continuous",
+      "linked": false
+    },
+    {
+      "name": "TUNE",
+      "default": 64,
+      "min": 0,
+      "max": 127,
+      "transform": "raw14",
+      "control": "continuous",
+      "linked": false
+    },
+    {
+      "name": "NOIS",
+      "default": 64,
+      "min": 0,
+      "max": 127,
+      "transform": "raw14",
+      "control": "continuous",
+      "linked": false
+    }
+  ],
+  "machine_version": "1.0",
+  "max_track_cycles": 3888,
+  "program": {
+    "abi_version": 1,
+    "init_symbol": "init",
+    "trig_symbol": "trigger",
+    "render_symbol": "render",
+    "x_workset_words": 25,
+    "y_workset_words": 4,
+    "relocations": [
+      {
+        "symbol": "init",
+        "word_delta": 6
+      },
+      {
+        "symbol": "init",
+        "word_delta": 37
+      },
+      {
+        "symbol": "init",
+        "word_delta": 42
+      },
+      {
+        "symbol": "init",
+        "word_delta": 54
+      },
+      {
+        "symbol": "init",
+        "word_delta": 61
+      },
+      {
+        "symbol": "init",
+        "word_delta": 74
+      },
+      {
+        "symbol": "init",
+        "word_delta": 81
+      },
+      {
+        "symbol": "init",
+        "word_delta": 168
+      },
+      {
+        "symbol": "init",
+        "word_delta": 198
+      },
+      {
+        "symbol": "init",
+        "word_delta": 207
+      },
+      {
+        "symbol": "init",
+        "word_delta": 216
+      },
+      {
+        "symbol": "init",
+        "word_delta": 233
+      },
+      {
+        "symbol": "init",
+        "word_delta": 237
+      },
+      {
+        "symbol": "init",
+        "word_delta": 244
+      },
+      {
+        "symbol": "init",
+        "word_delta": 273
+      },
+      {
+        "symbol": "init",
+        "word_delta": 277
+      },
+      {
+        "symbol": "init",
+        "word_delta": 293
+      },
+      {
+        "symbol": "init",
+        "word_delta": 308
+      },
+      {
+        "symbol": "init",
+        "word_delta": 311
+      },
+      {
+        "symbol": "init",
+        "word_delta": 325
+      },
+      {
+        "symbol": "init",
+        "word_delta": 352
+      },
+      {
+        "symbol": "init",
+        "word_delta": 372
+      },
+      {
+        "symbol": "init",
+        "word_delta": 380
+      }
+    ],
+    "imports": [
+      {
+        "symbol": "init",
+        "word_delta": 323,
+        "abi_symbol": 8,
+        "kind": 4
+      },
+      {
+        "symbol": "init",
+        "word_delta": 336,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 348,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 350,
+        "abi_symbol": 8,
+        "kind": 4
+      },
+      {
+        "symbol": "init",
+        "word_delta": 370,
+        "abi_symbol": 8,
+        "kind": 4
+      }
+    ]
+  },
+  "_build": {
+    "assembly": "cp.asm",
+    "origin": 0,
+    "import_symbols": {
+      "mds_scratch_x": 0,
+      "mds_scratch_y": 0
+    },
+    "symbols": {
+      "init": 0,
+      "init_end": 8,
+      "trigger": 15,
+      "control_1_end": 45,
+      "control_2_end": 64,
+      "control_3_end": 84,
+      "render": 190,
+      "no_tail_start": 212,
+      "no_tail_decay": 221,
+      "foundation_onset": 245,
+      "foundation_inject": 246,
+      "foundation_advance": 252,
+      "air_ready": 275,
+      "burst_ready": 295,
+      "fade_done": 317,
+      "noise_end": 334,
+      "filter_end": 366,
+      "mix_end": 377,
+      "silent": 378,
+      "zero_end": 382,
+      "control_1": 383,
+      "control_2": 511,
+      "control_3": 703,
+      "burst_table": 1023,
+      "air_table": 2559,
+      "fade_table": 2795
+    },
+    "program_words": 2811,
+    "program_sha256": "7eb5f6e2997eb9ad92234138f3922a066dca5c1c319ef11d556321f204d12677",
+    "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Write packed big-endian 24-bit program words and symbols to temporary files. Run upstream MDS tools/mds_pack.py definition.json program.bin --symbols symbols.json -o machine.mds, then tools/mds_to_syx.py machine.mds --slot 8."
+  },
+  "_validation": {
+    "status": "simulator-qualified; hardware audition pending",
+    "timing": {
+      "measured_model_max_clocks": 3862,
+      "declared_max_clocks": 3888,
+      "limit": 3951,
+      "scope": "Actual X.20 dispatcher P:$6b through P:$e1, DMA handshakes ready, empty 8x128 instruction cache, additive interlocks, 3 waits per external instruction miss AND external data word, plus 64-clock output-transfer reserve. Busywait latency and interrupts are system scheduling, not bounded here; no hardware timing claim.",
+      "dispatcher_flags_tested": 128,
+      "cache_placements": "All 128 word alignments fit the eight cache sectors for every traced path.",
+      "physical_wait_states_verified": false
+    },
+    "tests": {
+      "controls": 454,
+      "samples": 1409216,
+      "peak": 0.624580979347229,
+      "clipped_samples": 0,
+      "guards_and_parameters": true,
+      "dirty_entry_registers": true,
+      "init_silent": true,
+      "retrigger": true,
+      "tracer_audio_cycles_equal": true
+    },
+    "perceptual_metric": "Existing native four-seed WMD ensemble scorer; lower loss is closer, not a calibrated quality percentage.",
+    "perceptual_scores": [
+      {
+        "case": "default",
+        "retained": 2.6570193123175865,
+        "candidate": 2.6625146983870684,
+        "level_matched": 2.6468919217654303,
+        "level_delta_db": 0.10098462315163204,
+        "peak": 0.4413414001464844,
+        "clipped_samples": 0
+      },
+      {
+        "case": "maximum",
+        "retained": 2.8205078167218898,
+        "candidate": 2.8147383336404523,
+        "level_matched": 2.81363433942316,
+        "level_delta_db": 1.8163597370775655,
+        "peak": 0.5435605049133301,
+        "clipped_samples": 0
+      }
+    ],
+    "hardware_tested": false
+  },
+  "_design": {
+    "description": "Full-rate filtered noise, four burst envelopes, NOIS-dependent tail, late foundation and terminal fade; clap extension to the family.",
+    "strategy": "Start with an affordable approximation, qualify complete trigger/render admission and bank fit, then add fidelity only within verified headroom.",
+    "control_resolution": "64 representative values per continuous control; clap burst decay uses 16 values. Defaults and endpoints are represented.",
+    "source": "https://github.com/Fadedlimes/Simple606/tree/6aacda7a14a8c097d32836039fd356eb0976ba8e",
+    "license": "MIT; complete notice is embedded in the assembly source."
+  },
+  "_send": {
+    "file": "cp.syx",
+    "destination_slot": 8,
+    "bank_file": "../tr6-bank.syx",
+    "instruction": "Load an empty/appropriate Machine Bank and send this file with an MDS-capable SysEx sender. The bank file installs all eight voices into U01-U08. Files have not been sent to hardware."
+  }
+}
