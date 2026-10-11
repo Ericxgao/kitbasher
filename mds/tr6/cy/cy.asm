@@ -1,5 +1,6 @@
-; TR6 CY - Simple606-inspired MDS voice for X.20.
-; Two metallic partials plus a fitted noise band, all at 44.1 kHz.
+; TR6 CY - Simple606-inspired MDS voice for X.20, version 1.1.
+; New layer controls preserve version 1.0 audio at their defaults.
+; BELL: 0 = remove this layer; 127 = original layer level. Captured on trigger.
 ;
 ; MIT License
 ; 
@@ -107,10 +108,14 @@ control_2_end:
     move x0,x:(r6+$11)
     move #>$7fffff,x0
     move x0,x:(r6+$12)
-    move #>$366666,x0
-    move x0,x:(r6+$13)
     move #>$2ca3d7,x0
     move x0,x:(r6+$14)
+    move y:(r6+$3),a
+    asr #8,a,a
+    add #>layer_table,a
+    move a1,r0
+    move p:(r0)+,x0
+    move x0,x:(r6+$13)
     rts
 render:
     move #>$ffffff,m6
@@ -370,3 +375,12 @@ control_2:
     .dc $0660ff,$e8e15e,$fa9abd,$1fac9d,$e0e13f,$ee28af,$18e694,$cbfc4d
     .dc $eb9155,$058f90,$e88dda,$f60e57,$1ea23a,$dee2cc,$e9631c,$18389a
     .dc $ca33fd,$ea39c4,$044947,$e848cb,$ef1239,$1cf1d5,$dc2f83,$e218ca
+layer_table:
+    .dc $000000,$00d99a,$01b333,$028ccd,$036666,$044000,$05199a,$05f333
+    .dc $06cccd,$07a666,$088000,$09599a,$0a3333,$0b0ccd,$0be666,$0cc000
+    .dc $0d999a,$0e7333,$0f4ccd,$102666,$110000,$11d999,$12b333,$138ccd
+    .dc $146666,$154000,$161999,$16f333,$17cccd,$18a666,$198000,$1a5999
+    .dc $1b3333,$1c0ccd,$1ce666,$1dc000,$1e9999,$1f7333,$204ccd,$212666
+    .dc $220000,$22d999,$23b333,$248ccd,$256666,$264000,$271999,$27f333
+    .dc $28cccc,$29a666,$2a8000,$2b5999,$2c3333,$2d0ccc,$2de666,$2ec000
+    .dc $2f9999,$307333,$314ccc,$322666,$330000,$33d999,$34b333,$366666

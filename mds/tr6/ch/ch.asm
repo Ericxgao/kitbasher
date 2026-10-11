@@ -1,5 +1,6 @@
-; TR6 CH - Simple606-inspired MDS voice for X.20.
-; Two metallic partials plus a fitted noise band, all at 44.1 kHz.
+; TR6 CH - Simple606-inspired MDS voice for X.20, version 1.1.
+; New layer controls preserve version 1.0 audio at their defaults.
+; METL: 0 = noise only; 64 = original blend; 127 = metal only. Captured on trigger.
 ;
 ; MIT License
 ; 
@@ -49,13 +50,15 @@
 ; 15: envelope
 ; 16: tonegain
 ; 17: noisegain
+; 18: metal_tone
+; 19: metal_noise
 
 ; Local instruction compaction; verify against retained native audio.
 init:
     move #>$ffffff,m6
     move #>$ffffff,m0
     clr a r6,r0
-    do #24,init_end
+    do #26,init_end
     move a1,x:(r0)+
 init_end:
     move #>$606301,x0
@@ -73,8 +76,7 @@ trigger:
     and #>$3f,a
     clr a a1,x0
     add x0,a
-    asl a
-    asl a
+    asl #2,a,a
     add #>control_1,a
     move a1,r0
     move r6,a
@@ -88,9 +90,7 @@ control_1_end:
     and #>$3f,a
     clr a a1,x0
     add x0,a
-    asl a
-    asl a
-    asl a
+    asl #3,a,a
     add x0,a
     add #>control_2,a
     move a1,r0
@@ -109,7 +109,18 @@ control_2_end:
     move x0,x:(r6+$12)
     move #>$2ccccd,x0
     move x0,x:(r6+$13)
-    move #>$273333,x0
+    move y:(r6+$3),a
+    asr #8,a,a
+    move a1,a
+    asl a a1,x0
+    add x0,a
+    add #>metal_table,a
+    move a1,r0
+    move p:(r0)+,x0
+    move x0,x:(r6+$18)
+    move p:(r0)+,x0
+    move x0,x:(r6+$19)
+    move p:(r0)+,x0
     move x0,x:(r6+$14)
     rts
 render:
@@ -163,14 +174,14 @@ render:
     move x:(r6+$13),a
     add #>$400000,a
     move a1,x0
-    move #>$10e560,y0
+    move x:(r6+$18),y0
     mpy y0,x0,a
     move a1,x0
     move x:(r6+$15),y0
     mpyr y0,x0,a
     move a1,x:(r6+$16)
     move x:(r6+$15),x0
-    move #>$45cfab,y0
+    move x:(r6+$19),y0
     mpy y0,x0,a
     move x:(r6+$14),x0
     add x0,a
@@ -370,3 +381,28 @@ control_2:
     .dc $0660ff,$e8e15e,$fa9abd,$1fac9d,$e0e13f,$ee28af,$0cb54f,$ab998c
     .dc $d58679,$058f90,$e88dda,$f60e57,$1ea23a,$dee2cc,$e9631c,$0be10a
     .dc $a950cf,$d42bd6,$044947,$e848cb,$ef1239,$1cf1d5,$dc2f83,$e218ca
+metal_table:
+    .dc $000000,$45cfab,$273333,$00872b,$45cfab,$273333,$010e56,$45cfab
+    .dc $273333,$019581,$45cfab,$273333,$021cac,$45cfab,$273333,$02a3d7
+    .dc $45cfab,$273333,$032b02,$45cfab,$273333,$03b22d,$45cfab,$273333
+    .dc $043958,$45cfab,$273333,$04c083,$45cfab,$273333,$0547ae,$45cfab
+    .dc $273333,$05ced9,$45cfab,$273333,$065604,$45cfab,$273333,$06dd2f
+    .dc $45cfab,$273333,$07645a,$45cfab,$273333,$07eb85,$45cfab,$273333
+    .dc $0872b0,$45cfab,$273333,$08f9db,$45cfab,$273333,$098106,$45cfab
+    .dc $273333,$0a0831,$45cfab,$273333,$0a8f5c,$45cfab,$273333,$0b1687
+    .dc $45cfab,$273333,$0b9db2,$45cfab,$273333,$0c24dd,$45cfab,$273333
+    .dc $0cac08,$45cfab,$273333,$0d3333,$45cfab,$273333,$0dba5e,$45cfab
+    .dc $273333,$0e4189,$45cfab,$273333,$0ec8b4,$45cfab,$273333,$0f4fdf
+    .dc $45cfab,$273333,$0fd70a,$45cfab,$273333,$105e35,$45cfab,$273333
+    .dc $10e560,$45cfab,$273333,$10e560,$439850,$25f49f,$10e560,$4160f5
+    .dc $24b60b,$10e560,$3f299b,$237777,$10e560,$3cf240,$2238e3,$10e560
+    .dc $3abae5,$20fa4f,$10e560,$38838a,$1fbbbc,$10e560,$364c30,$1e7d28
+    .dc $10e560,$3414d5,$1d3e94,$10e560,$31dd7a,$1c0000,$10e560,$2fa61f
+    .dc $1ac16c,$10e560,$2d6ec5,$1982d8,$10e560,$2b376a,$184444,$10e560
+    .dc $29000f,$1705b0,$10e560,$26c8b4,$15c71c,$10e560,$24915a,$148888
+    .dc $10e560,$2259ff,$1349f5,$10e560,$2022a4,$120b61,$10e560,$1deb49
+    .dc $10cccd,$10e560,$1bb3ef,$0f8e39,$10e560,$197c94,$0e4fa5,$10e560
+    .dc $174539,$0d1111,$10e560,$150dde,$0bd27d,$10e560,$12d683,$0a93e9
+    .dc $10e560,$109f29,$095555,$10e560,$0e67ce,$0816c1,$10e560,$0c3073
+    .dc $06d82d,$10e560,$09f918,$05999a,$10e560,$07c1be,$045b06,$10e560
+    .dc $058a63,$031c72,$10e560,$035308,$01ddde,$10e560,$000000,$000000

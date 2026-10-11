@@ -1,5 +1,6 @@
-; TR6 CP - Simple606-inspired MDS voice for X.20.
-; Full-rate filtered noise, four burst envelopes, NOIS-dependent tail, late foundation and terminal fade; clap extension to the family.
+; TR6 CP - Simple606-inspired MDS voice for X.20, version 1.1.
+; New layer controls preserve version 1.0 audio at their defaults.
+; BODY: 0 = remove this layer; 127 = original layer level. Captured on trigger.
 ;
 ; MIT License
 ; 
@@ -50,13 +51,14 @@
 ; 16: rise_pole
 ; 17: fast
 ; 18: gain
+; 19: burstgain
 
 ; Local instruction compaction; verify against retained native audio.
 init:
     move #>$ffffff,m6
     move #>$ffffff,m0
     clr a r6,r0
-    do #25,init_end
+    do #26,init_end
     move a1,x:(r0)+
 init_end:
     move #>$06c1a9,x0
@@ -214,6 +216,9 @@ control_3_end:
     move #>$579913,y0
     mpyr y0,x0,a
     move a1,x:(r6+$15)
+    move y:(r6+$4),a
+    asr #7,a,a
+    move a1,x:(r6+$19)
     rts
 render:
     move #>$ffffff,m6
@@ -312,6 +317,14 @@ burst_ready:
     move x:(r6+$e),r0
     nop
     move p:(r0+n0),x0
+    move x:(r6+$19),a
+    cmp #>127,a
+    jeq burst_level_done
+    asl #16,a,a
+    move a1,y0
+    mpyr y0,x0,a
+    move a1,x0
+burst_level_done:
     move x:(r6+$18),a
     add x0,a
     move a1,x:(r6+$18)

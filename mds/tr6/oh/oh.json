@@ -27,17 +27,26 @@
       "transform": "raw14",
       "control": "continuous",
       "linked": false
+    },
+    {
+      "name": "METL",
+      "default": 64,
+      "min": 0,
+      "max": 127,
+      "transform": "raw14",
+      "control": "continuous",
+      "linked": false
     }
   ],
-  "machine_version": "1.0",
-  "max_track_cycles": 3904,
+  "machine_version": "1.1",
+  "max_track_cycles": 3948,
   "program": {
     "abi_version": 1,
     "init_symbol": "init",
     "trig_symbol": "trigger",
     "render_symbol": "render",
-    "x_workset_words": 24,
-    "y_workset_words": 3,
+    "x_workset_words": 26,
+    "y_workset_words": 4,
     "relocations": [
       {
         "symbol": "init",
@@ -45,95 +54,99 @@
       },
       {
         "symbol": "init",
-        "word_delta": 30
+        "word_delta": 29
       },
       {
         "symbol": "init",
-        "word_delta": 35
+        "word_delta": 34
       },
       {
         "symbol": "init",
-        "word_delta": 49
+        "word_delta": 46
       },
       {
         "symbol": "init",
-        "word_delta": 56
+        "word_delta": 53
       },
       {
         "symbol": "init",
-        "word_delta": 80
+        "word_delta": 74
       },
       {
         "symbol": "init",
-        "word_delta": 157
+        "word_delta": 88
       },
       {
         "symbol": "init",
-        "word_delta": 184
+        "word_delta": 163
       },
       {
         "symbol": "init",
-        "word_delta": 206
+        "word_delta": 190
       },
       {
         "symbol": "init",
-        "word_delta": 220
+        "word_delta": 212
       },
       {
         "symbol": "init",
-        "word_delta": 236
+        "word_delta": 226
       },
       {
         "symbol": "init",
-        "word_delta": 245
+        "word_delta": 242
+      },
+      {
+        "symbol": "init",
+        "word_delta": 251
       }
     ],
     "imports": [
       {
         "symbol": "init",
-        "word_delta": 155,
+        "word_delta": 161,
         "abi_symbol": 8,
         "kind": 4
       },
       {
         "symbol": "init",
-        "word_delta": 168,
+        "word_delta": 174,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 180,
+        "word_delta": 186,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 182,
+        "word_delta": 188,
         "abi_symbol": 8,
         "kind": 4
       },
       {
         "symbol": "init",
-        "word_delta": 201,
+        "word_delta": 207,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 215,
+        "word_delta": 221,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 232,
+        "word_delta": 238,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 234,
+        "word_delta": 240,
         "abi_symbol": 8,
         "kind": 4
       }
@@ -150,28 +163,38 @@
       "init": 0,
       "init_end": 8,
       "trigger": 12,
-      "control_1_end": 38,
-      "control_2_end": 59,
-      "render": 75,
-      "noise_end": 166,
-      "filter_end": 198,
-      "tone0_end": 212,
-      "tone1_end": 227,
-      "mix_end": 242,
-      "silent": 243,
-      "zero_end": 247,
-      "control_1": 248,
-      "control_2": 504
+      "control_1_end": 37,
+      "control_2_end": 56,
+      "render": 83,
+      "noise_end": 172,
+      "filter_end": 204,
+      "tone0_end": 218,
+      "tone1_end": 233,
+      "mix_end": 248,
+      "silent": 249,
+      "zero_end": 253,
+      "control_1": 254,
+      "control_2": 510,
+      "metal_table": 1086
     },
-    "program_words": 1080,
-    "program_sha256": "26e0fa87c1d4ca0b81977877cbc2304585e80812347d769857a5fda2ef6346db",
-    "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Write packed big-endian 24-bit program words and symbols to temporary files. Run upstream MDS tools/mds_pack.py definition.json program.bin --symbols symbols.json -o machine.mds, then tools/mds_to_syx.py machine.mds --slot 6."
+    "program_words": 1278,
+    "program_sha256": "cfba0a2669e2989d65e983dafcb59938b6980030a593d79ef10371bd34fa70ee",
+    "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Pass packed big-endian 24-bit words and symbols to upstream MDS tools/mds_pack.py, then export with tools/mds_to_syx.py --slot 6."
   },
+  "_controls": [
+    {
+      "name": "METL",
+      "default": 64,
+      "resolution": 64,
+      "behavior": "0 = noise only; 64 = original blend; 127 = metal only.",
+      "update": "Captured on trigger."
+    }
+  ],
   "_validation": {
-    "status": "simulator-qualified; hardware audition pending",
+    "status": "simulator-qualified control expansion; version 1.1 hardware audition pending",
     "timing": {
-      "measured_model_max_clocks": 3876,
-      "declared_max_clocks": 3904,
+      "measured_model_max_clocks": 3932,
+      "declared_max_clocks": 3948,
       "limit": 3951,
       "scope": "Actual X.20 dispatcher P:$6b through P:$e1, DMA handshakes ready, empty 8x128 instruction cache, additive interlocks, 3 waits per external instruction miss AND external data word, plus 64-clock output-transfer reserve. Busywait latency and interrupts are system scheduling, not bounded here; no hardware timing claim.",
       "dispatcher_flags_tested": 128,
@@ -179,8 +202,8 @@
       "physical_wait_states_verified": false
     },
     "tests": {
-      "controls": 323,
-      "samples": 1002592,
+      "controls": 454,
+      "samples": 1409216,
       "peak": 0.6792894601821899,
       "clipped_samples": 0,
       "guards_and_parameters": true,
@@ -189,33 +212,77 @@
       "retrigger": true,
       "tracer_audio_cycles_equal": true
     },
-    "perceptual_metric": "Existing native four-seed WMD ensemble scorer; lower loss is closer, not a calibrated quality percentage.",
-    "perceptual_scores": [
-      {
-        "case": "default",
-        "retained": 2.302456492560202,
-        "candidate": 2.7878173454245645,
-        "level_matched": 2.7277839686278536,
-        "level_delta_db": -0.5021195941878105,
-        "peak": 0.5756655931472778,
-        "clipped_samples": 0
-      },
-      {
-        "case": "maximum",
-        "retained": 3.0559093609522328,
-        "candidate": 3.37223602766507,
-        "level_matched": 3.3186727351617247,
-        "level_delta_db": -0.813891062913271,
-        "peak": 0.4818120002746582,
-        "clipped_samples": 0
-      }
-    ],
+    "long_tail": {
+      "cases": 8,
+      "seeds": [
+        1,
+        1193046,
+        6317574,
+        8388607
+      ],
+      "samples": 2097152,
+      "peak": 0.6278234720230103,
+      "clipped_samples": 0,
+      "layer_contracts": true
+    },
+    "default_preservation": {
+      "reference": "TR6 version 1.0 installed bank; PR #21",
+      "method": "Bit-exact full-duration PCM at original default and maximum controls, with added controls at defaults; four RNG seeds.",
+      "results": [
+        {
+          "case": "default",
+          "seed": 1,
+          "sha256": "35a5eda2fd8f0dc211b98eba886b667b127404f5ea445a52c0ef8e9c4401ff9f",
+          "bytes": 262144
+        },
+        {
+          "case": "default",
+          "seed": 1193046,
+          "sha256": "ff9a00dd895415fe41af805b425ee8c1d4f35a15cd8040b45671ab8ae678c90c",
+          "bytes": 262144
+        },
+        {
+          "case": "default",
+          "seed": 6317574,
+          "sha256": "6bbbaa5d60fb68abd86fe6f291e1e191714e3610629780fa043fc79c1f811757",
+          "bytes": 262144
+        },
+        {
+          "case": "default",
+          "seed": 8388607,
+          "sha256": "a45e3226e4053efc6f26b3edc4d9056df991e8474982e4350c25a6fbac265992",
+          "bytes": 262144
+        },
+        {
+          "case": "maximum",
+          "seed": 1,
+          "sha256": "374e89cfac03269921822e21a97ff88478b7f948173c3cfe20e63338cfe7491e",
+          "bytes": 262144
+        },
+        {
+          "case": "maximum",
+          "seed": 1193046,
+          "sha256": "747afc241e49996c60db7a43f11e49610e9246cd320389aaf14290052437cac5",
+          "bytes": 262144
+        },
+        {
+          "case": "maximum",
+          "seed": 6317574,
+          "sha256": "243960a3fc1170a0582df349fb856d4b9d5a5c9d5ca9892252778149f865541a",
+          "bytes": 262144
+        },
+        {
+          "case": "maximum",
+          "seed": 8388607,
+          "sha256": "3269aeb5e1e787095004c3d1c44deb3c3614ec225353f5037c83730e79fefaf7",
+          "bytes": 262144
+        }
+      ]
+    },
     "hardware_tested": false
   },
   "_design": {
-    "description": "Two metallic partials plus a fitted noise band, all at 44.1 kHz.",
-    "strategy": "Start with an affordable approximation, qualify complete trigger/render admission and bank fit, then add fidelity only within verified headroom.",
-    "control_resolution": "64 representative values per continuous control; clap burst decay uses 16 values. Defaults and endpoints are represented.",
+    "strategy": "Expose existing layers without additional sample-loop synthesis. Preserve version 1.0 audio at new-control defaults.",
     "source": "https://github.com/Fadedlimes/Simple606/tree/6aacda7a14a8c097d32836039fd356eb0976ba8e",
     "license": "MIT; complete notice is embedded in the assembly source."
   },
@@ -223,6 +290,7 @@
     "file": "oh.syx",
     "destination_slot": 6,
     "bank_file": "../tr6-bank.syx",
-    "instruction": "Load an empty/appropriate Machine Bank and send this file with an MDS-capable SysEx sender. The bank file installs all eight voices into U01-U08. Files have not been sent to hardware."
+    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08. Version 1.1 has not been sent to hardware.",
+    "existing_kits": "Existing kits may retain zero in formerly unused parameter positions. Set the new controls to their documented defaults to restore the version 1.0 sound; existing parameter indices are unchanged."
   }
 }
