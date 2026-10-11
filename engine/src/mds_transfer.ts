@@ -2,6 +2,7 @@
 import { CMD, decodeMessage, encodeMessage, hex, machineMessages, parseCaps, parseSlots, planBank, requireMds, type MdsAssignment, type MdsMachine, type MdsMessage, type MdsSnapshot } from './mds.js';
 
 export interface MdsTransport { send(bytes: Uint8Array): void; receive(timeoutMs: number): Promise<Uint8Array | null> }
+export const MIDI_CONNECTION_ERROR = 'You must plug in both MIDI IN and MIDI OUT to send Machines';
 export interface TransferProgress { slot: number; alias: string; packet: number; packets: number; state: 'sending' | 'waiting' | 'retrying' | 'committed' }
 const REASONS = ['', 'Malformed message', 'Unsupported version', 'Unsupported command', 'Invalid slot', 'Package too large', 'Corrupt data', 'Incompatible machine', 'Reserved reason', 'Receiver not ready', 'Slot in use', 'Device busy', 'Storage failure', 'DSP activation failure', 'Transaction conflict', 'Internal fault', 'DSP memory full', 'Machine library full', 'Cycle budget exceeded'];
 function rejection(m: MdsMessage): Error {
@@ -16,10 +17,11 @@ export class MdsClient {
   private transaction = Math.floor(Math.random() * 16000) + 1;
   constructor(private readonly io: MdsTransport, private readonly now = () => performance.now(), private readonly timeout = 8000, private readonly waitLimit = 60000) {}
   private next(): number { this.transaction = (this.transaction + 1) % 16384; return this.transaction; }
-  private async query(command: number, expected: number): Promise<Uint8Array> {
+  private async query(command: number, expected: number, connectionDeadline: number): Promise<Uint8Array> {
     const transaction = this.next(), wire = encodeMessage(command, transaction);
     for (let attempt = 0; attempt < 3; attempt++) {
-      this.io.send(wire); const deadline = this.now() + this.timeout;
+      if (this.now() >= connectionDeadline) break;
+      this.io.send(wire); const deadline = Math.min(connectionDeadline, this.now() + this.timeout);
       while (this.now() < deadline) {
         const bytes = await this.io.receive(Math.max(1, deadline - this.now())); if (!bytes) break;
         const reply = decodeMessage(bytes);
@@ -28,12 +30,14 @@ export class MdsClient {
         if ((reply.command === CMD.nak || reply.command === CMD.cancel) && reply.body[0] === command) throw rejection(reply);
       }
     }
-    throw new Error('No MDS reply. Connect Machinedrum OUT to your MIDI interface input and the interface output to Machinedrum IN. Return replies are required to pace the sends. Check the selected ports and X.20 firmware. No machine data was sent by this connection check.');
+    throw new Error(MIDI_CONNECTION_ERROR);
   }
   async snapshot(): Promise<MdsSnapshot> {
-    const first = parseSlots(await this.query(CMD.slots, CMD.slotsReply));
-    const caps = parseCaps(await this.query(CMD.caps, CMD.capsReply));
-    const last = parseSlots(await this.query(CMD.slots, CMD.slotsReply));
+    // One shared budget for the whole connection check, including retries.
+    const deadline = this.now() + 5000;
+    const first = parseSlots(await this.query(CMD.slots, CMD.slotsReply, deadline));
+    const caps = parseCaps(await this.query(CMD.caps, CMD.capsReply, deadline));
+    const last = parseSlots(await this.query(CMD.slots, CMD.slotsReply, deadline));
     requireMds(JSON.stringify(first) === JSON.stringify(last), 'Machine Bank changed while reading it. Read the bank again.');
     return { ...last, caps };
   }
