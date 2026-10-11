@@ -1,5 +1,7 @@
-; TR6 LT - Simple606-inspired MDS voice for X.20.
-; Two damped tonal modes at 22.05 kHz with linear reconstruction; noise and its filter remain at 44.1 kHz.
+; TR6 LT - Simple606-inspired MDS voice for X.20, version 1.1.
+; New layer controls preserve version 1.0 audio at their defaults.
+; NOIS: 0 = remove this layer; 127 = original layer level. Captured on trigger.
+; OVER: 0 = remove this layer; 127 = original layer level. Captured on trigger.
 ;
 ; MIT License
 ; 
@@ -114,10 +116,6 @@ control_2_end:
     move x0,x:(r6+$18)
     move #>$059833,x0
     move x0,x:(r6+$1a)
-    move #>$666666,x0
-    move x0,x:(r6+$13)
-    move #>$08f5c3,x0
-    move x0,x:(r6+$14)
     move x:(r6+$3),x0
     move x:(r6+$8),y0
     mpyr y0,x0,a
@@ -126,6 +124,28 @@ control_2_end:
     move x:(r6+$a),y0
     mpyr y0,x0,a
     move a1,x:(r6+$1b)
+    move y:(r6+$3),a
+    asr #7,a,a
+    and #>$7e,a
+    add #>layer_table,a
+    move a1,r0
+    move p:(r0)+,x0
+    move x0,x:(r6+$13)
+    move p:(r0)+,x0
+    move x0,x:(r6+$14)
+    move y:(r6+$4),a
+    asr #7,a,a
+    cmp #>127,a
+    jeq over_done
+    asl #16,a,a
+    move a1,y0
+    move x:(r6+$1a),x0
+    mpyr y0,x0,a
+    move a1,x:(r6+$1a)
+    move x:(r6+$9),x0
+    mpyr y0,x0,a
+    move a1,x:(r6+$9)
+over_done:
     rts
 render:
     move #>$ffffff,m6
@@ -398,3 +418,20 @@ control_2:
     .dc $7d8ca2,$088178,$02b59d,$0722a9,$6e16ef,$ce4552,$299a6f,$7f7cb8
     .dc $fffdee,$7d70f4,$08b125,$02c4ce,$074553,$6daae6,$ce8aa6,$29b0fc
     .dc $7f73e9,$ffce3f,$7d4521,$08faa0,$02dc36,$077a55,$6d03e6,$cef4a9
+layer_table:
+    .dc $000000,$000000,$01999a,$0023d7,$033333,$0047ae,$04cccd,$006b85
+    .dc $066666,$008f5c,$080000,$00b333,$09999a,$00d70a,$0b3333,$00fae1
+    .dc $0ccccd,$011eb8,$0e6666,$01428f,$100000,$016666,$11999a,$018a3e
+    .dc $133333,$01ae15,$14cccd,$01d1ec,$166666,$01f5c3,$180000,$02199a
+    .dc $19999a,$023d71,$1b3333,$026148,$1ccccd,$02851f,$1e6666,$02a8f6
+    .dc $200000,$02cccd,$219999,$02f0a4,$233333,$03147b,$24cccd,$033852
+    .dc $266666,$035c29,$280000,$038000,$299999,$03a3d7,$2b3333,$03c7ae
+    .dc $2ccccd,$03eb85,$2e6666,$040f5c,$300000,$043333,$319999,$04570a
+    .dc $333333,$047ae2,$34cccd,$049eb9,$366666,$04c290,$380000,$04e667
+    .dc $399999,$050a3e,$3b3333,$052e15,$3ccccd,$0551ec,$3e6666,$0575c3
+    .dc $400000,$05999a,$419999,$05bd71,$433333,$05e148,$44cccd,$06051f
+    .dc $466666,$0628f6,$480000,$064ccd,$499999,$0670a4,$4b3333,$06947b
+    .dc $4ccccc,$06b852,$4e6666,$06dc29,$500000,$070000,$519999,$0723d7
+    .dc $533333,$0747ae,$54cccc,$076b85,$566666,$078f5d,$580000,$07b334
+    .dc $599999,$07d70b,$5b3333,$07fae2,$5ccccc,$081eb9,$5e6666,$084290
+    .dc $600000,$086667,$619999,$088a3e,$633333,$08ae15,$666666,$08f5c3

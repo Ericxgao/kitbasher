@@ -1,5 +1,6 @@
-; TR6 SD - Simple606-inspired MDS voice for X.20.
-; 44.1 kHz tonal body and snare wires; one body oscillator with two decay envelopes and a full-rate fitted noise band.
+; TR6 SD - Simple606-inspired MDS voice for X.20, version 1.1.
+; New layer controls preserve version 1.0 audio at their defaults.
+; BODY: 0 = remove this layer; 127 = original layer level. Captured on trigger.
 ;
 ; MIT License
 ; 
@@ -147,12 +148,17 @@ control_3_end:
     move x0,x:(r6+$19)
     move #>$400000,x0
     move x0,x:(r6+$15)
-    move #>$2388b9,x0
-    move x0,x:(r6+$17)
-    move #>$27fcb9,x0
-    move x0,x:(r6+$18)
     move x:(r6+$4),a
     move a1,x:(r6+$14)
+    move y:(r6+$5),a
+    asr #7,a,a
+    and #>$7e,a
+    add #>layer_table,a
+    move a1,r0
+    move p:(r0)+,x0
+    move x0,x:(r6+$17)
+    move p:(r0)+,x0
+    move x0,x:(r6+$18)
     rts
 render:
     move #>$ffffff,m6
@@ -409,3 +415,20 @@ control_3:
     .dc $d6128b,$29ed75,$d54422,$2abbde,$d475b8,$2b8a48,$d3a74f,$2c58b1
     .dc $d2d8e5,$2d271b,$d20a7b,$2df585,$d13c12,$2ec3ee,$d06da8,$2f9258
     .dc $cf9f3e,$3060c2,$ced0d5,$312f2b,$ce026b,$31fd95,$cccccd,$333333
+layer_table:
+    .dc $000000,$000000,$008e23,$009ff3,$011c46,$013fe6,$01aa69,$01dfd9
+    .dc $02388c,$027fcc,$02c6ae,$031fbe,$0354d1,$03bfb1,$03e2f4,$045fa4
+    .dc $047117,$04ff97,$04ff3a,$059f8a,$058d5d,$063f7d,$061b80,$06df70
+    .dc $06a9a3,$077f63,$0737c6,$081f56,$07c5e8,$08bf48,$08540b,$095f3b
+    .dc $08e22e,$09ff2e,$097051,$0a9f21,$09fe74,$0b3f14,$0a8c97,$0bdf07
+    .dc $0b1aba,$0c7efa,$0ba8dd,$0d1eed,$0c3700,$0dbee0,$0cc522,$0e5ed2
+    .dc $0d5345,$0efec5,$0de168,$0f9eb8,$0e6f8b,$103eab,$0efdae,$10de9e
+    .dc $0f8bd1,$117e91,$1019f4,$121e84,$10a817,$12be77,$11363a,$135e6a
+    .dc $11c45c,$13fe5c,$12527f,$149e4f,$12e0a2,$153e42,$136ec5,$15de35
+    .dc $13fce8,$167e28,$148b0b,$171e1b,$15192e,$17be0e,$15a751,$185e01
+    .dc $163574,$18fdf4,$16c397,$199de7,$1751b9,$1a3dd9,$17dfdc,$1addcc
+    .dc $186dff,$1b7dbf,$18fc22,$1c1db2,$198a45,$1cbda5,$1a1868,$1d5d98
+    .dc $1aa68b,$1dfd8b,$1b34ae,$1e9d7e,$1bc2d1,$1f3d71,$1c50f3,$1fdd63
+    .dc $1cdf16,$207d56,$1d6d39,$211d49,$1dfb5c,$21bd3c,$1e897f,$225d2f
+    .dc $1f17a2,$22fd22,$1fa5c5,$239d15,$2033e8,$243d08,$20c20b,$24dcfb
+    .dc $21502d,$257ced,$21de50,$261ce0,$226c73,$26bcd3,$2388b9,$27fcb9

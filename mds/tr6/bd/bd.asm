@@ -1,5 +1,6 @@
-; TR6 BD - Simple606-inspired MDS voice for X.20.
-; 22.05 kHz swept tonal body and click, smooth quadratic drive, linear reconstruction; controls captured on trigger.
+; TR6 BD - Simple606-inspired MDS voice for X.20, version 1.1.
+; New layer controls preserve version 1.0 audio at their defaults.
+; CLIK: 0 = remove this layer; 127 = original layer level. Captured on trigger.
 ;
 ; MIT License
 ; 
@@ -155,6 +156,16 @@ decay_ready:
     move x0,x:(r6+$10)
     move #>16384,x0
     move x0,x:(r6+$c)
+    move y:(r6+$6),a
+    asr #7,a,a
+    cmp #>127,a
+    jeq layer_done
+    asl #16,a,a
+    move a1,y0
+    move x:(r6+$5),x0
+    mpyr y0,x0,a
+    move a1,x:(r6+$5)
+layer_done:
     rts
 render:
     move #>$ffffff,m6
