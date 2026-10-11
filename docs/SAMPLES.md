@@ -67,6 +67,19 @@ is and its pad follows.
 - **Identity.** With no swaps, or with every sample swapped for its own stock data, the build
   is byte-for-byte the build without the Samples step, with trimming on or off.
 
+## X.20 B
+
+X.20 B keeps the same 21 samples in its own E12B flash file system, and its DSP2 loader lays
+them out at boot (the same table at P:`0x103d7b`, rebuilt from the file system's directory every
+boot). The build never sees X.20's DSP2 upload, so the machine map above comes from the recipe
+([`bases/x20.json`](../bases/x20.json) `e12.machines`, read once from X.20 B's own dispatch with
+the same rule; it is the table above). When the bank is read, its 21 entry names must be the
+recipe's, or the Samples step is not offered. A swap follows the rules above: it goes into the
+bank before the trim, is cut to the stock length, and is padded to whole words. The swapped bank
+is then encoded like any trimmed one ([engine/src/x20.ts](../engine/src/x20.ts) `trimX20Bank`).
+A swapped sample usually compresses differently from the stock one, so it can change how much
+E12B flash the trim frees for the machines; the storage check counts it.
+
 ## The Samples step
 
 The 16 E12 machines are laid out as pads in Machinedrum order (BD SD HT LT CP RS CB CH /

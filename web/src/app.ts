@@ -8,6 +8,12 @@
 // Continuing from Models also runs a full build in memory to check compressed slot capacity
 // before the category step.
 //
+// MDX X.20 B (engine/src/x20.ts): recognised by its file hash and taken through the same steps. Its
+// plan (planX20) drives the meters (DSP2 words at the chosen trim, machine IDs, the new-machine list,
+// the machine records), the layout editor (X.20's own menu families as fixed categories) and the
+// build; what the recipe does not patch (sample swapping, the unmute fix, MIDI chromatic input, pitch
+// note names) is shown turned off with the reason. Untested on hardware, and labelled so.
+//
 // Packs: the page bundles the packs that web/build.mjs includes. Users can load more pack files;
 // they are read with the File API, never uploaded, and planned and checked exactly like the
 // bundled ones.
@@ -30,13 +36,16 @@ import { currentFirmwareFixes } from '../../engine/src/clean_recovery.js';
 import { findTrimThreshold } from './auto-trim.js';
 import { selectCatalog } from '../../engine/src/catalog.js';
 import { readBank } from '../../engine/src/samples.js';
-import { decodeProject, encodeProject, osOf, osProblem, PROJECT_EXTENSION, type Project } from '../../engine/src/project.js';
+import { decodeProject, encodeProject, osOf, osOfRecipe, osProblem, PROJECT_EXTENSION, type Project } from '../../engine/src/project.js';
 import { SamplesStep } from './samples-ui.js';
 import { fileHint, gate, noUwOf, uwForBuild, uwOf, type UwAnswer } from './uw-mode.js';
 import { recoverSession } from '../../engine/src/restore.js';
 import { parseLayout, type Layout } from '../../engine/src/layout.js';
 import { num } from '../../engine/src/bytes.js';
 import { select } from '../../engine/src/selection.js';
+import { parseRecipe, recipeFor, type X20Recipe, type X20RecipeFile } from '../../engine/src/x20_recipe.js';
+import { buildX20, findX20Layout, planX20, readX20, trimX20Bank, X20_CATEGORIES, x20E12Bank, x20IdSlots, X20FlashError, type X20Plan, type X20Report, type X20Trimmed } from '../../engine/src/x20.js';
+import { sha256 } from '../../engine/src/bytes.js';
 
 interface Data { bases: BaseSet; packs: Pack[]; core: CorePack | null; source: { commit: string } }
 
@@ -53,7 +62,7 @@ const fmt = (n: number): string => n.toLocaleString('en');
 
 async function loadData(): Promise<Data> {
   const index = await (await fetch('data/index.json')).json() as { bases: string[]; packs: string[]; source: { commit: string } };
-  const files = await Promise.all(index.bases.map(async (f) => (await fetch(`data/bases/${f}`)).json() as Promise<BaseProfileFile | LineageFile>));
+  const files = await Promise.all(index.bases.map(async (f) => (await fetch(`data/bases/${f}`)).json() as Promise<BaseProfileFile | LineageFile | X20RecipeFile>));
   const bases = baseSet(files);
   const all = await Promise.all(index.packs.map(async (f) => (await fetch(`data/packs/${f}`)).json() as Promise<Pack | CorePack>));
   const core = (all.find((p) => p.family === 'CORE') as CorePack | undefined) ?? null;
@@ -79,7 +88,27 @@ let building = false;
 let downloadUrl: string | null = null;
 let fileRequest = 0;
 let packedCapacityProblem = false;
-let cachedBuild: { revision: number; result: BuildResult } | null = null;
+let cachedBuild: { revision: number; result: AnyBuild } | null = null;
+/** An X.20 file (a fixed per-release recipe, engine/src/x20.ts): its recipe, its stock E12B bank, its plan. */
+let x20: X20RecipeFile | null = null;
+let x20R: X20Recipe | null = null;
+let x20Bank: ReturnType<typeof readX20>['bank0'] | null = null;
+let x20Plan: X20Plan | null = null;
+const x20Trims = new Map<string, X20Trimmed>();  // per trim setting
+/** An X.20 build, as the page keeps it next to the 1.63-lineage ones */
+type X20Built = { output: Uint8Array; report: X20Report; x20: true };
+type AnyBuild = BuildResult | X20Built;
+/** what X.20 B does not have, and why: shown where the option would be */
+const X20_OFF = 'Not available on MDX OS X.20 B: MIDI chromatic note input and pitch note names ' +
+  '(the recipe does not patch X.20\'s MIDI input or parameter display). ' +
+  'Reusing the stock INP IDs 80..85 is not offered either: the stock INP machine would stay in the menu on the same ID.';
+const X20_FIXED_WHY = 'new, renamed or reordered categories, and the order of machines within a category (the recipe sets each machine\'s category only)';
+/** an OS is loaded: a 1.63-lineage base or an X.20 recipe file */
+const loaded = (): boolean => !!fw || !!x20;
+/** a plan that passed (the build may still find storage short) */
+const buildable = (): boolean => x20 ? !!x20Plan?.ok : !!base && !!current?.ok;
+/** the plan can be built: it fits and has a machine */
+const planReady = (): boolean => x20 ? !!x20Plan?.ok && x20Plan.sel.length > 0 : !!current?.ok && current.sel.length > 0;
 const keepSamples: TrimOptions = { db: -30, minSeconds: Infinity, cap: null };
 let autoTrimOptions: TrimOptions = keepSamples;
 const trimMode = (): string => document.querySelector<HTMLInputElement>('input[name=e12]:checked')!.value;
@@ -93,12 +122,12 @@ function clearDownload(): void {
 function syncWizard(): void {
   $('memory-trim-slot').hidden = step !== 3;
   if (step > 2) $(`step-${step}`).querySelector('.wizard-actions')!.before($('room'));
-  $('room').hidden = !fw || step <= 2;
-  const ready = !!current?.ok && current.sel.length > 0 && !packedCapacityProblem;
-  const asked = gate(uwAnswer, !!fw);
+  $('room').hidden = !loaded() || step <= 2;
+  const ready = planReady() && !packedCapacityProblem;
+  const asked = gate(uwAnswer, loaded());
   $('firmware-next').toggleAttribute('disabled', !asked.ok || building);
-  $('samples-next').toggleAttribute('disabled', !fw || building);
-  $('project-save').toggleAttribute('disabled', !fw || building);
+  $('samples-next').toggleAttribute('disabled', !loaded() || building);
+  $('project-save').toggleAttribute('disabled', !loaded() || building);
   $('models-next').toggleAttribute('disabled', !ready || building);
   $('categories-next').toggleAttribute('disabled', !ready || building);
   $('build').toggleAttribute('disabled', !ready || building);
@@ -111,7 +140,7 @@ function syncWizard(): void {
 }
 
 function showStep(n: number): void {
-  if (building || (n > 1 && !fw) || (n > 3 && (!current?.ok || !current.sel.length || packedCapacityProblem))) return;
+  if (building || (n > 1 && !loaded()) || (n > 3 && (!planReady() || packedCapacityProblem))) return;
   // the UW question is answered before anything else
   if (n > 1 && needsUwAnswer()) return;
   if (step <= 3 && n > 3 && !cachedBuild) { void onBuild(n === 4 ? 'categories' : 'download'); return; }
@@ -181,7 +210,8 @@ const catalogModels = (): PackModel[] => select(data.packs, {}).fams.flatMap((f)
 
 /** A layout from a file, a patched OS or the earlier-IDs preset becomes the user's map. */
 function adoptLayout(l: Layout, from: string, extra = ''): void {
-  if (!l.base && base) l = { ...l, base: base.id };
+  const baseId = x20?.id ?? base?.id;
+  if (!l.base && baseId) l = { ...l, base: baseId };
   layoutEd.adopt(l, from);                              // its UW answer: layoutEd.onAdopt
   $('project-status').textContent = `Machine IDs restored from ${from}: ${Object.keys(l.machines).length} machines keep their IDs.${extra}`;
   refresh();
@@ -189,6 +219,9 @@ function adoptLayout(l: Layout, from: string, extra = ''): void {
 
 /** A Kitbasher-built OS (.syx or .bin): its layout table, or else its descriptors matched to the catalog. */
 async function restoreFromOs(bytes: Uint8Array, name: string): Promise<boolean> {
+  // an X.20 build carries its layout table in E12B flash (engine/src/x20.ts findX20Layout)
+  const x20Layout = findX20Layout(bytes, data.bases.recipes.map((f) => f.id));
+  if (x20Layout) { adoptLayout(x20Layout, name); return true; }
   let parsed: Firmware;
   try { parsed = readFirmware(bytes); } catch { return false; }
   const r = recoverSession(parsed, catalogModels(), base?.os.descriptorTable ?? num(data.bases.lineage.anchors.descriptor_table));
@@ -314,12 +347,55 @@ function firmwareOptions(): ReturnType<typeof currentFirmwareFixes> {
   return { ...o, features: { ...o.features, ...(chromaOn() ? { midiChroma: { channel: chromaChannel } } : {}), ...(labelsOn() ? { pitchLabels: true } : {}) } };
 }
 function syncChromaOption(): void {
-  $('midi-chroma-option').hidden = !base?.support.midiChroma?.ok;
-  $('pitch-labels-option').hidden = !base?.support.pitchLabels?.ok;
+  // on X.20 B the options are shown turned off, with the reason ($('x20-unavailable'))
+  $('midi-chroma-option').hidden = !x20 && !base?.support.midiChroma?.ok;
+  $('pitch-labels-option').hidden = !x20 && !base?.support.pitchLabels?.ok;
+  for (const id of ['midi-chroma', 'pitch-labels']) {
+    const box = $<HTMLInputElement>(id);
+    box.disabled = !!x20;
+    if (x20) box.checked = false;
+  }
+  // X.20 B has its own unmute fix (the recipe's unmute feature: MUTE-mode TRIG keys act on press)
+  $<HTMLInputElement>('unmute-fix').disabled = false;
+  $('x20-unavailable').hidden = !x20;
+  $('x20-unavailable').textContent = x20 ? X20_OFF : '';
+}
+
+/** The meters a base has: the 1.63 lineage's RAM image, or X.20's IDs, list and records. */
+function syncMeters(): void {
+  $('m-ram').hidden = !!x20;
+  for (const id of ['m-ids', 'm-list', 'm-records']) $(id).hidden = !x20;
+  $('capacity-all').textContent = x20 ? 'All must fit. Untested on hardware.' : 'All three must fit.';
 }
 
 function planFor(exclude: string[], opt = trimOptions()): Plan {
   return plan(fw!, base!, data.packs, data.core!, { exclude, trim: opt, allowIdMove: allowIdMove(), uw: uwOf(uwAnswer), layout: layoutEd.mapForPlan(), samples: samples.edits(), ...firmwareOptions() }, trimmed(opt));
+}
+
+/** The X.20 E12B bank at a trim (cached: the auto trim asks for many). */
+function x20Trimmed(opt: TrimOptions): X20Trimmed {
+  const key = `${opt.db}|${opt.minSeconds}|${opt.cap}`;
+  let t = x20Trims.get(key);
+  if (!t) { t = trimX20Bank(x20R!, x20Bank!, { db: opt.db, minSeconds: opt.minSeconds, cap: opt.cap }, samples.edits()); x20Trims.set(key, t); }
+  return t;
+}
+
+function planX20For(exclude: string[], opt = trimOptions()): X20Plan {
+  // before the UW question is answered the plan is a UW one, as plan() takes no answer as with UW
+  return planX20(x20R!, x20Trimmed(opt), data.packs, { uw: uwAnswer !== 'no', exclude, layout: layoutEd.mapForPlan() });
+}
+
+/** Auto trim on X.20: the gentlest threshold whose DSP2 placement fits (as autoPlan does). */
+function autoPlanX20(exclude: string[], minDb: number | null): X20Plan {
+  autoTrimOptions = keepSamples;
+  const p = planX20For(exclude);
+  if (p.dsp2.fits && minDb === null) return p;
+  const cap = Number($<HTMLInputElement>('cap').value) || null;
+  const found = findTrimThreshold(db => planX20For(exclude, { db, minSeconds: 0.5, cap }),
+    candidate => candidate.dsp2.fits, minDb ?? -40);
+  autoTrimOptions = { db: found.db, minSeconds: 0.5, cap };
+  $<HTMLInputElement>('db').value = String(autoTrimOptions.db);
+  return found.value;
 }
 
 // Trimming can fix DSP placement, not ABI, menu, or other compatibility errors.
@@ -384,6 +460,8 @@ function refresh(minAutoDb: number | null = null): void {
     syncWizard();
     return;
   }
+  if (x20 && x20R && x20Bank) { refreshX20(minAutoDb); return; }
+  x20Plan = null;
   if (!fw || !base) {
     current = null;
     $('build').setAttribute('disabled', '');
@@ -450,6 +528,61 @@ function refresh(minAutoDb: number | null = null): void {
   scheduleStorageCheck();
 }
 
+/** refresh() on X.20 B: its plan, its meters, the layout editor; the same problems, needs and Download summary. */
+function refreshX20(minAutoDb: number | null): void {
+  const p = trimMode() === 'auto' ? autoPlanX20(excludes(), minAutoDb) : planX20For(excludes());
+  updateTrimControls();
+  current = null;
+  x20Plan = p;
+  layoutEd.render(p);
+  $('room').dataset.state = p.ok ? 'ok' : 'over';
+  $('status').removeAttribute('data-profile-error');
+  meter('m-dsp2', p.dsp2.demand, p.dsp2.capacity, 'words', p.dsp2.demand > p.dsp2.capacity || !p.dsp2.fits);
+  meter('m-ids', p.ids.used, p.ids.available, 'IDs', p.ids.used > p.ids.available);
+  meter('m-list', p.list.used, p.list.room, 'entries', p.list.used > p.list.room);
+  if (p.records) {
+    meter('m-records', p.records.used, p.records.cap, 'records', p.records.used > p.records.cap);
+    $('m-records').title = `At most ${fmt(p.records.used)} of ${fmt(p.records.cap)} machine records: X.20's own take at most ${p.records.stock} (its stock cap), plus one per added machine`;
+  } else {
+    $('m-records').dataset.state = 'pending';
+    ($('m-records').querySelector('.fill') as HTMLElement).style.width = '0';
+    $('m-records').querySelector('.num')!.textContent = "Not computed: the recipe does not give X.20's own record count";
+  }
+  $('room-note').textContent = p.ok ? 'Memory' : !p.dsp2.fits ? 'Not enough memory.' : 'Cannot continue — see details.';
+  $('capacity-problems').textContent = p.problems.join(' · ');
+  $('capacity-problems').hidden = !p.problems.length;
+  $('room-needs').textContent = [...p.moves.map((m) => `${m.name.trim()} moves ${m.preferred}→${m.id} (${m.why}).`),
+    ...p.sel.flatMap((s) => needLines(s.m))].join(' ');
+  $('make-room').hidden = false;
+  $('make-room-help').hidden = p.ok;
+  $('sample-options').hidden = false;
+  $('make-room-help').textContent = !p.dsp2.fits
+    ? trimMode() === 'auto' ? 'Still too large. Remove models or lower At most.' : 'Remove models or choose Auto trim.'
+    : 'Remove models.';
+  const swapped = samples.state.swaps.size;
+  $('download-summary').textContent = `${p.sel.length} models for ${x20R!.name}.${swapped ? ` ${swapped} sample${swapped === 1 ? '' : 's'} replaced.` : ''} Untested on hardware: back up first and keep the stock ${x20R!.name} file to reflash.`;
+  const needs = p.sel.flatMap(s => needLines(s.m));
+  $('download-needs').hidden = !needs.length;
+  $('ids-warning').hidden = layoutEd.restoredFrom !== null;
+  $('ids-warning').textContent = 'Machine IDs are assigned fresh. To keep your kits\' machines, drop your previous Kitbasher .syx under "Restore an earlier layout" on step 1.';
+  $('download-needs').replaceChildren(...(needs.length ? [
+    el('h3', {}, 'UW sample data: a separate step'),
+    el('p', {}, needs.join(' ')),
+    el('p', {}, 'These sample-based features require a UW Machinedrum. After installing the firmware, load the matching sample/wavetable SysEx through the UW sample manager, not the firmware upgrade screen. Back up your UW samples first and check the destination slot.'),
+    uwDownloads(p.sel.map(s => s.m), data.packs),
+    uwGuide(),
+  ] : []));
+  for (const i of boxes()) {
+    const label = i.closest('.machine') as HTMLElement;
+    i.disabled = false;
+    label.removeAttribute('data-nofit');
+    label.title = label.dataset.labels ?? '';
+  }
+  applyNoUw();
+  syncWizard();
+  scheduleStorageCheck();
+}
+
 function syncTrim(): void {
   updateTrimControls();
   refresh();
@@ -459,7 +592,10 @@ async function onFile(f: File): Promise<void> {
   const request = ++fileRequest;
   revision++;
   input = null; base = null; fw = null; current = null; cachedBuild = null;
+  x20 = null; x20R = null; x20Bank = null; x20Plan = null; x20Trims.clear();
+  layoutEd.leaveX20();
   syncChromaOption();
+  syncMeters();
   $('room').hidden = true;
   $('firmware-options').hidden = true;
   // a new OS starts from the default, or from what a loaded project chose
@@ -471,6 +607,41 @@ async function onFile(f: File): Promise<void> {
   clearDownload();
   try {
     let bytes: Uint8Array = new Uint8Array(await f.arrayBuffer());
+    // MDX X.20 and later: a fixed recipe for that exact file, found by its hash; then the same steps
+    const recipe = recipeFor(data.bases.recipes, await sha256(bytes));
+    if (recipe) {
+      const R = parseRecipe(recipe);
+      const { bank0 } = readX20(bytes, R);
+      if (request !== fileRequest) return;
+      x20 = recipe; x20R = R; x20Bank = bank0;
+      input = bytes; inputName = f.name;
+      layoutEd.setX20({ id: R.id, name: R.name, families: R.features.categories ? X20_CATEGORIES : Object.keys(R.families), slots: x20IdSlots(R), why: X20_FIXED_WHY });
+      try { samples.setBank(x20E12Bank(R, bank0)); }
+      catch (e) { samples.setBank(null, `Sample swapping is not available for this file: ${(e as Error).message}`); }
+      $('firmware-info').textContent = `${R.name}: a public beta OS. Kitbasher patches this exact file with a fixed recipe. ` +
+        `${recipe.qualification.level === 'hardware-proven' ? '' : 'Untested on hardware: back up first and keep the stock X.20 B file to reflash. '}` +
+        'User machines (USR) keep working. ' + X20_OFF;
+      $('firmware-details').hidden = false;
+      $('firmware-options').hidden = false;              // shown turned off, with the reason
+      syncChromaOption();
+      syncMeters();
+      status(`Loaded ${f.name} (${R.name}, public beta; untested on hardware).`, 'ok');
+      if (pendingProject) applyProject(pendingProject.project, pendingProject.name);
+      refresh();
+      if (gate(uwAnswer, true).ok) showStep(2);
+      else status(`Loaded ${f.name} (${R.name}, public beta; untested on hardware). ${gate(uwAnswer, true).why}`, 'info');
+      return;
+    }
+    // an X.20 build Kitbasher made: not built on; its layout table comes back and the stock X.20 file is asked for
+    const builtX20 = findX20Layout(bytes, data.bases.recipes.map((r) => r.id));
+    if (builtX20) {
+      if (request !== fileRequest) return;
+      adoptLayout(builtX20, f.name);
+      const was = data.bases.recipes.find((r) => r.id === builtX20.base)!;
+      status(`That's a Kitbasher build for ${was.name}: layout restored. Now drop the stock ${was.name} file it was built on.`, 'ok');
+      refresh();
+      return;
+    }
     let parsed = readFirmware(bytes);
     let b: Base;
     try {
@@ -514,6 +685,9 @@ async function onFile(f: File): Promise<void> {
   } catch (e) {
     if (request !== fileRequest) return;
     input = null; base = null; fw = null;
+    x20 = null; x20R = null; x20Bank = null;
+    syncChromaOption();
+    syncMeters();
     samples.setBank(null);
     status(`${f.name}: ${(e as Error).message}`, 'error');
   }
@@ -580,19 +754,30 @@ function reportView(r: BuildReport): HTMLElement {
 
 /** The build ran out of firmware storage: the compressed DSP slot, or (on bases where that slot
  *  grows) the OS area. Trimming samples or removing models fixes either. */
-const storageFull = (e: unknown): e is CompressedCapacityError | OsAreaCapacityError =>
-  e instanceof CompressedCapacityError || e instanceof OsAreaCapacityError;
+const storageFull = (e: unknown): e is CompressedCapacityError | OsAreaCapacityError | X20FlashError =>
+  e instanceof CompressedCapacityError || e instanceof OsAreaCapacityError || e instanceof X20FlashError;
 
-function buildWith(trim: TrimOptions): Promise<BuildResult> {
+function buildWith(trim: TrimOptions): Promise<AnyBuild> {
   // throws without a Yes or a No (and engine build refuses a missing answer too)
   const uw = uwForBuild(uwAnswer);
+  if (x20) {
+    return buildX20(input!, x20, data.packs, data.core!, { uw, exclude: excludes(), layout: layoutEd.mapForPlan(),
+      features: { unmute: $<HTMLInputElement>('unmute-fix').checked },
+      trim: { db: trim.db, minSeconds: trim.minSeconds, cap: trim.cap }, samples: samples.edits() }).then((r): X20Built => ({ ...r, x20: true }));
+  }
   return build(input!, base!, data.packs, data.core!,
     { exclude: excludes(), trim, allowIdMove: allowIdMove(), uw, layout: layoutEd.mapForPlan(), samples: samples.edits(), ...firmwareOptions() }, trimmed(trim));
 }
 
-function showStorage(report: BuildReport): void {
+function showStorage(result: AnyBuild): void {
   $('capacity-pending').hidden = true;
   $('room-note').textContent = 'Memory fits.';
+  if ('x20' in result) {
+    // X.20: the machines' code, the list and the layout table in the E12B flash the trim frees
+    meter('m-packed', result.report.flash.used, result.report.flash.capacity, 'bytes', false);
+    return;
+  }
+  const report = result.report;
   if (report.dsp2.packed_capacity !== null) {
     meter('m-packed', report.dsp2.packed, report.dsp2.packed_capacity, 'bytes', false);
   } else {
@@ -601,7 +786,7 @@ function showStorage(report: BuildReport): void {
   }
 }
 
-function showStorageProblem(e: CompressedCapacityError | OsAreaCapacityError): void {
+function showStorageProblem(e: CompressedCapacityError | OsAreaCapacityError | X20FlashError): void {
   packedCapacityProblem = true;
   $('room').dataset.state = 'over';
   $('room-note').textContent = 'Not enough firmware storage.';
@@ -625,7 +810,7 @@ let storage: { revision: number; done: Promise<void> } | null = null;
 
 function scheduleStorageCheck(): void {
   storage = null;
-  if (!input || !base || !current?.ok || !gate(uwAnswer, true).ok) {
+  if (!input || (x20 ? !x20Plan?.ok : !base) || !x20 && !current?.ok || !gate(uwAnswer, true).ok) {
     $('m-packed').querySelector('.num')!.textContent = '';
     return;
   }
@@ -636,7 +821,7 @@ function scheduleStorageCheck(): void {
 
 async function checkStorage(version: number): Promise<void> {
   if (version !== revision || cachedBuild?.revision === version) return;
-  const attempt = async (trim: TrimOptions): Promise<BuildResult | Error> => {
+  const attempt = async (trim: TrimOptions): Promise<AnyBuild | Error> => {
     await new Promise((r) => setTimeout(r, 0));          // let the page answer clicks between builds
     if (version !== revision) return new Error('stale');
     try { return await buildWith(trim); } catch (e) { return e as Error; }
@@ -664,7 +849,7 @@ async function checkStorage(version: number): Promise<void> {
       refresh(hi);                                       // the plan, meters and slider at the new trim
       cachedBuild = { revision, result: best };
       storage = { revision, done: Promise.resolve() };
-      showStorage(best.report);
+      showStorage(best);
       return;
     }
     got = best;
@@ -675,12 +860,12 @@ async function checkStorage(version: number): Promise<void> {
     return;
   }
   cachedBuild = { revision: version, result: got };
-  showStorage(got.report);
+  showStorage(got);
 }
 
 /** Back to the question when it is unanswered: no build, check or download goes ahead without it. */
 function needsUwAnswer(): boolean {
-  const asked = gate(uwAnswer, !!fw);
+  const asked = x20 ? gate(uwAnswer, true) : gate(uwAnswer, !!fw);
   if (asked.ok) return false;
   status(asked.why!, 'error');
   if (step !== 1) { step = 1; for (let i = 1; i <= 5; i++) $(`step-${i}`).hidden = i !== 1; syncWizard(); }
@@ -689,7 +874,7 @@ function needsUwAnswer(): boolean {
 }
 
 async function onBuild(destination: 'categories' | 'download' = 'download'): Promise<void> {
-  if (!input || !base || !current?.ok || building) return;
+  if (!input || !buildable() || building) return;
   if (needsUwAnswer()) return;
   building = true;
   let succeeded = false;
@@ -712,10 +897,11 @@ async function onBuild(destination: 'categories' | 'download' = 'download'): Pro
     const result = cachedBuild?.revision === version ? cachedBuild.result : await buildWith(trimOptions());
     if (version !== revision) return;
     cachedBuild = { revision: version, result };
-    const { output, kind, report } = result;
-    showStorage(report);
+    showStorage(result);
     succeeded = true;
     if (destination === 'categories') { status('Your selection fits.', 'ok'); return; }
+    if ('x20' in result) { downloadX20(result, t); return; }
+    const { output, kind, report } = result;
     const syx = kind === 'syx' ? output : encodeSyx(containerOf(output));
     const blob = new Blob([syx as Uint8Array<ArrayBuffer>], { type: 'application/octet-stream' });
     const stem = inputName.replace(/\.(syx|bin)$/i, '');
@@ -741,6 +927,45 @@ async function onBuild(destination: 'categories' | 'download' = 'download'): Pro
   }
 }
 
+/** The X.20 build's download, with its report and the "untested on hardware" label. */
+function downloadX20(result: X20Built, t: number): void {
+  const blob = new Blob([result.output as Uint8Array<ArrayBuffer>], { type: 'application/octet-stream' });
+  const name = `${inputName.replace(/\.(syx|bin)$/i, '')}-models.syx`;
+  downloadUrl = URL.createObjectURL(blob);
+  const a = el('a', { class: 'download', href: downloadUrl, download: name }, `Download ${name}`);
+  a.addEventListener('click', (e) => { if (needsUwAnswer()) e.preventDefault(); });
+  $('result').replaceChildren(a,
+    el('p', { class: 'note', id: 'x20-untested' }, `Untested on hardware: ${x20R!.name} builds are checked by the gates below and in an emulator only. Back up first and keep the stock ${x20R!.name} file to reflash.`),
+    el('details', {}, el('summary', {}, 'Build details and checks'), x20ReportView(result.report)));
+  status(`Built in ${((performance.now() - t) / 1000).toFixed(1)} s. Untested on hardware.`, 'ok');
+}
+
+const X20_FEATURE_NAMES: Record<string, string> = { unmute: 'the unmute fix (MUTE-mode TRIG keys act on press)', categories: 'menu categories',
+  dyn_labels: 'dynamic knob labels', id_masks: 'the class-mask fix for IDs 88..95', title_rom: 'the machine-title fix' };
+function x20ReportView(r: X20Report): HTMLElement {
+  const stat = (k: string, v: string): HTMLElement => el('div', { class: 'stat' }, el('span', { class: 'k' }, k), el('span', { class: 'v' }, v));
+  return el('div', { class: 'report' },
+    el('div', { class: 'stats' },
+      stat('Machines', String(r.machines.length)),
+      stat('DSP2 words free', fmt(r.dsp2.free)),
+      stat('E12B flash free', `${fmt(r.flash.free_left)} B`),
+      stat('E12 words freed', fmt(r.e12.freed_words)),
+      stat('E12 samples trimmed', String(r.e12.trimmed))),
+    el('p', { class: 'note', id: 'report-uw' }, noUw()
+      ? 'Built for a Machinedrum without UW: every machine is on an ID below 128 and no model needs UW samples.'
+      : 'Built for a Machinedrum with UW.'),
+    r.moves.length ? el('p', { class: 'note' }, `Assigned available IDs: ${r.moves.map((m) => `${m.name.trim()} ${m.preferred}→${m.id} (${m.why})`).join(', ')}. Use the same saved layout when rebuilding for existing kits.`) : '',
+    el('details', {}, el('summary', {}, `Checks (${r.gates.filter((g) => g.ok).length} of ${r.gates.length} passed)`),
+      el('ul', { class: 'gates' }, ...r.gates.map((g) => el('li', {}, el('b', {}, g.ok ? g.name : `FAILED: ${g.name}`), ' ', g.detail)),
+        ...r.notes.map((n) => el('li', {}, n)))),
+    el('p', { class: 'note', id: 'report-features' }, r.features.length ? `Fixes and features in this build: ${r.features.map((f) => X20_FEATURE_NAMES[f.name] ?? f.name).join(', ')}.` : 'No optional fixes in this build.'),
+    el('details', {}, el('summary', {}, `Menu: your machines in ${r.menus.filter((f) => f.machines.length).length} categories, layout table at ${r.flash.layout ?? 'none'}`),
+      el('ul', { class: 'gates', id: 'report-menus' }, ...r.menus.filter((f) => f.machines.length).map((f) => el('li', {}, el('b', {}, f.name), ' ', f.machines.join(', '))))),
+    el('details', {}, el('summary', {}, 'Machine IDs'),
+      el('table', { class: 'ids' }, el('tr', {}, el('th', {}, 'Machine'), el('th', {}, 'Family'), el('th', {}, 'ID')),
+        ...r.machines.map((m) => el('tr', {}, el('td', {}, m.name), el('td', {}, r.layout.machines[m.key]?.category ?? m.family), el('td', {}, String(m.id)))))));
+}
+
 /** Whether a plan's bank was laid with these edits (the same sample data on the same entries). */
 function sameEdits(laid: Trimmed['edits'], now: { swaps: ReadonlyMap<number, ArrayLike<number>>; noTrim: ReadonlySet<number> }): boolean {
   const swaps = laid?.swaps ?? new Map<number, ArrayLike<number>>(), noTrim = laid?.noTrim ?? new Set<number>();
@@ -753,7 +978,7 @@ function sameEdits(laid: Trimmed['edits'], now: { swaps: ReadonlyMap<number, Arr
 function projectNow(): Project {
   const mode = trimMode();
   return {
-    os: osOf(base!),
+    os: x20 ? osOfRecipe(x20) : osOf(base!),
     swaps: samples.state.swaps, sources: samples.state.sources, noTrim: samples.state.noTrim,
     trim: { mode: mode === 'trim' ? 'manual' : mode === 'keep' ? 'keep' : 'auto',
             db: Number($<HTMLInputElement>('db').value), cap: Number($<HTMLInputElement>('cap').value) },
@@ -761,15 +986,16 @@ function projectNow(): Project {
     layout: layoutEd.mapForPlan() ?? null,
     uw: uwOf(uwAnswer),
     // what the user chose, even on an OS that cannot have it, so the project keeps it
-    midiChroma: chromaTicked() ? { channel: chromaChannel } : undefined,
-    pitchLabels: labelsTicked() ? true : undefined,
+    // (not on X.20 B, which has none of them)
+    midiChroma: !x20 && chromaTicked() ? { channel: chromaChannel } : undefined,
+    pitchLabels: !x20 && labelsTicked() ? true : undefined,
     // saved only when off, the default being on
     unmuteFix: $<HTMLInputElement>('unmute-fix').checked ? undefined : false,
   };
 }
 
 async function saveProject(): Promise<void> {
-  if (!fw || !base) return;
+  if (!loaded()) return;
   const text = JSON.stringify(await encodeProject(projectNow()), null, 1);
   const stem = inputName.replace(/\.(syx|bin)$/i, '');
   const a = el('a', { href: URL.createObjectURL(new Blob([text], { type: 'application/json' })), download: `${stem}${PROJECT_EXTENSION}` }) as HTMLAnchorElement;
@@ -789,8 +1015,8 @@ async function onProjectFile(f: File): Promise<void> {
     const text = await f.text();
     if (JSON.parse(text)?.format !== 'kitbasher-project/1') { adoptLayout(parseLayout(text), f.name); return; }
     const p = await decodeProject(text);
-    if (fw && base) {
-      const problem = osProblem(p.os, base);
+    if (loaded()) {
+      const problem = osProblem(p.os, x20 ? osOfRecipe(x20) : base!);
       if (problem) throw new Error(`${problem}. Load the ${p.os.name || p.os.base} file it was made with first.`);
       if (applyProject(p, f.name)) { refresh(); showStep(2); }
     } else {
@@ -808,7 +1034,7 @@ async function onProjectFile(f: File): Promise<void> {
 /** Put a project's choices on the page. Refused (false) unless the loaded OS is the project's. */
 function applyProject(p: Project, name: string): boolean {
   pendingProject = null;
-  const problem = osProblem(p.os, base!);
+  const problem = osProblem(p.os, x20 ? osOfRecipe(x20) : base!);
   const count = samples.bank?.entries.length ?? 0;
   const bad = [...p.swaps.keys(), ...p.noTrim].filter((e) => e >= count);
   const why = problem ?? (!samples.bank && (p.swaps.size || p.noTrim.size)
@@ -820,14 +1046,14 @@ function applyProject(p: Project, name: string): boolean {
     return false;
   }
   samples.setState({ swaps: new Map(p.swaps), noTrim: new Set(p.noTrim), sources: new Map(p.sources), notes: new Map() });
-  trims.clear();
+  trims.clear(); x20Trims.clear();
   const radio = document.querySelector<HTMLInputElement>(`input[name=e12][value=${p.trim.mode === 'manual' ? 'trim' : p.trim.mode}]`);
   if (radio) radio.checked = true;
   $<HTMLInputElement>('db').value = String(p.trim.db);
   $<HTMLInputElement>('cap').value = String(p.trim.cap);
-  $<HTMLInputElement>('midi-chroma').checked = !!p.midiChroma;
+  $<HTMLInputElement>('midi-chroma').checked = !x20 && !!p.midiChroma;
   chromaChannel = p.midiChroma?.channel ?? MIDI_CHROMA_CHANNEL;
-  $<HTMLInputElement>('pitch-labels').checked = !!p.pitchLabels;
+  $<HTMLInputElement>('pitch-labels').checked = !x20 && !!p.pitchLabels;
   projectUnmute = p.unmuteFix !== false;
   $<HTMLInputElement>('unmute-fix').checked = projectUnmute;
   const want = new Set(p.models);
@@ -871,10 +1097,11 @@ async function main(): Promise<void> {
   $('models-next').addEventListener('click', () => void onBuild('categories'));
   $('categories-next').addEventListener('click', () => showStep(5));
   samples = new SamplesStep($('samples-panel'), {
-    onChange: () => { trims.clear(); refresh(); },
+    onChange: () => { trims.clear(); x20Trims.clear(); refresh(); },
     saveKit: () => void saveProject(),
     loadKit: (f) => void onProjectFile(f),
-    laid: () => (current && fw && sameEdits(current.trim.edits, samples.edits()) ? { report: current.trim.report, end: current.trim.end } : null),
+    laid: () => (current && fw && sameEdits(current.trim.edits, samples.edits()) ? { report: current.trim.report, end: current.trim.end }
+      : x20Plan && sameEdits(x20Plan.bank.edits, samples.edits()) ? { report: x20Plan.bank.report, end: x20Plan.bank.bankEnd } : null),
   });
   samples.render();
   const projectFile = $<HTMLInputElement>('project-file');

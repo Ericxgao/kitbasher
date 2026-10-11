@@ -106,6 +106,13 @@
 //   --discover <file>    what discovery finds in a base, feature by feature (no build; --report writes it as JSON)
 //
 // The output has the input's shape: a .syx for a .syx, a flash image for a flash image.
+//
+// MDX X.20 B (bases/x20.json, engine/src/x20.ts) is recognised by its .syx hash and built with a fixed
+// recipe: --uw/--no-uw, --families, --exclude, --trim-db/--trim-min/--trim-cap, --cache-align, --map, --restore, --report,
+// --no-unmute-fix, --no-dyn-labels and --family-menus (X.20's own menu families instead of the menu categories)
+// apply (a layout keeps IDs X.20 gives out and X.20 menu families as categories); the chroma and pitch-label options do not. The output is a .syx.
+//   --dsp2-load upload   emulator only: the machines' code goes to DSP2 after it starts (default preboot:
+//                        through DSP2's bootstrap, the way real hardware needs it)
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -121,6 +128,9 @@ import { select } from './selection.js';
 import { recoverSession } from './restore.js';
 import { decodeProject } from './project.js';
 import { containerOf, encodeSyx } from './syx.js';
+import { recipeFor } from './x20_recipe.js';
+import { buildX20, findX20Layout } from './x20.js';
+import { sha256 } from './bytes.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -210,6 +220,49 @@ async function main(): Promise<void> {
     [resolve(ROOT, 'catalog'), LOCAL_PACKS, ...(many.packs ?? []).map((d) => resolve(d))]);
   console.log(`packs: ${packs.length} from ${dirs.join(', ')}`);
   const input = readFileSync(a.in);
+  // MDX X.20 and later: a fixed per-release recipe, found by the file's hash (engine/src/x20.ts)
+  const recipe = recipeFor(bases.recipes, await sha256(input));
+  if (recipe) {
+    console.log(`base: ${recipe.name} [${recipe.qualification.level}: ${recipe.qualification.by}]${recipe.qualification.unproven ? ` (${recipe.qualification.unproven})` : ''}`);
+    if (a['midi-chroma'] || a['pitch-labels']) console.log('  not available on this OS (ignored): --midi-chroma, --pitch-labels');
+    const load = a['dsp2-load'] as 'preboot' | 'upload' | undefined;
+    if (load && load !== 'preboot' && load !== 'upload') throw new Error('--dsp2-load: preboot or upload');
+    // the layout: --map, or --restore (a layout or project file, or an X.20 .syx Kitbasher built: its layout table)
+    let x20Layout = a.map ? parseLayout(readFileSync(a.map, 'utf8')) : undefined;
+    if (a.restore) {
+      const bytes = readFileSync(a.restore);
+      if (/\.(syx|bin)$/i.test(a.restore)) {
+        x20Layout = findX20Layout(bytes, bases.recipes.map((f) => f.id)) ?? undefined;
+        if (!x20Layout) throw new Error(`${a.restore}: not an X.20 OS Kitbasher built (no layout table found)`);
+      } else {
+        const text = bytes.toString('utf8');
+        x20Layout = JSON.parse(text).format === 'kitbasher-project/1' ? (await decodeProject(text)).layout ?? undefined : parseLayout(text);
+      }
+    }
+    if (x20Layout && x20Layout.base !== recipe.id) {
+      console.log(`the layout was made for ${x20Layout.base}: applied to ${recipe.name}; machines on IDs X.20 does not give out move (listed below)`);
+      x20Layout = { ...x20Layout, base: recipe.id };
+    }
+    const r = await buildX20(Uint8Array.from(input), recipe, packs, core, {
+      layout: x20Layout,
+      uw, families: a.families === 'none' ? [] : a.families ? a.families.split(',') : undefined,
+      exclude: a.exclude ? a.exclude.split(',') : undefined,
+      trim: { db: Number(a['trim-db'] ?? -30), minSeconds: Number(a['trim-min'] ?? 0.5), cap: (a['trim-cap'] === undefined ? 0.55 : Number(a['trim-cap'])) || null },
+      align: a['cache-align'] ? true : undefined, dsp2Load: load,
+      features: { unmute: unmuteFlag(a) === false ? false : undefined, dynLabels: a['no-dyn-labels'] ? false : undefined,
+        categories: a['family-menus'] ? false : undefined },
+    });
+    writeFileSync(a.out, r.output);
+    console.log(`features: ${r.report.features.map((f) => f.name).join(', ') || 'none'}`);
+    for (const m of r.report.machines) console.log(`  ${m.name.padEnd(6)} ID ${String(m.id).padStart(3)}  ${m.family}  ${m.words} words at ${m.org}`);
+    for (const g of r.report.gates) console.log(`  gate ${g.ok ? 'passed' : 'FAILED'}: ${g.name} (${g.detail})`);
+    for (const n of r.report.notes) console.log(`  ${n}`);
+    for (const m of r.report.moves) console.log(`  ${m.name.trim()} moves ${m.preferred} -> ${m.id}: ${m.why}`);
+    console.log(`E12: ${r.report.e12.trimmed} samples trimmed, bank ends at ${r.report.e12.bank_end}; DSP2 ${r.report.dsp2.demand}/${r.report.dsp2.capacity} words`);
+    if (a.report) writeFileSync(a.report, JSON.stringify(r.report, null, 1));
+    console.log(`wrote ${a.out} (syx)`);
+    return;
+  }
   const { base, disagreements } = await resolveBase(readFirmware(input), bases);
   console.log(`base: ${base.name} [${base.qualification.level}]`);
   for (const d of disagreements) console.log(`  CACHE DISAGREES (discovery wins): ${d}`);

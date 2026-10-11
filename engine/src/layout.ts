@@ -128,7 +128,7 @@ export function baseFamilies(fw: Firmware, base: Base): BaseFamily[] {
 // ---- the layout of a selection, and checking one -----------------------------------------------
 
 /** The layout a build gets with no map: pack families as categories, pack order, preferred IDs. */
-export function defaultLayout(base: Base, fams: Family[], idOf: (key: string) => number): Layout {
+export function defaultLayout(base: Pick<Base, 'id'>, fams: Family[], idOf: (key: string) => number): Layout {
   const machines: Record<string, MachinePlace> = {};
   for (const f of fams) f.models.forEach((m, i) => { machines[m.key] = { id: idOf(m.key), category: f.name, order: i }; });
   return { format: LAYOUT_FORMAT, base: base.id, categories: fams.map((f) => f.name), machines };

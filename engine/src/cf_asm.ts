@@ -110,7 +110,7 @@ export class Asm {
       }
       case 'nop': return [[0x4e71, 2]];
       case 'tst.b': case 'tst.l': return W(0x4a00 | ((op === 'tst.l' ? 2 : 0) << 6) | ea6(this.ea(a0, op[4] as 'b' | 'l')), this.ea(a0, op[4] as 'b' | 'l'));
-      case 'clr.l': return W(0x4280 | ea6(this.ea(a0, 'l')), this.ea(a0, 'l'));
+      case 'clr.b': case 'clr.l': return W(0x4200 | ((op === 'clr.l' ? 2 : 0) << 6) | ea6(this.ea(a0, op[4] as 'b' | 'l')), this.ea(a0, op[4] as 'b' | 'l'));
       case 'cmp.l': return W(0xb080 | (D(a1) << 9) | ea6(this.ea(a0, 'l')), this.ea(a0, 'l'));
       case 'add.l': return W(0xd080 | (D(a1) << 9) | ea6(this.ea(a0, 'l')), this.ea(a0, 'l'));
       case 'sub.l': return W(0x9080 | (D(a1) << 9) | ea6(this.ea(a0, 'l')), this.ea(a0, 'l'));
@@ -135,8 +135,14 @@ export class Asm {
       }
       case 'extb.l': return [[0x49c0 | D(a0), 2]];
       case 'btst': case 'bset': {
-        if (REG(a0)?.k !== 'd') throw new Error(`${op}: only the register form`);
-        return W((op === 'btst' ? 0x0100 : 0x01c0) | (D(a0) << 9) | ea6(this.ea(a1, 'b')), this.ea(a1, 'b'));
+        if (REG(a0)?.k === 'd') return W((op === 'btst' ? 0x0100 : 0x01c0) | (D(a0) << 9) | ea6(this.ea(a1, 'b')), this.ea(a1, 'b'));
+        // the static form, #n: ISA_A takes it on Dn, (An), (An)+, -(An) and d16(An) only -- not on an
+        // absolute address (a `btst #n,abs.l` froze real hardware at boot; the emulators run it)
+        const n = /^#(\d+)$/.exec(a0);
+        if (!n || +n[1] > 31) throw new Error(`${op}: a data register or #0..31`);
+        const e = this.ea(a1, 'b');
+        if (e.mode === 1 || e.mode > 5) throw new Error(`${op} #n,${a1}: ISA_A has the static form only on Dn, (An), (An)+, -(An) and d16(An)`);
+        return [[(op === 'btst' ? 0x0800 : 0x08c0) | ea6(e), 2], [+n[1], 2], ...e.ext];
       }
       case 'movem.l': {   // movem.l d0-d7/a0-a4,(a7)  |  movem.l (a7),d0-d7/a0-a4   (ColdFire: (An) or d16(An) only)
         const list = (s: string): number => s.split('/').reduce((mask, g) => {

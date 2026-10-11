@@ -1,0 +1,1720 @@
+{
+ "format": "md-recipe/1",
+ "id": "x20",
+ "name": "MDX OS X.20 B",
+ "about": "The Machinedrum SPS-1 UW community OS X.20 B (by jmamma). Its loader decodes the OS at boot, so the build never reads the OS image: it re-packs the loader's stage image with a boot routine that writes the sites below once the loader has decoded the OS. The anchors (the bytes X.20 B has at each site) are checked offline against a decoded X.20 B (engine/test/x20.test.ts with KB_X20_OS); the build only accepts the exact X.20 B file (identify.syx_sha256). Addresses, anchors and hashes only: no firmware bytes.",
+ "identify": {
+  "syx_sha256": "dae8210a03f91135c1ce20c741ea32c9b572686f066bb5db99cf8a1c52f381cc",
+  "container_bytes": 966656,
+  "stage_sha256": "56d521fdd33afa454a8e449f2a7db101b2fbb40454454beaf7910475e3dc60e0"
+ },
+ "qualification": {
+  "level": "emulator-gated",
+  "by": "Emulator, with the post-start upload (--dsp2-load upload): boots; every bundled machine plays or is silent only for want of UW samples or input audio; the OS never stops; a USR machine installs through the Machine Manager",
+  "unproven": "Untested on hardware. The default pre-boot DSP2 load has not run anywhere for this build: the emulator cannot run it, and it is checked only offline"
+ },
+ "loader": {
+  "stage2": "0x2f8000",
+  "header": "0x40",
+  "stage2_bytes": "0x3060",
+  "copy_longs_at": "0x18",
+  "copy_longs": "0xc18",
+  "s2md": "0x2fb000",
+  "slot0_flash": "0x4008",
+  "payload_flash": "0x7014",
+  "handoff": {
+   "at": "0x2fa680",
+   "old": "4eb9002f8066",
+   "enter": "0x2f8066"
+  },
+  "dsp2_first_command": {
+   "at": "0x2f819c",
+   "old": "243c00454c44",
+   "what": "move.l #'ELD',d2: the loader's first command to DSP2's bootstrap"
+  }
+ },
+ "ram": {
+  "os_image": [
+   "0x200000",
+   "0x2be93c"
+  ],
+  "boot_code": [
+   "0x2fb060",
+   "0x2fc098"
+  ],
+  "window": [
+   "0x2fc0a0",
+   "0x2fd000"
+  ],
+  "menu": "0x2fd000",
+  "records": "0x2fd100",
+  "record_cap": 200,
+  "stock_record_cap": 159,
+  "stack_bottom": "0x2fe800",
+  "list": "0x2ce300",
+  "list_room": 3816,
+  "upload_buffer": [
+   "0x2c0000",
+   "0x2eb000"
+  ],
+  "stock_list": {
+   "at": "0x2b31a6",
+   "entries": 8,
+   "entry_bytes": 60
+  },
+  "handler_table": {
+   "at": "0x2b0d04",
+   "classes": 76
+  },
+  "menu_fields": {
+   "usr_list": "0xbc",
+   "usr_count": "0xcc",
+   "index_entries": "0x9f"
+  }
+ },
+ "hooks": {
+  "VALID": "0x2130ca",
+  "FAM": "0x217f36",
+  "CLS": "0x217686",
+  "GUARD": "0x202a82",
+  "COPYLIST_READS": "0x2beb00",
+  "ERGUARD": {
+   "resume": "0x20da12",
+   "context": "0x2b3dce"
+  }
+ },
+ "host": {
+  "dsp2": "0x600000",
+  "upload_vector": "0x89"
+ },
+ "flash_alias": "0x10000000",
+ "e12": {
+  "table": "0x103d7b",
+  "count": 21,
+  "bank_end": "0x135206",
+  "pairs": [
+   [
+    12,
+    15
+   ],
+   [
+    12,
+    11
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    14,
+    13
+   ],
+   [
+    6,
+    5
+   ],
+   [
+    20,
+    0
+   ]
+  ],
+  "names": [
+   "BR-M",
+   "CP",
+   "CB",
+   "CC",
+   "CH",
+   "BC-S",
+   "BC-M",
+   "BD",
+   "OH",
+   "BELL",
+   "RIDE",
+   "RS",
+   "SNAP",
+   "SH-M",
+   "SH-S",
+   "SD",
+   "TA",
+   "HT",
+   "LT",
+   "TR",
+   "BR-S"
+  ],
+  "machines": [
+   {
+    "id": 48,
+    "name": "E12-BD",
+    "entries": [
+     7
+    ]
+   },
+   {
+    "id": 49,
+    "name": "E12-SD",
+    "entries": [
+     12,
+     15
+    ]
+   },
+   {
+    "id": 50,
+    "name": "E12-HT",
+    "entries": [
+     17
+    ]
+   },
+   {
+    "id": 51,
+    "name": "E12-LT",
+    "entries": [
+     18
+    ]
+   },
+   {
+    "id": 52,
+    "name": "E12-CP",
+    "entries": [
+     1
+    ]
+   },
+   {
+    "id": 53,
+    "name": "E12-RS",
+    "entries": [
+     12,
+     11
+    ]
+   },
+   {
+    "id": 54,
+    "name": "E12-CB",
+    "entries": [
+     2
+    ]
+   },
+   {
+    "id": 55,
+    "name": "E12-CH",
+    "entries": [
+     4
+    ]
+   },
+   {
+    "id": 56,
+    "name": "E12-OH",
+    "entries": [
+     8
+    ]
+   },
+   {
+    "id": 57,
+    "name": "E12-RC",
+    "entries": [
+     9,
+     10
+    ]
+   },
+   {
+    "id": 58,
+    "name": "E12-CC",
+    "entries": [
+     3
+    ]
+   },
+   {
+    "id": 59,
+    "name": "E12-BR",
+    "entries": [
+     20,
+     0
+    ]
+   },
+   {
+    "id": 60,
+    "name": "E12-TA",
+    "entries": [
+     16
+    ]
+   },
+   {
+    "id": 61,
+    "name": "E12-TR",
+    "entries": [
+     19
+    ]
+   },
+   {
+    "id": 62,
+    "name": "E12-SH",
+    "entries": [
+     14,
+     13
+    ]
+   },
+   {
+    "id": 63,
+    "name": "E12-BC",
+    "entries": [
+     6,
+     5
+    ]
+   }
+  ],
+  "machines_evidence": "X.20 B's stock DSP2 dispatch (trigger table 0x145bb6, init 0x145af5, indexed by ID + 1): a TRIGGER that loads table entries into r0/r1 plays those (r0 first); one that adds the table to the track's entry index plays the entry its INIT stores (engine/src/samples.ts e12Machines, the same rule as on the 1.63 lineage). names: the E12B directory's 4-character entry names, checked when the bank is read."
+ },
+ "dsp2": {
+  "free": [
+   [
+    "0x147c01",
+    "0x147d80"
+   ]
+  ],
+  "dispatch": {
+   "init": "0x145af5",
+   "trigger": "0x145bb6",
+   "render": "0x145c77",
+   "entries": 193
+  },
+  "dispatch_relocated": {
+   "init": "0x145d38",
+   "trigger": "0x145e0b",
+   "render": "0x145ede",
+   "entries": 211
+  },
+  "workspace": {
+   "base": "0x12d000",
+   "slice": "0x800"
+  },
+  "pi": {
+   "ids": [
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72
+   ],
+   "inits": [
+    "0x142100",
+    "0x142d49",
+    "0x1434a6",
+    "0x143e0d",
+    "0x145aa7",
+    "0x144ab9",
+    "0x145624",
+    "0x144fec",
+    "0x14584f"
+   ],
+   "ws": "0x135600",
+   "slice": "0x600",
+   "track": "0x142"
+  },
+  "usr_bank_end": "0x13f846",
+  "runtime": {
+   "abi": "md-voice/1",
+   "evidence": "X.20 B leaves DSP2 memory as X.14 has it wherever X.14 writes it (offline decode of X.20 B); assembly models sound in the emulator"
+  },
+  "boot_loader": {
+   "about": "DSP2's bootstrap takes an ELD before its own: a receiver at P:$148000 loads the models' code into DSP2 before its loader and runtime start; a wiper at the end of the second free region clears the receiver and returns to the bootstrap's RDY. DSP1 is not used (its bootstrap runs PFLUSH with the cache off on an ELD, which traps on hardware).",
+   "receiver": "0x148000",
+   "wiper": "0x147d80",
+   "save": "0x147df0",
+   "save_end": "0x147e00",
+   "rdy": "0x14f025"
+  }
+ },
+ "ids": {
+  "usable": [
+   6,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   30,
+   31,
+   40,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   73,
+   74,
+   75,
+   76,
+   77,
+   78,
+   79,
+   88,
+   89,
+   90,
+   91,
+   92,
+   93,
+   94,
+   95,
+   124,
+   125,
+   126,
+   127,
+   164,
+   169,
+   170,
+   171,
+   172,
+   173,
+   174,
+   175
+  ],
+  "not_usable": {
+   "96..123": "X.20 treats these as MIDI/control (no-audio) machines in about 40 inline range tests (e.g. 0x2a5c10: id-$60 <= $1b): a model there is silent",
+   "1 4 5 7 8 9 86 87": "X.20's own machines (86/87 INP-CA/CB: overwriting their DSP2 dispatch entries breaks boot)",
+   "192..209": "X.20's user-machine IDs (194..209 are its 16 USR slots): a built-in machine on 192 or 193 freezes the OS when assigned"
+  },
+  "forbidden": [
+   [
+    96,
+    123
+   ],
+   [
+    192,
+    255
+   ]
+  ],
+  "x20_own": [
+   1,
+   4,
+   5,
+   7,
+   8,
+   9,
+   86,
+   87
+  ]
+ },
+ "families": {
+  "GND": 0,
+  "TRX": 1,
+  "EFM": 2,
+  "NFX": 10
+ },
+ "pack_menu": {
+  "AN": "TRX",
+  "FX": "NFX",
+  "*": "GND"
+ },
+ "key_menu": {
+  "FMS": "EFM"
+ },
+ "features": {
+  "unmute": {
+   "about": "MUTE-mode TRIG keys act on press, and the sequencer's mute word changes at once. Stock X.20 B sets only the key's LED bit on press and toggles the mute on release (0x29dace -> 0x231f28), then the sequencer copies the mask ($295a, read when a trig plays) only when it next drains its message queue, so a panel mute lands as late as the key is held. Checked on hardware with the same routines.",
+   "sites": [
+    {
+     "group": "unmute",
+     "at": "0x231b0c",
+     "old": "3141245e4a2824a2",
+     "new": {
+      "parts": [
+       {
+        "jsr": "PMUTE"
+       },
+       {
+        "nop": 1
+       }
+      ]
+     },
+     "what": "panel mute (0x231ae6): the sequencer's mute word at once -> PMUTE"
+    },
+    {
+     "group": "unmute",
+     "at": "0x29daaa",
+     "old": "671e",
+     "new": {
+      "hex": "661e"
+     },
+     "what": "MUTE-mode TRIG key: toggle on press (beq -> bne)"
+    },
+    {
+     "group": "unmute",
+     "at": "0x29daac",
+     "old": "7001e9a8",
+     "new": {
+      "hex": "6000f9fa"
+     },
+     "what": "MUTE-mode TRIG key: release goes to the handler exit (bra.w 0x29d4a8)"
+    }
+   ],
+   "anchors": [
+    {
+     "at": "0x231ae6",
+     "old": "4e56ffec206e00082d48ffec",
+     "what": "mute setter (kit ctx, mask): a0 = kit ctx"
+    },
+    {
+     "at": "0x231b14",
+     "old": "6634",
+     "what": "bne after tst.b $24a2(a0)"
+    },
+    {
+     "at": "0x231b30",
+     "old": "48682f2c",
+     "what": "pea $2f2c(a0): the sequencer ctx is kit ctx + $2f2c"
+    },
+    {
+     "at": "0x29daa8",
+     "old": "4a02",
+     "what": "tst.b d2 (press)"
+    },
+    {
+     "at": "0x29dab0",
+     "old": "322c009c80813940009c2f0c4eb900231e7e2f4c00506000f8e2",
+     "what": "press path: held bit $9c, then the sync"
+    },
+    {
+     "at": "0x29daca",
+     "old": "2f042f0c4eb900231f28508f",
+     "what": "release path: jsr 0x231f28 (toggle)"
+    },
+    {
+     "at": "0x29d4a8",
+     "old": "7001",
+     "what": "handler exit"
+    }
+   ]
+  },
+  "title_rom": {
+   "about": "Machine title: X.20 B draws a ROM-range machine (IDs 128..159, 176..191) as the name's first 3 letters plus the ROM number (id-127 / id-143), so an added machine there reads like 'TX942'. TITLEROM makes both range tests fail for added machines. Applied only when an added machine takes such an ID.",
+   "sites": [
+    {
+     "group": "title_rom",
+     "at": "0x276fb8",
+     "old": "2a040685ffffff80",
+     "new": {
+      "parts": [
+       {
+        "jsr": "TITLEROM"
+       },
+       {
+        "nop": 1
+       }
+      ]
+     },
+     "what": "machine title: no ROM number for added machines -> TITLEROM"
+    }
+   ],
+   "anchors": [
+    {
+     "at": "0x276fc0",
+     "old": "0285000000ff2c0e0686ffffffe0721fb285640017560684000000500284000000ffe88c67001754",
+     "what": "the two ROM-range tests (d5 = id-128 <= 31; ((id+0x50)&0xff)>>4 == 0) and their branches"
+    }
+   ]
+  },
+  "categories": {
+   "about": "Menu categories: added machines take the user-machine path on the category pages (USRTEST), are grouped by their category (CMP3, in place of the 3-letter name compare) and the page is titled with the category's code (TITLE, in place of the record-name pointer). Checked on hardware with the same routines.",
+   "replaces": [
+    "0x270df8"
+   ],
+   "sites": [
+    {
+     "group": "categories",
+     "at": "0x270638",
+     "old": "06800000003e0280000000ff",
+     "new": {
+      "parts": [
+       {
+        "jsr": "USRTEST"
+       },
+       {
+        "nop": 3
+       }
+      ]
+     },
+     "what": "category pages: user-machine test -> USRTEST"
+    },
+    {
+     "group": "categories",
+     "at": "0x2788a4",
+     "old": "06800000003e0280000000ff",
+     "new": {
+      "parts": [
+       {
+        "jsr": "USRTEST"
+       },
+       {
+        "nop": 3
+       }
+      ]
+     },
+     "what": "category pages: user-machine test -> USRTEST"
+    },
+    {
+     "group": "categories",
+     "at": "0x2788f0",
+     "old": "06800000003e0280000000ff",
+     "new": {
+      "parts": [
+       {
+        "jsr": "USRTEST"
+       },
+       {
+        "nop": 3
+       }
+      ]
+     },
+     "what": "category pages: user-machine test -> USRTEST"
+    },
+    {
+     "group": "categories",
+     "at": "0x2706a4",
+     "old": "4eb9002663c0",
+     "new": {
+      "jsr": "CMP3"
+     },
+     "what": "category grouping: 3-letter compare -> CMP3"
+    },
+    {
+     "group": "categories",
+     "at": "0x27890a",
+     "old": "4eb9002663c0",
+     "new": {
+      "jsr": "CMP3"
+     },
+     "what": "category grouping: 3-letter compare -> CMP3"
+    },
+    {
+     "group": "categories",
+     "at": "0x270df6",
+     "old": "d1fc002ce301",
+     "new": {
+      "jsr": "TITLE"
+     },
+     "what": "category page title -> TITLE (replaces the records site at 0x270df8)"
+    }
+   ],
+   "anchors": [
+    {
+     "at": "0x2663c0",
+     "old": "2f0a2f02226f000c",
+     "what": "strncmp(p1, p2, n): CMP3 falls through to it for X.20's own records"
+    }
+   ]
+  },
+  "id_masks": {
+   "about": "Machine-class mask tests: X.20 B classifies IDs with andi.l #M,dN (then an equality test against a class constant) and with addi.l #-0x78,dN range tests (CTR-8P, 120..123). For an added machine on 88..95 or 124..127 these would read it as an INP/MID/CTR machine; each site calls a thunk that gives the stock result for every other ID and, for an added one, a value no class constant equals (0x100; 0x80 for the -0x78 ranges). Applied only when an added machine takes such an ID.",
+   "sites": [
+    {
+     "group": "id_masks",
+     "at": "0x213236",
+     "old": "0283000000e0",
+     "new": {
+      "jsr": "IM_3_e0"
+     },
+     "what": "andi.l #$e0,d3 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x230f46",
+     "old": "0281000000e0",
+     "new": {
+      "jsr": "IM_1_e0"
+     },
+     "what": "andi.l #$e0,d1 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x27eac8",
+     "old": "0280000000e0",
+     "new": {
+      "jsr": "IM_0_e0"
+     },
+     "what": "andi.l #$e0,d0 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x27eb86",
+     "old": "0280000000e0",
+     "new": {
+      "jsr": "IM_0_e0"
+     },
+     "what": "andi.l #$e0,d0 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x213212",
+     "old": "0283000000f0",
+     "new": {
+      "jsr": "IM_3_f0"
+     },
+     "what": "andi.l #$f0,d3 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x2136a8",
+     "old": "0280000000f0",
+     "new": {
+      "jsr": "IM_0_f0"
+     },
+     "what": "andi.l #$f0,d0 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x216f7e",
+     "old": "0282000000f0",
+     "new": {
+      "jsr": "IM_2_f0"
+     },
+     "what": "andi.l #$f0,d2 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x23102e",
+     "old": "0286000000f0",
+     "new": {
+      "jsr": "IM_6_f0"
+     },
+     "what": "andi.l #$f0,d6 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x21148a",
+     "old": "0282000000f8",
+     "new": {
+      "jsr": "IM_2_f8"
+     },
+     "what": "andi.l #$f8,d2 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x27e95e",
+     "old": "0280000000f8",
+     "new": {
+      "jsr": "IM_0_f8"
+     },
+     "what": "andi.l #$f8,d0 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x270b92",
+     "old": "0281000000d0",
+     "new": {
+      "jsr": "IM_1_d0"
+     },
+     "what": "andi.l #$d0,d1 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x21306e",
+     "old": "0681ffffff88",
+     "new": {
+      "jsr": "IS_1"
+     },
+     "what": "addi.l #-$78,d1 (CTR-8P range) -> thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x217538",
+     "old": "0684ffffff88",
+     "new": {
+      "jsr": "IS_4"
+     },
+     "what": "addi.l #-$78,d4 (CTR-8P range) -> thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x217dfa",
+     "old": "0681ffffff88",
+     "new": {
+      "jsr": "IS_1"
+     },
+     "what": "addi.l #-$78,d1 (CTR-8P range) -> thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x230d8c",
+     "old": "0680ffffff88",
+     "new": {
+      "jsr": "IS_0"
+     },
+     "what": "addi.l #-$78,d0 (CTR-8P range) -> thunk"
+    }
+   ],
+   "anchors": [
+    {
+     "at": "0x21323c",
+     "old": "7a60ba83660476606022",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x230f4c",
+     "old": "20417260b28867567207",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x27eace",
+     "old": "7260b280670001164a87",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x27eb8c",
+     "old": "7260b28067584a87664a",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x213218",
+     "old": "326a11c67a70ba83660a",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x2136ae",
+     "old": "7270b280660e42801002",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x216f84",
+     "old": "7a70ba82670000ee43f2",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x231034",
+     "old": "20467c70bc8866100280",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x211490",
+     "old": "20427478b488660e5381",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x27e964",
+     "old": "7278b2806614600000d6",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x270b98",
+     "old": "7450b48167b422000281",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x213074",
+     "old": "0281000000ffe489",
+     "what": "the CTR-8P range test after the subtraction"
+    },
+    {
+     "at": "0x21753e",
+     "old": "42801004e4886718",
+     "what": "the CTR-8P range test after the subtraction"
+    },
+    {
+     "at": "0x217e00",
+     "old": "0281000000ffe489",
+     "what": "the CTR-8P range test after the subtraction"
+    },
+    {
+     "at": "0x230d92",
+     "old": "7c03bc8065387c07",
+     "what": "the CTR-8P range test after the subtraction"
+    }
+   ]
+  },
+  "dyn_labels": {
+   "about": "Dynamic knob labels: the parameter page's setup (0x229a6c) looks a machine's record up with findRec (0x217cee) at 0x229a9e; DLREC calls it and, for a machine with dynamic labels, copies the record's names into a RAM buffer, overlays the captions of the stop each labelled knob's MODE is on (the packs' formula) and points rec+8 at the buffer. Caption data in E12B flash, read through the alias from the UI task only. Checked on hardware with the same routines.",
+   "sites": [
+    {
+     "group": "dyn_labels",
+     "at": "0x229aa0",
+     "old": "00217cee",
+     "new": {
+      "u32": "DLREC"
+     },
+     "what": "page setup: record lookup -> DLREC"
+    }
+   ],
+   "anchors": [
+    {
+     "at": "0x229a6c",
+     "old": "4fefffc848d77cfc266f003c286f0040",
+     "what": "page setup: a3/a4 = args (a4 = page)"
+    },
+    {
+     "at": "0x229a8a",
+     "old": "206c0060d1fc002d7348142808b342851a022f05",
+     "what": "page setup: id = kit ID of track $60(a4), pushed"
+    },
+    {
+     "at": "0x229a9e",
+     "old": "4eb900217cee2c40",
+     "what": "page setup: jsr findRec; a6 = rec"
+    },
+    {
+     "at": "0x229ba8",
+     "old": "226f003020690008d1c0",
+     "what": "knob setup reads *(rec+8) + 5p"
+    },
+    {
+     "at": "0x217dc6",
+     "old": "41f2ac00224020290008d088",
+     "what": "name lookup reads *(rec+8) + 5p"
+    },
+    {
+     "at": "0x217cee",
+     "old": "2f032f02242f000c",
+     "what": "findRec(id) entry"
+    },
+    {
+     "at": "0x276720",
+     "old": "4eb900229a6c",
+     "what": "painter calls page setup"
+    }
+   ]
+  }
+ },
+ "sites": [
+  {
+   "group": "stack",
+   "at": "0x200266",
+   "old": "002fd000",
+   "new": {
+    "u32": "STACK"
+   }
+  },
+  {
+   "group": "stack",
+   "at": "0x283998",
+   "old": "002fd000",
+   "new": {
+    "u32": "STACK"
+   }
+  },
+  {
+   "group": "stack",
+   "at": "0x2839fe",
+   "old": "002fd000",
+   "new": {
+    "u32": "STACK"
+   }
+  },
+  {
+   "group": "stack",
+   "at": "0x283ac0",
+   "old": "002fd000",
+   "new": {
+    "u32": "STACK"
+   }
+  },
+  {
+   "group": "stack",
+   "at": "0x283b0c",
+   "old": "002fd000",
+   "new": {
+    "u32": "STACK"
+   }
+  },
+  {
+   "group": "stack",
+   "at": "0x283b54",
+   "old": "002fd000",
+   "new": {
+    "u32": "STACK"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x217d12",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x217d36",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x270628",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x27069a",
+   "old": "002ce301",
+   "new": {
+    "u32": "RECS+0x1"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x270762",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x27084c",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x270870",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x27096a",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2709da",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x270df8",
+   "old": "002ce301",
+   "new": {
+    "u32": "RECS+0x1"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2788e0",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2abb76",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2abbf4",
+   "old": "002ce301",
+   "new": {
+    "u32": "RECS+0x1"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2abc66",
+   "old": "002ce308",
+   "new": {
+    "u32": "RECS+0x8"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2abcb4",
+   "old": "002ce308",
+   "new": {
+    "u32": "RECS+0x8"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2abcbc",
+   "old": "002ce30c",
+   "new": {
+    "u32": "RECS+0xc"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2abd18",
+   "old": "002ce314",
+   "new": {
+    "u32": "RECS+0x14"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2abd60",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2abdea",
+   "old": "002ce300",
+   "new": {
+    "u32": "RECS"
+   }
+  },
+  {
+   "group": "records",
+   "at": "0x2abbe0",
+   "old": "002cdb00",
+   "new": {
+    "u32": "RECS-0x800"
+   },
+   "what": "the builder addresses the records as $800(a5)"
+  },
+  {
+   "group": "cap",
+   "at": "0x2abadc",
+   "old": "0000009e",
+   "new": {
+    "u32": "CAP-1"
+   }
+  },
+  {
+   "group": "cap",
+   "at": "0x2abbae",
+   "old": "0000009e",
+   "new": {
+    "u32": "CAP-1"
+   }
+  },
+  {
+   "group": "cap",
+   "at": "0x2abd82",
+   "old": "0000009f",
+   "new": {
+    "u32": "CAP"
+   }
+  },
+  {
+   "group": "cap",
+   "at": "0x2705fa",
+   "old": "0000009f",
+   "new": {
+    "u32": "CAP"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x200356",
+   "old": "002cf574",
+   "new": {
+    "u32": "MENU+M_U"
+   },
+   "what": "cleared at boot"
+  },
+  {
+   "group": "menu",
+   "at": "0x2705ea",
+   "old": "002cf574",
+   "new": {
+    "u32": "MENU+M_U"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x27066e",
+   "old": "002cf574",
+   "new": {
+    "u32": "MENU+M_U"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x270682",
+   "old": "002cf564",
+   "new": {
+    "u32": "MENU+M_L"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x2706ca",
+   "old": "002cf574",
+   "new": {
+    "u32": "MENU+M_U"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x2706d2",
+   "old": "002cdb00",
+   "new": {
+    "u32": "MENU+M_L-0x1a64"
+   },
+   "what": "addressed as $1a64(a)"
+  },
+  {
+   "group": "menu",
+   "at": "0x2708ca",
+   "old": "002cf575",
+   "new": {
+    "u32": "MENU+M_U+1"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x2708d2",
+   "old": "002cf576",
+   "new": {
+    "u32": "MENU+M_U+2"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x270900",
+   "old": "002cf576",
+   "new": {
+    "u32": "MENU+M_U+2"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x27090a",
+   "old": "002cf575",
+   "new": {
+    "u32": "MENU+M_U+1"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x2aba74",
+   "old": "002cf576",
+   "new": {
+    "u32": "MENU+M_U+2"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x27072e",
+   "old": "002cf4a8",
+   "new": {
+    "u32": "MENU"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x27074e",
+   "old": "002cf4c4",
+   "new": {
+    "u32": "MENU+0x1c"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x27091c",
+   "old": "002cf4a8",
+   "new": {
+    "u32": "MENU"
+   }
+  },
+  {
+   "group": "menu",
+   "at": "0x270756",
+   "old": "002cdb00",
+   "new": {
+    "u32": "MENU-0x19a8"
+   },
+   "what": "addressed as $19a8(a)/$19c5(a)"
+  },
+  {
+   "group": "menu",
+   "at": "0x217ed6",
+   "old": "00cc",
+   "new": {
+    "u16": "M_U"
+   },
+   "what": "field displacement"
+  },
+  {
+   "group": "menu",
+   "at": "0x217edc",
+   "old": "00bc",
+   "new": {
+    "u16": "M_L"
+   },
+   "what": "field displacement"
+  },
+  {
+   "group": "menu",
+   "at": "0x270ae8",
+   "old": "00cd",
+   "new": {
+    "u16": "M_U+1"
+   },
+   "what": "field displacement"
+  },
+  {
+   "group": "menu",
+   "at": "0x270b1c",
+   "old": "00cc",
+   "new": {
+    "u16": "M_U"
+   },
+   "what": "field displacement"
+  },
+  {
+   "group": "menu",
+   "at": "0x270b2a",
+   "old": "00bc",
+   "new": {
+    "u16": "M_L"
+   },
+   "what": "field displacement"
+  },
+  {
+   "group": "menu",
+   "at": "0x270d16",
+   "old": "00cd",
+   "new": {
+    "u16": "M_U+1"
+   },
+   "what": "field displacement"
+  },
+  {
+   "group": "menu",
+   "at": "0x270d34",
+   "old": "00cc",
+   "new": {
+    "u16": "M_U"
+   },
+   "what": "field displacement"
+  },
+  {
+   "group": "menu",
+   "at": "0x278952",
+   "old": "00cd",
+   "new": {
+    "u16": "M_U+1"
+   },
+   "what": "field displacement"
+  },
+  {
+   "group": "menu",
+   "at": "0x278990",
+   "old": "00cd",
+   "new": {
+    "u16": "M_U+1"
+   },
+   "what": "field displacement"
+  },
+  {
+   "group": "menu-frame",
+   "at": "0x2705c8",
+   "old": "4fefff0c",
+   "new": {
+    "hex": "4feffe0c"
+   },
+   "what": "menu builder frame: a family byte per record"
+  },
+  {
+   "group": "menu-frame",
+   "at": "0x2708da",
+   "old": "4fef00f4",
+   "new": {
+    "hex": "4fef01f4"
+   }
+  },
+  {
+   "group": "menu-frame",
+   "at": "0x2708c4",
+   "old": "41ef00fb",
+   "new": {
+    "hex": "41ef01fb"
+   }
+  },
+  {
+   "group": "list",
+   "at": "0x2abac8",
+   "old": "002b31a6",
+   "new": {
+    "u32": "LIST"
+   }
+  },
+  {
+   "group": "list",
+   "at": "0x2abb0c",
+   "old": "002b31a7",
+   "new": {
+    "u32": "LIST+1"
+   }
+  },
+  {
+   "group": "list",
+   "at": "0x2abb22",
+   "old": "002b31ad",
+   "new": {
+    "u32": "LIST+7"
+   }
+  },
+  {
+   "group": "list",
+   "at": "0x2abb30",
+   "old": "002b31d5",
+   "new": {
+    "u32": "LIST+0x2f"
+   }
+  },
+  {
+   "group": "list",
+   "at": "0x2abb48",
+   "old": "002b31de",
+   "new": {
+    "u32": "LIST+0x38"
+   }
+  },
+  {
+   "group": "list",
+   "at": "0x2abd2c",
+   "old": "002b31a6",
+   "new": {
+    "u32": "LIST"
+   }
+  },
+  {
+   "group": "list",
+   "at": "0x2abb9e",
+   "old": "7008",
+   "new": {
+    "moveq": "LIST_N"
+   },
+   "what": "entries (loop 1)"
+  },
+  {
+   "group": "list",
+   "at": "0x2abe14",
+   "old": "7008",
+   "new": {
+    "moveq": "LIST_N"
+   },
+   "what": "entries (loop 2)"
+  },
+  {
+   "group": "e12",
+   "at": "0x29087e",
+   "old": "00135206",
+   "new": {
+    "u32": "BANK_END"
+   },
+   "what": "sample validator: bank end"
+  },
+  {
+   "group": "e12",
+   "at": "0x20da0a",
+   "old": "4feffff048d7",
+   "new": {
+    "jmp": "ERGUARD"
+   },
+   "what": "flash file system erase: refused for the E12B instance only (the +Drive machine banks use it too)"
+  },
+  {
+   "group": "e12",
+   "at": "0x20dcca",
+   "old": "4fefffd8",
+   "new": {
+    "hex": "70004e75"
+   },
+   "what": "E12B program refused"
+  },
+  {
+   "group": "hook",
+   "at": "0x2130c2",
+   "old": "2f032f02242f",
+   "new": {
+    "jmp": "VALID"
+   },
+   "what": "machine ID validity"
+  },
+  {
+   "group": "hook",
+   "at": "0x217f30",
+   "old": "2f02222f0008",
+   "new": {
+    "jmp": "FAM"
+   },
+   "what": "menu family of a machine"
+  },
+  {
+   "group": "hook",
+   "at": "0x217680",
+   "old": "2f02222f0008",
+   "new": {
+    "jmp": "CLS"
+   },
+   "what": "parameter class of a machine"
+  },
+  {
+   "group": "hook",
+   "at": "0x202a7c",
+   "old": "2f0a4aaf000c",
+   "new": {
+    "jmp": "GUARD"
+   },
+   "what": "DSP2 block write"
+  },
+  {
+   "group": "hook",
+   "at": "0x2aba40",
+   "old": "2039002beb00",
+   "new": {
+    "jsr": "COPYLIST"
+   },
+   "what": "record builder start"
+  },
+  {
+   "group": "hook",
+   "at": "0x294758",
+   "old": "41f9002b0d0428300c00",
+   "new": {
+    "parts": [
+     {
+      "jsr": "HTAB"
+     },
+     {
+      "nop": 2
+     }
+    ]
+   },
+   "what": "class handler fetch (lea table,a0; move.l (a0,d0.l*4),d4) -> HTAB: X.20's own table for its classes, the knob callback for ours"
+  },
+  {
+   "group": "usr",
+   "at": "0x21780e",
+   "old": "41e8ed892d48ffec",
+   "new": {
+    "parts": [
+     {
+      "jsr": "USRCHKREC"
+     },
+     {
+      "nop": 1
+     }
+    ]
+   },
+   "what": "USR check descriptor: records"
+  },
+  {
+   "group": "usr",
+   "at": "0x217818",
+   "old": "0000009f",
+   "new": {
+    "u32": "CAP"
+   },
+   "what": "USR check descriptor: capacity"
+  },
+  {
+   "group": "usr",
+   "at": "0x217820",
+   "old": "41e80ee8",
+   "new": {
+    "hex": "41e8fc71"
+   },
+   "what": "USR check descriptor: count (a0 = base+$1a77)"
+  },
+  {
+   "group": "usr",
+   "at": "0x21782e",
+   "old": "0680000019a8",
+   "new": {
+    "parts": [
+     {
+      "hex": "203c"
+     },
+     {
+      "u32": "MENU"
+     }
+    ]
+   },
+   "what": "USR check descriptor: menu struct"
+  },
+  {
+   "group": "usr",
+   "at": "0x2177a0",
+   "old": "0000009f",
+   "new": {
+    "u32": "CAP"
+   },
+   "what": "USR check worker: capacity"
+  },
+  {
+   "group": "usr",
+   "at": "0x2177cc",
+   "old": "0000009f",
+   "new": {
+    "u32": "CAP"
+   },
+   "what": "USR check worker: full"
+  },
+  {
+   "group": "usr",
+   "at": "0x217c24",
+   "old": "420115411a76",
+   "new": {
+    "parts": [
+     {
+      "hex": "4239"
+     },
+     {
+      "u32": "MENU+M_U+2"
+     }
+    ]
+   },
+   "what": "USR remove: menu valid"
+  },
+  {
+   "group": "usr",
+   "at": "0x217c3e",
+   "old": "0000009f",
+   "new": {
+    "u32": "CAP"
+   },
+   "what": "USR remove: capacity"
+  },
+  {
+   "group": "usr",
+   "at": "0x217c44",
+   "old": "41ea080042822a480280000000ff",
+   "new": {
+    "parts": [
+     {
+      "jsr": "USRREM"
+     },
+     {
+      "nop": 4
+     }
+    ]
+   },
+   "what": "USR remove: records"
+  },
+  {
+   "group": "usr",
+   "at": "0x217c6a",
+   "old": "0680000007e8",
+   "new": {
+    "parts": [
+     {
+      "hex": "203c"
+     },
+     {
+      "u32": "RECS-0x18"
+     }
+    ]
+   },
+   "what": "USR remove: records - 24"
+  },
+  {
+   "group": "usr",
+   "at": "0x2660a2",
+   "old": "068300000800",
+   "new": {
+    "parts": [
+     {
+      "hex": "263c"
+     },
+     {
+      "u32": "RECS"
+     }
+    ]
+   },
+   "what": "USR install: records"
+  },
+  {
+   "group": "usr",
+   "at": "0x2660b2",
+   "old": "0000009f",
+   "new": {
+    "u32": "CAP"
+   },
+   "what": "USR install: capacity"
+  },
+  {
+   "group": "usr",
+   "at": "0x2660c6",
+   "old": "41ea19a82d48ffa0",
+   "new": {
+    "parts": [
+     {
+      "jsr": "USRINSMENU"
+     },
+     {
+      "nop": 1
+     }
+    ]
+   },
+   "what": "USR install: menu struct"
+  },
+  {
+   "group": "usr",
+   "at": "0x266134",
+   "old": "0000009f",
+   "new": {
+    "u32": "CAP"
+   },
+   "what": "USR install: capacity check"
+  },
+  {
+   "group": "usr",
+   "at": "0x266160",
+   "old": "0000009f",
+   "new": {
+    "u32": "CAP"
+   },
+   "what": "USR install: full"
+  },
+  {
+   "group": "usr",
+   "at": "0x266188",
+   "old": "420115411a76",
+   "new": {
+    "parts": [
+     {
+      "hex": "4239"
+     },
+     {
+      "u32": "MENU+M_U+2"
+     }
+    ]
+   },
+   "what": "USR install: menu valid"
+  }
+ ],
+ "category_family": {
+  "KIK": "TRX",
+  "SNR": "TRX",
+  "HAT": "TRX",
+  "PRC": "TRX",
+  "FM": "EFM",
+  "SYN": "GND",
+  "WAV": "GND",
+  "VOX": "GND",
+  "PHY": "GND",
+  "FX": "NFX",
+  "OTH": "GND"
+ }
+}

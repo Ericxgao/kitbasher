@@ -20,6 +20,13 @@ A few engine tests compare the engine with real OS files: set `firmwareDir` in
 `.local/config.json` (or `MD_FIRMWARE_DIR`) to a directory of OS files you own,
 and they read every file in it. Without it they are skipped, as in CI.
 
+The X.20 B tests also build from that directory when it holds the X.20 B `.syx`
+([X.20 B](BASES.md#mdx-x20-b-public-beta)). X.20 packs its OS, so a build cannot read the
+bytes a recipe site replaces: set `KB_X20_OS` to a decoded X.20 B ColdFire image (the
+780,604-byte image its loader rebuilds at `0x200000`; never commit it) to check every
+anchor against it. Run it whenever the recipe's sites change. The pre-boot load runs only
+on hardware: the emulator tests use `--dsp2-load upload`.
+
 ## Assembly encoding
 
 `npm run test:assembly` checks real instruction encoding and relocation. Build
