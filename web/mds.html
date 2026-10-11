@@ -33,14 +33,14 @@
         <p id="capacity-mode" class="fine">X.20 capacity estimate · empty bank</p>
         <div id="capacity-meters" class="mds-capacity"></div>
         <p id="bank-problems" role="status"></p>
-        <div class="mds-midi-head"><span>MIDI connection</span><button type="button" id="connect-midi">Connect MIDI</button><button type="button" id="disconnect-midi" hidden>Disconnect</button></div>
+        <div class="mds-midi-head"><span>MIDI connection</span><button type="button" id="disconnect-midi" hidden>Disconnect</button></div>
         <div class="mds-connection" id="connection" hidden>
           <label>To Machinedrum IN<select id="midi-output" aria-label="MIDI output"></select></label>
           <label>From Machinedrum OUT<select id="midi-input" aria-label="MIDI input"></select></label>
         </div>
         <p id="midi-status" class="fine" role="status" aria-live="polite">Connect both MIDI directions. Machinedrum OUT provides the replies that pace each send.</p>
         <p class="fine">Select the destination Machine Bank on your Machinedrum. Flashing replaces selected slots; other slots are kept.</p>
-        <button type="button" id="flash-machines" class="mds-primary" disabled>Flash machines</button>
+        <button type="button" id="flash-machines" class="mds-primary" aria-describedby="midi-status" disabled>Loading machines…</button>
         <section id="transfer-panel" class="mds-transfer" aria-labelledby="transfer-title" hidden><h2 id="transfer-title">Installing machines</h2><progress id="transfer-progress" max="1" value="0"></progress><p id="transfer-status" role="status" aria-live="polite"></p><button type="button" id="stop-transfer">Stop after this machine</button></section>
       </div>
     </aside>

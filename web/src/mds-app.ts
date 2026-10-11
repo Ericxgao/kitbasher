@@ -14,14 +14,27 @@ const slotName = (n: number) => `U${String(n + 1).padStart(2, '0')}`;
 let entries: CatalogEntry[] = [], selection: MdsMachine[] = [], family = 'all', start = 0, busy = false, access: MIDIAccess | undefined;
 let transport: BrowserMdsTransport | undefined, client: MdsClient | undefined, snapshot: MdsSnapshot | undefined;
 let stop = false, dragIndex: number | undefined;
+let primaryProgress = '';
 const loaded = new Map<string, MdsMachine>();
 const assignments = (): MdsAssignment[] => selection.map((machine, i) => ({ machine, slot: start + i }));
 function status(message: string, error = false) { $('mds-status').textContent = message; $('mds-status').dataset.error = String(error); }
 function save() { try { localStorage.setItem('kitbasher-mds-bank', JSON.stringify({ start, ids: selection.map(m => m.contentId) })); } catch { /* Storage can be disabled. */ } }
+function portsReady() {
+  return access?.inputs.get($<HTMLSelectElement>('midi-input').value)?.state === 'connected'
+    && access?.outputs.get($<HTMLSelectElement>('midi-output').value)?.state === 'connected';
+}
+function primaryAction() {
+  if (!selection.length) return 'Choose machines';
+  if (!access) return 'Connect MIDI';
+  if (!portsReady()) return 'Choose MIDI ports';
+  if (!snapshot) return 'Retry MIDI connection';
+  return 'Flash machines';
+}
+function primaryWorking(label: string) { primaryProgress = label; $('flash-machines').textContent = label; $('flash-machines').setAttribute('aria-busy', 'true'); }
 async function act(work: () => Promise<void>) {
   if (busy) return; busy = true; render();
   try { await work(); } catch (e) { status(e instanceof Error ? e.message : String(e), true); }
-  finally { busy = false; render(); }
+  finally { busy = false; primaryProgress = ''; render(); }
 }
 async function load(e: CatalogEntry): Promise<MdsMachine> {
   const known = loaded.get(e.contentId); if (known) return known;
@@ -87,10 +100,11 @@ function render() {
   $<HTMLButtonElement>('add-family').disabled = family === 'all' || !shown.some(e => !selection.some(m => m.contentId === e.contentId));
   $<HTMLButtonElement>('clear-selection').disabled = !selection.length; $<HTMLButtonElement>('sort-selection').disabled = selection.length < 2;
   $<HTMLButtonElement>('download-bank').disabled = !selection.length || plan.problems.length > 0;
-  $<HTMLButtonElement>('flash-machines').disabled = !access || !selection.length;
+  $<HTMLButtonElement>('flash-machines').disabled = false;
+  $('flash-machines').textContent = primaryProgress || primaryAction();
+  $('flash-machines').setAttribute('aria-busy', String(!!primaryProgress));
   $<HTMLButtonElement>('disconnect-midi').disabled = !access;
-  $<HTMLButtonElement>('connect-midi').disabled = !!access;
-  $('connect-midi').hidden = !!access; $('disconnect-midi').hidden = !access;
+  $('disconnect-midi').hidden = !access;
   $<HTMLSelectElement>('start-slot').value = String(start);
   for (const option of $<HTMLSelectElement>('start-slot').options) option.disabled = Number(option.value) + selection.length > 16;
   if (busy) {
@@ -127,6 +141,7 @@ function populatePorts() {
 }
 async function closeTransport() { const old = transport; transport = undefined; client = undefined; snapshot = undefined; if (old) await old.close(); }
 async function readBank() {
+  primaryWorking('Checking MIDI connection…');
   await closeTransport();
   const input = access?.inputs.get($<HTMLSelectElement>('midi-input').value), output = access?.outputs.get($<HTMLSelectElement>('midi-output').value);
   $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Checking both MIDI directions…';
@@ -138,7 +153,8 @@ async function readBank() {
     $('midi-status').textContent = `Connected · both MIDI directions verified. ${snapshot.slots.filter(s => s.flags & 1).length} occupied slots.`;
   } catch (e) { await closeTransport(); $('midi-status').dataset.error = 'true'; $('midi-status').textContent = e instanceof Error ? e.message : String(e); throw e; }
 }
-$('connect-midi').onclick = () => void act(async () => {
+async function connectMidi() {
+  primaryWorking('Connecting MIDI…');
   if (!navigator.requestMIDIAccess || !isSecureContext) throw new Error('MIDI needs Chrome on HTTPS or localhost. You can still choose machines and download SysEx here.');
   access = await navigator.requestMIDIAccess({ sysex: true });
   if (!access.sysexEnabled) { access = undefined; throw new Error('MIDI permission did not include SysEx. Allow SysEx access to install machines.'); }
@@ -147,10 +163,11 @@ $('connect-midi').onclick = () => void act(async () => {
     if (transport && (transport.input.state !== 'connected' || transport.output.state !== 'connected')) { snapshot = undefined; $('midi-status').dataset.error = 'true'; $('midi-status').textContent = 'MIDI disconnected. Reconnect both directions before flashing.'; status('MIDI disconnected. Reconnect both directions before flashing.', true); }
     if (!busy) { populatePorts(); render(); }
   };
-  await readBank();
-});
+  if (portsReady()) await readBank();
+  else { $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Choose the output to Machinedrum IN and the input from Machinedrum OUT above.'; }
+}
 $('disconnect-midi').onclick = () => void act(async () => { if (access) access.onstatechange = null; await closeTransport(); access = undefined; $('connection').hidden = true; $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Connect both MIDI directions. Machinedrum OUT provides the replies that pace each send.'; status('MIDI disconnected. Capacity now assumes an empty X.20 bank.'); });
-for (const id of ['midi-input', 'midi-output']) $(id).onchange = () => void act(readBank);
+for (const id of ['midi-input', 'midi-output']) $(id).onchange = () => void act(async () => { if (portsReady()) await readBank(); else { await closeTransport(); $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Choose both MIDI ports to continue.'; } });
 $('family-filter').onchange = () => { family = $<HTMLSelectElement>('family-filter').value; render(); };
 for (const id of ['machine-search', 'collection-filter', 'machine-sort']) $(id).addEventListener(id === 'machine-search' ? 'input' : 'change', render);
 $('start-slot').onchange = () => { start = Number($<HTMLSelectElement>('start-slot').value); save(); render(); };
@@ -179,7 +196,13 @@ $('download-bank').onclick = () => void act(async () => {
   status(`Downloaded ${current.length} selected machines for ${slotName(start)}–${slotName(start + selection.length - 1)}. Use an MDS-aware sender, or install here with acknowledgments.`);
 });
 $('close-details').onclick = () => $<HTMLDialogElement>('machine-details').close();
-$('flash-machines').onclick = () => void act(async () => {
+$('flash-machines').onclick = async () => { await act(async () => {
+  try {
+    if (!selection.length) { status('Add machines from the library to begin.'); return; }
+    if (!access) { await connectMidi(); return; }
+    if (!portsReady()) { populatePorts(); await readBank(); return; }
+    // A retry restores the ready state; only a click labelled Flash machines writes.
+    if (!snapshot) { await readBank(); return; }
   const run = async () => {
     const preview = snapshot;
     await readBank();
@@ -188,6 +211,7 @@ $('flash-machines').onclick = () => void act(async () => {
     const selected = assignments(), plan = planBank(selected, snapshot), connection = client, baseline = snapshot;
     if (plan.problems.length) throw new Error(plan.problems.join(' '));
     if (!plan.changes.length) { status('Every selected machine is already installed and valid in its destination slot.'); return; }
+    primaryWorking('Flashing machines…');
     stop = false; $('transfer-panel').hidden = false; $<HTMLButtonElement>('stop-transfer').disabled = false;
     const total = plan.changes.reduce((n, a) => n + Math.ceil(a.machine.bytes.length / 420) + 2, 0);
     let finished = 0; const progress = $<HTMLProgressElement>('transfer-progress'); progress.max = total; progress.value = 0;
@@ -202,7 +226,14 @@ $('flash-machines').onclick = () => void act(async () => {
     finally { $<HTMLButtonElement>('stop-transfer').disabled = true; }
   };
   if (navigator.locks) await navigator.locks.request('kitbasher-mds-midi', { ifAvailable: true }, async lock => { if (!lock) throw new Error('Another Kitbasher tab is using MIDI. Finish that transfer first.'); await run(); }); else await run();
+  } catch (e) { $('midi-status').dataset.error = 'true'; $('midi-status').textContent = e instanceof Error ? e.message : String(e); throw e; }
 });
+  if (!selection.length) { $('machine-search').scrollIntoView({ block: 'center' }); $('machine-search').focus(); }
+  else if (access && !portsReady()) {
+    const missing = access.outputs.get($<HTMLSelectElement>('midi-output').value)?.state === 'connected' ? $('midi-input') : $('midi-output');
+    missing.scrollIntoView({ block: 'center' }); missing.focus();
+  }
+};
 $('stop-transfer').onclick = () => { stop = true; $<HTMLButtonElement>('stop-transfer').disabled = true; $('transfer-status').textContent = 'Finishing the current machine safely, then stopping.'; };
 window.addEventListener('beforeunload', event => { if (busy && !$('transfer-panel').hidden) { event.preventDefault(); event.returnValue = ''; } });
 window.addEventListener('pagehide', () => { void transport?.close(); });
