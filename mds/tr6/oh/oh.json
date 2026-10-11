@@ -1,0 +1,228 @@
+{
+  "schema": "spsx.mds.machine/1",
+  "id": "org.kitbasher.tr6.oh",
+  "category": "TR6",
+  "category_order": 6,
+  "short_label": "OH",
+  "display_name": "TR6 OPEN HAT",
+  "tonal": false,
+  "neighbour": false,
+  "stereo_pair": false,
+  "retrigger": "restart",
+  "params": [
+    {
+      "name": "DEC",
+      "default": 89,
+      "min": 0,
+      "max": 127,
+      "transform": "raw14",
+      "control": "continuous",
+      "linked": false
+    },
+    {
+      "name": "TUNE",
+      "default": 64,
+      "min": 0,
+      "max": 127,
+      "transform": "raw14",
+      "control": "continuous",
+      "linked": false
+    }
+  ],
+  "machine_version": "1.0",
+  "max_track_cycles": 3904,
+  "program": {
+    "abi_version": 1,
+    "init_symbol": "init",
+    "trig_symbol": "trigger",
+    "render_symbol": "render",
+    "x_workset_words": 24,
+    "y_workset_words": 3,
+    "relocations": [
+      {
+        "symbol": "init",
+        "word_delta": 6
+      },
+      {
+        "symbol": "init",
+        "word_delta": 30
+      },
+      {
+        "symbol": "init",
+        "word_delta": 35
+      },
+      {
+        "symbol": "init",
+        "word_delta": 49
+      },
+      {
+        "symbol": "init",
+        "word_delta": 56
+      },
+      {
+        "symbol": "init",
+        "word_delta": 80
+      },
+      {
+        "symbol": "init",
+        "word_delta": 157
+      },
+      {
+        "symbol": "init",
+        "word_delta": 184
+      },
+      {
+        "symbol": "init",
+        "word_delta": 206
+      },
+      {
+        "symbol": "init",
+        "word_delta": 220
+      },
+      {
+        "symbol": "init",
+        "word_delta": 236
+      },
+      {
+        "symbol": "init",
+        "word_delta": 245
+      }
+    ],
+    "imports": [
+      {
+        "symbol": "init",
+        "word_delta": 155,
+        "abi_symbol": 8,
+        "kind": 4
+      },
+      {
+        "symbol": "init",
+        "word_delta": 168,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 180,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 182,
+        "abi_symbol": 8,
+        "kind": 4
+      },
+      {
+        "symbol": "init",
+        "word_delta": 201,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 215,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 232,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 234,
+        "abi_symbol": 8,
+        "kind": 4
+      }
+    ]
+  },
+  "_build": {
+    "assembly": "oh.asm",
+    "origin": 0,
+    "import_symbols": {
+      "mds_scratch_x": 0,
+      "mds_scratch_y": 0
+    },
+    "symbols": {
+      "init": 0,
+      "init_end": 8,
+      "trigger": 12,
+      "control_1_end": 38,
+      "control_2_end": 59,
+      "render": 75,
+      "noise_end": 166,
+      "filter_end": 198,
+      "tone0_end": 212,
+      "tone1_end": 227,
+      "mix_end": 242,
+      "silent": 243,
+      "zero_end": 247,
+      "control_1": 248,
+      "control_2": 504
+    },
+    "program_words": 1080,
+    "program_sha256": "26e0fa87c1d4ca0b81977877cbc2304585e80812347d769857a5fda2ef6346db",
+    "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Write packed big-endian 24-bit program words and symbols to temporary files. Run upstream MDS tools/mds_pack.py definition.json program.bin --symbols symbols.json -o machine.mds, then tools/mds_to_syx.py machine.mds --slot 6."
+  },
+  "_validation": {
+    "status": "simulator-qualified; hardware audition pending",
+    "timing": {
+      "measured_model_max_clocks": 3876,
+      "declared_max_clocks": 3904,
+      "limit": 3951,
+      "scope": "Actual X.20 dispatcher P:$6b through P:$e1, DMA handshakes ready, empty 8x128 instruction cache, additive interlocks, 3 waits per external instruction miss AND external data word, plus 64-clock output-transfer reserve. Busywait latency and interrupts are system scheduling, not bounded here; no hardware timing claim.",
+      "dispatcher_flags_tested": 128,
+      "cache_placements": "All 128 word alignments fit the eight cache sectors for every traced path.",
+      "physical_wait_states_verified": false
+    },
+    "tests": {
+      "controls": 323,
+      "samples": 1002592,
+      "peak": 0.6792894601821899,
+      "clipped_samples": 0,
+      "guards_and_parameters": true,
+      "dirty_entry_registers": true,
+      "init_silent": true,
+      "retrigger": true,
+      "tracer_audio_cycles_equal": true
+    },
+    "perceptual_metric": "Existing native four-seed WMD ensemble scorer; lower loss is closer, not a calibrated quality percentage.",
+    "perceptual_scores": [
+      {
+        "case": "default",
+        "retained": 2.302456492560202,
+        "candidate": 2.7878173454245645,
+        "level_matched": 2.7277839686278536,
+        "level_delta_db": -0.5021195941878105,
+        "peak": 0.5756655931472778,
+        "clipped_samples": 0
+      },
+      {
+        "case": "maximum",
+        "retained": 3.0559093609522328,
+        "candidate": 3.37223602766507,
+        "level_matched": 3.3186727351617247,
+        "level_delta_db": -0.813891062913271,
+        "peak": 0.4818120002746582,
+        "clipped_samples": 0
+      }
+    ],
+    "hardware_tested": false
+  },
+  "_design": {
+    "description": "Two metallic partials plus a fitted noise band, all at 44.1 kHz.",
+    "strategy": "Start with an affordable approximation, qualify complete trigger/render admission and bank fit, then add fidelity only within verified headroom.",
+    "control_resolution": "64 representative values per continuous control; clap burst decay uses 16 values. Defaults and endpoints are represented.",
+    "source": "https://github.com/Fadedlimes/Simple606/tree/6aacda7a14a8c097d32836039fd356eb0976ba8e",
+    "license": "MIT; complete notice is embedded in the assembly source."
+  },
+  "_send": {
+    "file": "oh.syx",
+    "destination_slot": 6,
+    "bank_file": "../tr6-bank.syx",
+    "instruction": "Load an empty/appropriate Machine Bank and send this file with an MDS-capable SysEx sender. The bank file installs all eight voices into U01-U08. Files have not been sent to hardware."
+  }
+}
