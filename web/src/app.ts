@@ -683,7 +683,7 @@ async function onFile(f: File): Promise<void> {
       if (pendingProject) applyProject(pendingProject.project, pendingProject.name);
       refresh();
       if (gate(uwAnswer, true).ok) showStep(3);
-      else status(`Loaded ${f.name} (${R.name}, public beta; untested on hardware). ${gate(uwAnswer, true).why}`, 'info');
+      else { status('Answer the UW question to continue.'); $('status').dataset.uwError = 'true'; }
       return;
     }
     // an X.20 build Kitbasher made: not built on; its layout table comes back and the stock X.20 file is asked for
@@ -747,7 +747,7 @@ async function onFile(f: File): Promise<void> {
   }
   refresh();
   if (fw && gate(uwAnswer, true).ok) showStep(3);
-  else if (fw) status(`Loaded ${f.name}. ${gate(uwAnswer, true).why}`, 'info');
+  else if (fw) { status('Answer the UW question to continue.'); $('status').dataset.uwError = 'true'; }
 }
 
 /** Pack files the user chose: read locally, checked, merged with what is there (same bytes twice is fine). */
