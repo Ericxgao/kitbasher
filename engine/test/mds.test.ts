@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { CMD, X20_CAPS, concat, crc32, decodeMessage, encodeMessage, hex, machineMessages, parseCaps, parsePackage, parseSlots, parseSysex, planBank, type MdsMachine, type MdsMessage, type MdsSnapshot } from '../src/mds.js';
 import { MdsClient, type MdsTransport } from '../src/mds_transfer.js';
 const file = (name: string) => new Uint8Array(readFileSync(new URL(`../../../mds/${name}`, import.meta.url)));
-const bank = await parseSysex(file('tr6/tr6-bank.syx'));
+const bank = await parseSysex(file('tx6/tx6-bank.syx'));
 const kick = bank[0];
 const empty = (): MdsSnapshot => ({ generation: 2, caps: { ...X20_CAPS }, slots: Array.from({ length: 16 }, (_, slot) => ({ slot, flags: 0, model: 194 + slot, words: 0, bytes: 0, alias: '', contentId: '0000000000000000' })) });
 function installed(s: MdsSnapshot, slot: number, machine: MdsMachine) {
@@ -41,12 +41,12 @@ test('real released bank decodes; destinations change without changing package i
   assert.equal(bank.length, 8); assert.equal(kick.version, '1.2'); assert.equal(kick.parameters.find(p => p.name === 'XL')?.max, 127);
   const frames = machineMessages(kick, 15, 14200); const [again] = await parseSysex(concat(frames));
   assert.deepEqual(again.bytes, kick.bytes); assert.ok(frames.every(f => decodeMessage(f).slot === 15));
-  assert.equal(hex(concat(machineMessages(kick, 0, 1))), hex(file('tr6/bd/bd.syx')));
+  assert.equal(hex(concat(machineMessages(kick, 0, 1))), hex(file('tx6/bd/bd.syx')));
 });
 test('rejects bad checksums, unused packing bits, truncation and unrelated SysEx', async () => {
   const wire = encodeMessage(2, 7, 0, 0, Uint8Array.of(255)); wire[15] ^= 1; assert.throws(() => decodeMessage(wire), /checksum/);
   const packed = encodeMessage(2, 7, 0, 0, Uint8Array.of(255)); packed[14] |= 1; packed[packed.length - 4]++; assert.throws(() => decodeMessage(packed), /packing/);
-  await assert.rejects(parseSysex(file('tr6/bd/bd.syx').slice(0, -1)), /Incomplete/);
+  await assert.rejects(parseSysex(file('tx6/bd/bd.syx').slice(0, -1)), /Incomplete/);
   await assert.rejects(parseSysex(Uint8Array.from([240, 1, 2, 247])), /MDS/);
 });
 test('rejects reordered packets, inconsistent descriptor and corrupted package content ID', async () => {
@@ -55,7 +55,7 @@ test('rejects reordered packets, inconsistent descriptor and corrupted package c
   const f = machineMessages(kick, 0, 1), header = decodeMessage(f[0]); header.body[10] ^= 1; f[0] = encodeMessage(1, 1, 0, 127, header.body); await assert.rejects(parseSysex(concat(f)), /descriptor/);
 });
 test('accepts interspersed realtime bytes without counting them in the checksum', async () => {
-  const bytes = file('tr6/bd/bd.syx'); const withClock = Uint8Array.from(Array.from(bytes).flatMap((v, i) => i % 9 ? [v] : [v, 248]));
+  const bytes = file('tx6/bd/bd.syx'); const withClock = Uint8Array.from(Array.from(bytes).flatMap((v, i) => i % 9 ? [v] : [v, 248]));
   assert.equal((await parseSysex(withClock))[0].contentId, kick.contentId);
 });
 test('device capabilities and slot readback are decoded at protocol offsets', () => {

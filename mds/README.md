@@ -2,7 +2,7 @@
 
 The MDS page installs individual user machines into an X.20 Machine Bank. It is separate from Kitbasher's firmware builder. `catalog.json` is the curated public index; the website build validates each package and publishes content-addressed files. Capacity, controls, version and identity come from the package itself.
 
-The first collection contains the X.20 USR releases in `core/` (TX8, TX9, TXZ, SYN, P-I and NFX) and the Simple606-inspired community TR6 port in `tr6/`. Core binaries are preserved byte-for-byte from the supplied X.20 USR collection. Their source and license were not supplied; the catalog records that rather than inventing a source link or license. The site repository's license does not override individual machine licenses. TR6 source attribution and its MIT notice are in each assembly file.
+The first collection contains the X.20 USR releases in `core/` (TX8, TX9, TXZ, SYN, P-I and NFX) and the Simple606-inspired community TX6 port in `tx6/`. Core binaries are preserved byte-for-byte from the supplied X.20 USR collection. Their source and license were not supplied; the catalog records that rather than inventing a source link or license. The site repository's license does not override individual machine licenses. TX6 source attribution and its MIT notice are in each assembly file.
 
 ## Curating releases
 
@@ -12,6 +12,45 @@ The first collection contains the X.20 USR releases in `core/` (TX8, TX9, TXZ, S
 4. Run `node ci/workflow.mjs check`. Review the generated MDS page, parameter descriptions, capacities and source links before merging. A site deployment publishes the updated catalog.
 
 Users can import local `.mds` or `.syx` files without publishing them. A local bank SysEx may contain multiple machine transfers. Non-MDS SysEx is rejected. Downloads rewrite only the destination slot, transaction and wire checksums; package bytes and their identities remain unchanged.
+
+## Submit a community machine
+
+Fork Kitbasher and open a pull request against `main`, using the [MDS submission template](../.github/PULL_REQUEST_TEMPLATE/mds-machine.md). Add your release under `mds/community/<author>/<machine>/` and append one entry per machine to the `machines` array in `mds/catalog.json`. No frontend code or separate registration is needed. Use `channel: "community"`; maintainers manage the core collection.
+
+Copy this entry, replacing the example values with your release details:
+
+```json
+{
+  "file": "mds/community/your-name/example/example.syx",
+  "sha256": "replace-with-the-64-character-sha256-of-this-exact-file",
+  "channel": "community",
+  "author": "Your name",
+  "summary": "A short description of the sound and useful controls.",
+  "source": "https://github.com/your-name/your-project/tree/COMMIT/machine",
+  "project": "https://github.com/your-name/your-project",
+  "license": "MIT",
+  "notes": "Compatibility notes or changes that affect existing kits."
+}
+```
+
+`file` is relative to the repository root and must point to a single-machine `.syx` or `.mds`. `sha256` covers that exact file, not its unpacked program. `author`, `summary`, and `license` must be nonempty strings. Use an accurate license and include its required notices; only submit files you can redistribute. `source` and `project` must be HTTPS URLs or explicit `null` when unavailable. Pin source to a release commit. `notes` is optional.
+
+The package supplies its stable machine ID, family/category, short label, display name, version, parameter names/ranges/defaults, memory use and declared CPU cost. Those values are decoded automatically; do not duplicate or override them in the catalog entry. Keep the ID stable across updates, increment the package version, and replace its existing catalog entry instead of appending a duplicate. The SysEx destination slot is remapped to the user's selection by the browser.
+
+Calculate the file hash in PowerShell:
+
+```powershell
+(Get-FileHash -Algorithm SHA256 -LiteralPath 'mds/community/your-name/example/example.syx').Hash.ToLowerInvariant()
+```
+
+Before submitting:
+
+- Include the package, metadata entry, and source/license links or attribution files.
+- Confirm the package is for MDS v1 on X.20, with a nonzero per-track cycle declaration no greater than 3,951 clocks per block. Provide timing evidence; the declaration alone is not a benchmark.
+- Describe the sound, controls, memory needs, testing performed, and whether it was tested on hardware. Mention dependencies and existing-kit compatibility changes.
+- Install dependencies with `npm ci`, then run `npm run check` using the repository's development setup. CI also runs the checks on the PR. Check the deployment preview for the correct family, controls and capacity.
+
+CI rejects malformed packages, mismatched hashes, duplicate machine IDs, invalid metadata and cycle declarations outside the admission limit. Maintainers review provenance, DSP behavior and test evidence; passing CI does not establish sound quality or DSP safety. **Approval alone does not publish a release: once the approved PR is merged and deployment succeeds, the machine appears automatically in the public list.** The build generates its download asset, and the page discovers families and filters from the updated catalog.
 
 ## MIDI installation
 

@@ -11,10 +11,13 @@ export async function buildMdsCatalog(root) {
   if (catalog.schema !== 'kitbasher.mds-catalog/1' || !Array.isArray(catalog.machines)) throw new Error('Invalid MDS catalog');
   const machines = [], assets = [], ids = new Set();
   for (const entry of catalog.machines) {
+    if (!entry || typeof entry !== 'object' || typeof entry.file !== 'string') throw new Error('MDS catalog entries need a file path');
     const path = resolve(root, entry.file);
     if (!path.startsWith(resolve(root, 'mds') + sep) || !/\.(syx|mds)$/.test(path)) throw new Error('MDS catalog file must be under mds/');
-    if (!['core', 'community'].includes(entry.channel) || !entry.author || !entry.summary) throw new Error(`Missing curation metadata: ${entry.file}`);
-    for (const field of ['source', 'project']) if (entry[field] && new URL(entry[field]).protocol !== 'https:') throw new Error('Catalog links must use HTTPS');
+    if (!['core', 'community'].includes(entry.channel) || ['author', 'summary', 'license'].some(field => typeof entry[field] !== 'string' || !entry[field].trim())) throw new Error(`Missing curation metadata: ${entry.file}`);
+    if (typeof entry.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(entry.sha256)) throw new Error(`Invalid SHA-256 pin: ${entry.file}`);
+    if (entry.notes !== undefined && typeof entry.notes !== 'string') throw new Error(`Catalog notes must be text: ${entry.file}`);
+    for (const field of ['source', 'project']) if (entry[field] !== null && (typeof entry[field] !== 'string' || new URL(entry[field]).protocol !== 'https:')) throw new Error('Catalog links must be HTTPS URLs or null');
     const bytes = readFileSync(path), hash = createHash('sha256').update(bytes).digest('hex');
     if (hash !== entry.sha256) throw new Error(`MDS hash changed: ${entry.file}. Review the release and update its catalog pin.`);
     const parsed = path.endsWith('.mds') ? [await parsePackage(bytes)] : await parseSysex(bytes);

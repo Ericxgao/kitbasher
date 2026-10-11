@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
+import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import { buildMdsCatalog } from '../web/build-mds.mjs';
 
 test('every curated core/community release validates, with unique IDs and exact pinned bytes', async () => {
@@ -8,10 +10,28 @@ test('every curated core/community release validates, with unique IDs and exact 
   const { index, assets } = await buildMdsCatalog(root);
   assert.ok(index.machines.length >= 51);
   assert.equal(assets.length, index.machines.length);
-  for (const family of ['NFX', 'P-I', 'SYN', 'TR6', 'TX8', 'TX9', 'TXZ']) assert.ok(index.machines.some(m => m.category === family));
+  for (const family of ['NFX', 'P-I', 'SYN', 'TX6', 'TX8', 'TX9', 'TXZ']) assert.ok(index.machines.some(m => m.category === family));
   assert.ok(index.machines.filter(m => m.channel === 'core').length >= 43);
   assert.ok(index.machines.filter(m => m.channel === 'community').length >= 8);
-  const kick = index.machines.find(m => m.alias === 'TR6-BD');
-  assert.equal(kick.version, '1.2'); assert.match(kick.source, /3bc3635/);
+  const kick = index.machines.find(m => m.alias === 'TX6-BD');
+  assert.equal(kick.version, '1.2'); assert.match(kick.source, /945e29c/);
+  assert.equal(index.machines.filter(m => m.category === 'TX6').length, 8);
+  assert.ok(index.machines.every(m => m.category !== 'TR6'));
   assert.ok(index.machines.every(m => m.cycles > 0 && m.cycles <= 3951 && m.words > 0 && m.contentId.length === 64));
+});
+
+test('community contributions need complete metadata and a valid single-machine release', async t => {
+  const root = fileURLToPath(new URL('../', import.meta.url));
+  const catalog = JSON.parse(readFileSync(join(root, 'mds/catalog.json'), 'utf8'));
+  const entry = catalog.machines.find(m => m.channel === 'community');
+  // Keep the fixture in the checkout so esbuild resolves the same project configuration.
+  const temp = mkdtempSync(join(root, '.mds-contribution-'));
+  t.after(() => rmSync(temp, { recursive: true, force: true }));
+  for (const file of ['engine/src/mds.ts', entry.file]) { mkdirSync(dirname(join(temp, file)), { recursive: true }); copyFileSync(join(root, file), join(temp, file)); }
+  const write = machines => writeFileSync(join(temp, 'mds/catalog.json'), JSON.stringify({ schema: catalog.schema, machines }));
+  write([entry]); assert.equal((await buildMdsCatalog(temp)).index.machines.length, 1);
+  for (const patch of [{ author: '' }, { summary: 42 }, { license: null }, { sha256: 'invalid' }, { source: 'http://example.com' }, { project: undefined }, { notes: [] }]) {
+    write([{ ...entry, ...patch }]); await assert.rejects(buildMdsCatalog(temp));
+  }
+  write([entry, entry]); await assert.rejects(buildMdsCatalog(temp), /Duplicate/);
 });
