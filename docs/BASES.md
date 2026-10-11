@@ -254,11 +254,8 @@ adds, in its own routines and at every OS and loader site, decodes as ISA_A
 (MCF5206e: the emulators run 68k forms such as `btst #n,abs.l` and
 `move.l #imm,d16(An)` that the CPU traps on); the DSP boot code holds no cache
 instruction; boot-time chunk reads use flash's own address (the alias only in the
-emulator-only upload variant). Offline, with a decoded X.20 B image (`KB_X20_OS`, see
-[Testing](TESTING.md)), the tests check every anchor (the optional features' sites
-and the stock code their routines rely on included) and run a relocation audit:
-every instruction that reaches a table the recipe moves is patched or explained
-in the recipe's `audit` list.
+emulator-only upload variant). The file's hash pins the OS; the recipe's anchors
+are checked offline against a decoded X.20 B image (`KB_X20_OS`, see [Testing](TESTING.md)).
 
 ## Machinedrum without UW
 

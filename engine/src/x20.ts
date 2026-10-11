@@ -646,9 +646,8 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   // ---- flash: chunks, then our list entries, in the flash the bank frees
   const spans = freeFlash(bank).map(([a, b]) => [a, b] as [number, number]);
   // the emulator-only upload variant sends every chunk after DSP2 starts; the emulated OS misses DSP2's startup
-  // messages when one chunk takes too long to unpack, so that variant packs smaller chunks (KB_X20_RAWMAX overrides)
-  const envRaw = Number((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.KB_X20_RAWMAX ?? NaN);
-  const rawMax = Math.min(Number.isFinite(envRaw) ? envRaw : upload ? RAW_MAX_UPLOAD : RAW_MAX_DEFAULT, R.ram.uploadBuffer[1] - R.ram.uploadBuffer[0]);
+  // messages when one chunk takes too long to unpack, so that variant packs smaller chunks
+  const rawMax = Math.min(upload ? RAW_MAX_UPLOAD : RAW_MAX_DEFAULT, R.ram.uploadBuffer[1] - R.ram.uploadBuffer[0]);
   const flashCapacity = spans.reduce((n, [a, b]) => n + b - a, 0);
   const preC = await chunks(pre, spans, rawMax, flashCapacity);
   const postC = await chunks(post, spans, rawMax, flashCapacity);
@@ -764,7 +763,7 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   while ((len - L.header) % 16) len++;
   const stage = img.slice(0, len);
   stage.set(be32((len - L.header) / 4), L.copyLongsAt);
-  const packed = await uclPack(stage, Number((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.KB_STAGE_LEVEL ?? 10));
+  const packed = await uclPack(stage, 10);
   const back = nrv2bDecode(packed).out;
   if (back.length !== stage.length || back.some((b, k) => b !== stage[k])) throw new Error('stage image NRV2B round trip');
   const room = L.payloadFlash - L.slot0Flash;

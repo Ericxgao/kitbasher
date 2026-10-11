@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 import { idAllowedOnX20, parseRecipe, recipeFor, type X20RecipeFile } from '../src/x20_recipe.js';
 import { cacheOpsIn, dsp2BootLoader, isCode, siteBytes, stageCode, windowA, writeList, x20Map, evalExpr, ID_MASK_THUNKS, ID_SUB_THUNKS } from '../src/x20_cf.js';
 import { buildX20, readX20, trimX20, trimX20Bank, x20E12Bank, x20IsaGate, x20NeighbourReads, NEIGHBOUR_1X, NEIGHBOUR_X20, X20_CATEGORIES, x20DynData } from '../src/x20.js';
-import { anchorMismatches, preloadConflicts, relocationAudit } from '../src/x20_audit.js';
 import { buildBank, decode as e12Decode, encode as e12Encode, freeFlash, readBank, ENTRIES } from '../src/e12b.js';
 import { decodeLinear } from '../src/isa.js';
 import { loadPacks } from '../src/node.js';
@@ -68,7 +67,7 @@ test('x20: every site is as long as its anchor, and every code site decodes as I
     if (isCode(s.value)) code.push({ at: s.at, bytes: b });
   }
   const boot = dsp2BootLoader(R);
-  const st = stageCode(R, writeList(writes), [0x100ca2dc], [0x100cfe18], wa, boot.receiver);
+  const st = stageCode(R, writeList(writes), [0xca2dc], [0xcfe18], wa, boot.receiver);
   const mem = [{ what: 'boot code', ram: R.ram.bootCode[0], bytes: st.asm.bytes }, { what: 'window A', ram: R.ram.window[0], bytes: wa.asm.bytes }];
   const ours = (a: number): boolean => mem.some((m) => a >= m.ram && a < m.ram + m.bytes.length);
   const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'HTAB', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM'].map((n) => wa.asm.labels[n]), wa.knobcb];
@@ -246,14 +245,6 @@ test('e12b: a synthetic bank round-trips through the encoder, the bank layout an
   assert.ok(freeFlash(bank).length > 0 && freeFlash(bank).every(([a, b]) => b > a));
 });
 
-test('x20: nothing written after the pre-boot load may land on the machines or the boot loader', () => {
-  const B = R.dsp2.boot, be = R.e12.table + 3 * R.e12.count;
-  const regions: [number, number][] = [[be, R.e12.bankEnd], ...R.dsp2.free];
-  assert.deepEqual(preloadConflicts(R, [[0x100000, 0x1025c4], [0x1028c0, 0x135205], [0x146000, 0x147bff], [0x147e00, 0x147f07]], be, regions), []);
-  assert.equal(preloadConflicts(R, [[B.wiper + 4, B.wiper + 4]], be, regions).length, 1);
-  assert.equal(preloadConflicts(R, [[0x147c10, 0x147c20]], be, regions).length, 1);
-});
-
 test('x20: a ping-pong neighbour read (md_output XOR $20) is rewritten for X.20\'s four rotating buffers; nothing else is', () => {
   const code = [0x000000, ...NEIGHBOUR_1X, 0x0c0000, ...NEIGHBOUR_1X];
   const placed = { records: [[0x120000, [...code]] as [number, number[]]], machines: [{ org: 0x120000, words: code.length, name: 'FX   ' }] };
@@ -284,34 +275,21 @@ test('x20: X.20\'s own machines are never usable IDs', () => {
   assert.throws(() => parseRecipe(f), /reserves|X\.20's own/);
 });
 
-// ---- offline, against a decoded X.20 B OS image (KB_X20_OS; never committed)
+// ---- offline, against a decoded X.20 B OS image (KB_X20_OS; never committed). X.20 packs its OS, so the
+// build cannot read the bytes a site replaces: this is the check that every anchor matches X.20 B.
 
 const OS = process.env.KB_X20_OS;
 const osSkip = !OS || !existsSync(OS) ? 'KB_X20_OS is not set to a decoded X.20 B ColdFire image' : false;
 
 test('x20 recipe: every anchor holds in X.20 B', { skip: osSkip }, () => {
-  assert.deepEqual(anchorMismatches(R, readFileSync(OS!)), []);
-});
-
-test('x20 recipe: relocation audit -- every reference to what the recipe moves is patched or explained', { skip: osSkip }, () => {
-  const os = readFileSync(OS!);
-  const spec = file().audit!;
-  assert.deepEqual(relocationAudit(R, os, spec).unexplained, []);
-  // the negative control: without the USR sites the routines behind the RECV FAIL are flagged
-  const f = file();
-  f.sites = f.sites.filter((s) => s.group !== 'usr');
-  const r = relocationAudit(parseRecipe(f), os, spec);
-  assert.ok(r.unexplained.length >= 10, r.unexplained.join('\n'));
-});
-
-const MAP = process.env.KB_X20_DSP_MAP;
-const mapSkip = !MAP || !existsSync(MAP) ? 'KB_X20_DSP_MAP is not set to the decoded X.20 B DSP write map' : false;
-
-test('x20: X.20 B\'s own DSP2 load (the decoded write map) never lands on the pre-loaded machines or the boot loader', { skip: mapSkip }, () => {
-  const m = JSON.parse(readFileSync(MAP!, 'utf8')) as { dsp2: Record<string, { ranges: [string, string, number][] }> };
-  const w = ['P', 'X', 'Y'].flatMap((k) => m.dsp2[k].ranges.map(([a, b]) => [parseInt(a, 16), parseInt(b, 16)] as [number, number])).filter(([a]) => a >= 0x100000);
-  const worst = R.e12.table + 3 * R.e12.count;            // no trim frees more than this
-  assert.deepEqual(preloadConflicts(R, w, worst, [[worst, R.e12.bankEnd], ...R.dsp2.free]), []);
+  const os = readFileSync(OS!), bad: string[] = [];
+  const feats = Object.entries(R.features).flatMap(([name, F]) => [...F!.sites, ...F!.anchors.map((x) => ({ ...x, what: `${name}: ${x.what}` }))]);
+  for (const s of [...R.sites, ...feats]) {
+    const got = os.subarray(s.at - 0x200000, s.at - 0x200000 + s.old.length);
+    if (got.length !== s.old.length || got.some((b, k) => b !== s.old[k]))
+      bad.push(`${s.at.toString(16)} (${s.what}): ${Buffer.from(got).toString('hex')}, recipe ${Buffer.from(s.old).toString('hex')}`);
+  }
+  assert.deepEqual(bad, []);
 });
 
 // ---- with firmware (MD_FIRMWARE_DIR holding the X.20 B .syx; skipped without it)

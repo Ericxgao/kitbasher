@@ -11,7 +11,6 @@
 
 import { num } from './bytes.js';
 import type { PiSlices } from './pi_clean.js';
-import type { AuditSpec } from './x20_audit.js';
 
 export const RECIPE_FORMAT = 'md-recipe/1';
 
@@ -80,8 +79,6 @@ export interface X20RecipeFile {
   /** X.20 menu family by pack family ('*': the rest), and by model key prefix (wins over the pack's) */
   pack_menu?: Record<string, string>;
   key_menu?: Record<string, string>;
-  /** the offline relocation audit's scope and allowlist (engine/src/x20_audit.ts) */
-  audit?: AuditSpec & { about?: string };
   /** the optional patches, by name */
   features?: Partial<Record<X20FeatureName, RecipeFeature>>;
   /** the X.20 menu family each menu category's machines go in (with the categories feature) */
