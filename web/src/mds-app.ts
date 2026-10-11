@@ -18,6 +18,13 @@ let stop = false, dragIndex: number | undefined;
 let primaryProgress = '';
 const loaded = new Map<string, MdsMachine>();
 const assignments = (): MdsAssignment[] => selection.map((machine, i) => ({ machine, slot: start + i }));
+function bankProblems(problems: string[]): string { return [...new Set(problems.map(p => /^Remove \d+ (DSP words|package bytes)/.test(p) ? 'Not enough space. Remove a machine to continue.' : p))].join('\n'); }
+function errorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.startsWith('No MDS reply')) return 'Your Machinedrum is not responding. Check both MIDI cables, the selected interface and X.20 firmware.';
+  if (error instanceof Error && (error.name === 'NotAllowedError' || /permission denied/i.test(message))) return 'MIDI access was denied. Click Connect MIDI and allow access in Chrome.';
+  return message;
+}
 function status(message: string, error = false) { $('mds-status').textContent = message; $('mds-status').dataset.error = String(error); }
 function save() { try { localStorage.setItem('kitbasher-mds-bank', JSON.stringify({ start, ids: selection.map(m => m.contentId) })); } catch { /* Storage can be disabled. */ } }
 function portsReady() {
@@ -27,14 +34,14 @@ function portsReady() {
 function primaryAction() {
   if (!selection.length) return 'Choose machines';
   if (!access) return 'Connect MIDI';
-  if (!portsReady()) return 'Choose MIDI ports';
-  if (!snapshot) return 'Retry MIDI connection';
-  return 'Flash machines';
+  if (!portsReady()) return 'Choose MIDI device';
+  if (!snapshot) return 'Try connection again';
+  return 'Send machines';
 }
 function primaryWorking(label: string) { primaryProgress = label; $('flash-machines').textContent = label; $('flash-machines').setAttribute('aria-busy', 'true'); }
 async function act(work: () => Promise<void>) {
   if (busy) return; busy = true; render();
-  try { await work(); } catch (e) { status(e instanceof Error ? e.message : String(e), true); }
+  try { await work(); } catch (e) { const message = errorMessage(e); status($('midi-status').textContent === message ? '' : message, true); }
   finally { busy = false; primaryProgress = ''; render(); }
 }
 async function load(e: CatalogEntry): Promise<MdsMachine> {
@@ -52,7 +59,7 @@ function filtered(): CatalogEntry[] {
   const sort = $<HTMLSelectElement>('machine-sort').value;
   if (sort !== 'curated') result.sort((a, b) => (sort === 'smallest' ? a.words - b.words : sort === 'cpu' ? a.cycles - b.cycles : 0) || a.alias.localeCompare(b.alias)); return result;
 }
-function add(e: CatalogEntry) { void act(async () => { if (selection.length + start >= 16) throw new Error('All destination slots are filled. Remove a selection or choose an earlier start slot.'); selection.push(await load(e)); save(); status(`${e.alias} added to ${slotName(start + selection.length - 1)}.`); }); }
+function add(e: CatalogEntry) { void act(async () => { if (selection.length + start >= 16) throw new Error('All 16 slots are full. Remove a machine to add another.'); selection.push(await load(e)); save(); status(`${e.alias} added to ${slotName(start + selection.length - 1)}.`); }); }
 function remove(index: number) { selection.splice(index, 1); save(); render(); }
 function move(from: number, to: number) { if (busy || from === to || to < 0 || to >= selection.length) return; const [m] = selection.splice(from, 1); selection.splice(to, 0, m); save(); render(); ($('bank-slots').children[start + to] as HTMLElement)?.focus(); status(`${m.alias} moved to ${slotName(start + to)}.`); }
 function render() {
@@ -65,16 +72,25 @@ function render() {
     const selected = selection.findIndex(m => m.contentId === e.contentId), row = node('tr'); row.dataset.selected = String(selected >= 0);
     const nameCell = node('td'), name = button(e.alias, () => details(e)); name.className = 'machine-name';
     nameCell.append(name, node('span', e.summary, 'machine-subtitle'));
-    if (e.hardware) nameCell.append(node('span', e.hardware === 'uw' ? 'UW required' : 'UW + non-UW', 'machine-subtitle'));
-    const collection = node('td', e.channel === 'local' ? 'Local' : e.channel === 'core' ? 'Core' : 'Community');
-    const memory = node('td', number(e.words), 'numeric'); memory.title = `${number(e.packageBytes)} package bytes · ${e.cycles} declared clocks/block`;
+    if (e.hardware === 'uw') nameCell.append(node('span', 'Requires a UW model', 'machine-subtitle'));
     const pick = node('td'), b = button(selected < 0 ? 'Add' : 'Added', () => selected < 0 ? add(e) : remove(selected), selected < 0 ? `Add ${e.alias}` : `Remove ${e.alias}`); b.className = 'pick-button'; b.setAttribute('aria-pressed', String(selected >= 0)); pick.append(b);
-    row.append(nameCell, collection, memory, pick); list.append(row);
+    row.append(nameCell, pick); list.append(row);
   }
   $('empty-library').hidden = shown.length > 0;
   const plan = planBank(assignments(), snapshot);
   $('selection-count').textContent = `${selection.length} selected`;
-  $('capacity-mode').textContent = snapshot ? 'Device readback · includes untouched slots' : 'X.20 capacity estimate · empty bank';
+  $('capacity-mode').textContent = snapshot ? 'Includes machines already on your device.' : 'Estimate for an empty bank. Connect MIDI to check your device.';
+  const used = Math.ceil(Math.max(plan.words / plan.caps.totalWords, plan.bytes / plan.caps.totalBytes) * 100);
+  const space = $('space-summary'), spaceText = node('div'), spaceBar = node('progress');
+  space.dataset.over = String(used > 100); spaceBar.max = 100; spaceBar.value = Math.min(100, used);
+  spaceBar.setAttribute('aria-label', `${used}% of bank space used`);
+  spaceText.append(node('span', snapshot ? 'Bank space' : 'Estimated space'), node('span', `${used}% used · ${plan.occupied}/16 slots`));
+  space.replaceChildren(spaceText, spaceBar);
+  $('empty-bank').hidden = plan.occupied > 0;
+  $('reorder-hint').hidden = selection.length < 2;
+  $('send-hint').hidden = !selection.length || !snapshot;
+  $('midi-help').hidden = !!snapshot;
+  if (access && !snapshot) $<HTMLDetailsElement>('connection').open = true;
   const meters = $('capacity-meters'); meters.replaceChildren();
   for (const [label, value, max, unit] of [['DSP memory', plan.words, plan.caps.totalWords, 'words'], ['Package storage', plan.bytes, plan.caps.totalBytes, 'bytes'], ['Slots', plan.occupied, 16, '']] as const) {
     const wrap = node('div', '', 'mds-meter'), text = node('div'), bar = node('progress'); wrap.dataset.over = String(value > max);
@@ -83,6 +99,7 @@ function render() {
   const slots = $('bank-slots'); slots.replaceChildren();
   for (let i = 0; i < 16; i++) {
     const index = i - start, m = selection[index], installed = snapshot?.slots[i], row = node('li', '', 'mds-slot'); row.dataset.selected = String(!!m);
+    row.hidden = !m && !((installed?.flags ?? 0) & 1);
     row.append(node('span', slotName(i), 'slot-number'));
     const label = node('span', m?.alias ?? ((installed?.flags ?? 0) & 1 ? installed!.alias : 'Empty'), `slot-name${!m ? ' empty' : ''}`);
     if (m && installed && (installed.flags & 1)) label.append(node('span', installed.contentId === m.contentId.slice(0, 16) ? 'Installed' : 'Replace', 'slot-note'));
@@ -98,7 +115,8 @@ function render() {
     }
     slots.append(row);
   }
-  $('bank-problems').textContent = plan.problems.join('\n');
+  $('bank-problems').textContent = bankProblems(plan.problems);
+  $('add-family').hidden = family === 'all';
   $<HTMLButtonElement>('add-family').disabled = family === 'all' || !shown.some(e => !selection.some(m => m.contentId === e.contentId));
   $<HTMLButtonElement>('clear-selection').disabled = !selection.length; $<HTMLButtonElement>('sort-selection').disabled = selection.length < 2;
   $<HTMLButtonElement>('download-bank').disabled = !selection.length || plan.problems.length > 0;
@@ -120,8 +138,9 @@ function details(e: CatalogEntry) {
   $('detail-title').textContent = e.alias; const body = $('detail-body'); body.replaceChildren(node('p', e.summary));
   const dl = node('dl', '', 'mds-details-grid');
   for (const [name, value] of [['Author', e.author], ['Version', e.version], ['DSP memory', `${number(e.words)} words`], ['Storage', `${number(e.packageBytes)} bytes`], ['Declared CPU', `${(e.cycles / 32).toFixed(2)} clocks/sample`], ['License', e.license]]) { const box = node('div'); box.append(node('dt', name), node('dd', value)); dl.append(box); }
-  body.append(dl, node('h3', 'Controls')); const controls = node('div', '', 'mds-controls');
-  for (const p of e.parameters) controls.append(node('div', `${p.name} · ${p.min}–${p.max} · default ${p.default}`, 'mds-control')); body.append(controls);
+  const technical = node('details', '', 'mds-technical'); technical.append(node('summary', 'Technical details'), dl, node('h3', 'Controls'));
+  const controls = node('div', '', 'mds-controls');
+  for (const p of e.parameters) controls.append(node('div', `${p.name} · ${p.min}–${p.max} · default ${p.default}`, 'mds-control')); technical.append(controls);
   if (e.notes) body.append(node('p', e.notes));
   if (e.hardware) body.append(node('p', e.hardware === 'uw' ? 'Requires a Machinedrum UW, as specified by the author.' : 'Supports UW and non-UW Machinedrums, as specified by the author.'));
   if (e.tonal) body.append(node('p', 'Tonal machine with pitch control.'));
@@ -129,7 +148,7 @@ function details(e: CatalogEntry) {
   if (e.stereoPair) body.append(node('p', 'Supports stereo pairing when the same installed machine is assigned to adjacent tracks. Pan the tracks apart for stereo.'));
   const links = node('p'); if (e.source) links.append(external('Machine source', e.source)); else links.append(node('span', 'Machine source is not published in this catalog.'));
   if (e.project) links.append(node('span', ' · '), external('Project', e.project)); body.append(links);
-  body.append(node('p', 'CPU cost is the package author’s declaration, not a measurement by this browser.', 'fine'));
+  technical.append(node('p', 'CPU cost is the package author’s declaration, not a measurement by this browser.', 'fine')); body.append(technical);
   $<HTMLDialogElement>('machine-details').showModal();
 }
 function populatePorts() {
@@ -147,30 +166,30 @@ async function readBank() {
   primaryWorking('Checking MIDI connection…');
   await closeTransport();
   const input = access?.inputs.get($<HTMLSelectElement>('midi-input').value), output = access?.outputs.get($<HTMLSelectElement>('midi-output').value);
-  $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Checking both MIDI directions…';
+  $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Checking your Machinedrum…';
   try {
-    if (!output || output.state !== 'connected') throw new Error('No MIDI output connected. Choose the interface output connected to Machinedrum IN.');
-    if (!input || input.state !== 'connected') throw new Error('No MIDI return input connected. Connect Machinedrum OUT to your interface input; its replies are required to pace the sends.');
+    if (!output || output.state !== 'connected') throw new Error('No MIDI output connected. Choose your interface under Send to Machinedrum IN.');
+    if (!input || input.state !== 'connected') throw new Error('No MIDI input connected. Connect Machinedrum OUT to your interface IN, then choose it under Receive.');
     transport = new BrowserMdsTransport(input, output);
     await Promise.all([input.open(), output.open()]); client = new MdsClient(transport); snapshot = await client.snapshot();
-    $('midi-status').textContent = `Connected · both MIDI directions verified. ${snapshot.slots.filter(s => s.flags & 1).length} occupied slots.`;
-  } catch (e) { await closeTransport(); $('midi-status').dataset.error = 'true'; $('midi-status').textContent = e instanceof Error ? e.message : String(e); throw e; }
+    $('midi-status').textContent = 'Machinedrum connected.'; $<HTMLDetailsElement>('connection').open = false;
+  } catch (e) { await closeTransport(); $('midi-status').dataset.error = 'true'; $('midi-status').textContent = errorMessage(e); throw e; }
 }
 async function connectMidi() {
   primaryWorking('Connecting MIDI…');
-  if (!navigator.requestMIDIAccess || !isSecureContext) throw new Error('MIDI needs Chrome on HTTPS or localhost. You can still choose machines and download SysEx here.');
+  if (!navigator.requestMIDIAccess || !isSecureContext) throw new Error('Open this page in Chrome to send machines over MIDI.');
   access = await navigator.requestMIDIAccess({ sysex: true });
-  if (!access.sysexEnabled) { access = undefined; throw new Error('MIDI permission did not include SysEx. Allow SysEx access to install machines.'); }
+  if (!access.sysexEnabled) { access = undefined; throw new Error('Allow MIDI access, including SysEx, when Chrome asks. Then try again.'); }
   $('connection').hidden = false; populatePorts();
   access.onstatechange = () => {
-    if (transport && (transport.input.state !== 'connected' || transport.output.state !== 'connected')) { snapshot = undefined; $('midi-status').dataset.error = 'true'; $('midi-status').textContent = 'MIDI disconnected. Reconnect both directions before flashing.'; status('MIDI disconnected. Reconnect both directions before flashing.', true); }
+    if (transport && (transport.input.state !== 'connected' || transport.output.state !== 'connected')) { snapshot = undefined; $('midi-status').dataset.error = 'true'; $('midi-status').textContent = 'MIDI disconnected. Reconnect both cables and try again.'; status('MIDI disconnected. Reconnect both cables and try again.', true); }
     if (!busy) { populatePorts(); render(); }
   };
   if (portsReady()) await readBank();
-  else { $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Choose the output to Machinedrum IN and the input from Machinedrum OUT above.'; }
+  else { $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Choose your MIDI interface in both menus.'; }
 }
-$('disconnect-midi').onclick = () => void act(async () => { if (access) access.onstatechange = null; await closeTransport(); access = undefined; $('connection').hidden = true; $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Connect both MIDI directions. Machinedrum OUT provides the replies that pace each send.'; status('MIDI disconnected. Capacity now assumes an empty X.20 bank.'); });
-for (const id of ['midi-input', 'midi-output']) $(id).onchange = () => void act(async () => { if (portsReady()) await readBank(); else { await closeTransport(); $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Choose both MIDI ports to continue.'; } });
+$('disconnect-midi').onclick = () => void act(async () => { if (access) access.onstatechange = null; await closeTransport(); access = undefined; $('connection').hidden = true; $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Connect your MIDI interface to both IN and OUT on your Machinedrum.'; status('MIDI disconnected.'); });
+for (const id of ['midi-input', 'midi-output']) $(id).onchange = () => void act(async () => { if (portsReady()) await readBank(); else { await closeTransport(); $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Choose your MIDI interface in both menus.'; } });
 $('family-filter').onchange = () => { family = $<HTMLSelectElement>('family-filter').value; render(); };
 for (const id of ['machine-search', 'collection-filter', 'machine-sort']) $(id).addEventListener(id === 'machine-search' ? 'input' : 'change', render);
 $('start-slot').onchange = () => { start = Number($<HTMLSelectElement>('start-slot').value); save(); render(); };
@@ -178,7 +197,7 @@ $('clear-selection').onclick = () => { selection = []; save(); render(); status(
 $('sort-selection').onclick = () => { selection.sort((a, b) => a.alias.localeCompare(b.alias)); save(); render(); };
 $('add-family').onclick = () => void act(async () => {
   const add = filtered().filter(e => !selection.some(m => m.contentId === e.contentId));
-  if (selection.length + add.length + start > 16) throw new Error('This family would exceed the available destination slots. Add individual machines instead.');
+  if (selection.length + add.length + start > 16) throw new Error('Not enough free slots for the whole family. Add individual machines instead.');
   const machines = await Promise.all(add.map(load)); selection.push(...machines); save(); status(`Added ${machines.length} ${family} machines.`);
 });
 $('import-machines').onchange = () => void act(async () => {
@@ -196,7 +215,7 @@ $('download-bank').onclick = () => void act(async () => {
   const current = assignments(), plan = planBank(current, snapshot); if (!current.length || plan.problems.length) throw new Error('Resolve bank capacity before exporting.');
   const bytes = concat(current.flatMap((a, i) => machineMessages(a.machine, a.slot, i + 1)));
   const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/octet-stream' })), a = node('a'); a.href = url; a.download = 'kitbasher-mds-bank.syx'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  status(`Downloaded ${current.length} selected machines for ${slotName(start)}–${slotName(start + selection.length - 1)}. Use an MDS-aware sender, or install here with acknowledgments.`);
+  status(`Downloaded ${current.length} selected machines for ${slotName(start)}–${slotName(start + selection.length - 1)}. Use this page to send the file to your Machinedrum.`);
 });
 $('close-details').onclick = () => $<HTMLDialogElement>('machine-details').close();
 $('flash-machines').onclick = async () => { await act(async () => {
@@ -204,32 +223,32 @@ $('flash-machines').onclick = async () => { await act(async () => {
     if (!selection.length) { status('Add machines from the library to begin.'); return; }
     if (!access) { await connectMidi(); return; }
     if (!portsReady()) { populatePorts(); await readBank(); return; }
-    // A retry restores the ready state; only a click labelled Flash machines writes.
+    // A retry restores the ready state; only a click labelled Send machines writes.
     if (!snapshot) { await readBank(); return; }
   const run = async () => {
     const preview = snapshot;
     await readBank();
     if (!client || !snapshot) throw new Error('MIDI connection could not be verified.');
-    if (preview && !sameLibrary(preview, snapshot)) throw new Error('The device bank changed. The preview has been updated; check the destinations before flashing again.');
+    if (preview && !sameLibrary(preview, snapshot)) throw new Error('The bank on your Machinedrum changed. Check the updated selection before sending again.');
     const selected = assignments(), plan = planBank(selected, snapshot), connection = client, baseline = snapshot;
-    if (plan.problems.length) throw new Error(plan.problems.join(' '));
-    if (!plan.changes.length) { status('Every selected machine is already installed and valid in its destination slot.'); return; }
-    primaryWorking('Flashing machines…');
+    if (plan.problems.length) throw new Error(bankProblems(plan.problems));
+    if (!plan.changes.length) { status('These machines are already installed.'); return; }
+    primaryWorking('Sending machines…');
     stop = false; $('transfer-panel').hidden = false; $<HTMLButtonElement>('stop-transfer').disabled = false;
     const total = plan.changes.reduce((n, a) => n + Math.ceil(a.machine.bytes.length / 420) + 2, 0);
     let finished = 0; const progress = $<HTMLProgressElement>('transfer-progress'); progress.max = total; progress.value = 0;
     try {
       const result = await connection.install(selected, baseline, event => {
-        progress.value = finished + event.packet; $('transfer-status').textContent = `${slotName(event.slot)} · ${event.alias}: ${event.state} (${event.packet + 1}/${event.packets})`;
+        progress.value = finished + event.packet; $('transfer-status').textContent = event.state === 'committed' ? `${event.alias} installed.` : `Sending ${event.alias}…`;
         if (event.state === 'committed') { finished += event.packets; progress.value = finished; }
       }, () => stop);
-      snapshot = result.snapshot; const message = result.stopped ? 'Stopped between machines. Completed installations are retained and the bank was verified.' : 'Installation complete. Every transferred machine committed and its destination content ID verified.';
+      snapshot = result.snapshot; const message = result.stopped ? 'Stopped. Machines already sent are installed.' : 'Done. Your machines are installed.';
       $('transfer-status').textContent = message; status(message);
-    } catch (e) { snapshot = undefined; $('transfer-status').textContent = 'Transfer stopped. Earlier completed machines may remain installed. The bank will be checked automatically on retry.'; throw e; }
+    } catch (e) { snapshot = undefined; $('transfer-status').textContent = 'Sending stopped. Some machines may already be installed. Reconnect to check before trying again.'; throw e; }
     finally { $<HTMLButtonElement>('stop-transfer').disabled = true; }
   };
   if (navigator.locks) await navigator.locks.request('kitbasher-mds-midi', { ifAvailable: true }, async lock => { if (!lock) throw new Error('Another Kitbasher tab is using MIDI. Finish that transfer first.'); await run(); }); else await run();
-  } catch (e) { $('midi-status').dataset.error = 'true'; $('midi-status').textContent = e instanceof Error ? e.message : String(e); throw e; }
+  } catch (e) { $('midi-status').dataset.error = 'true'; $('midi-status').textContent = errorMessage(e); throw e; }
 });
   if (!selection.length) { $('machine-search').scrollIntoView({ block: 'center' }); $('machine-search').focus(); }
   else if (access && !portsReady()) {
@@ -237,7 +256,7 @@ $('flash-machines').onclick = async () => { await act(async () => {
     missing.scrollIntoView({ block: 'center' }); missing.focus();
   }
 };
-$('stop-transfer').onclick = () => { stop = true; $<HTMLButtonElement>('stop-transfer').disabled = true; $('transfer-status').textContent = 'Finishing the current machine safely, then stopping.'; };
+$('stop-transfer').onclick = () => { stop = true; $<HTMLButtonElement>('stop-transfer').disabled = true; $('transfer-status').textContent = 'Finishing this machine, then stopping.'; };
 window.addEventListener('beforeunload', event => { if (busy && !$('transfer-panel').hidden) { event.preventDefault(); event.returnValue = ''; } });
 window.addEventListener('pagehide', () => { void transport?.close(); });
 function theme() { const dark = document.documentElement.dataset.theme === 'dark'; $('theme-toggle').textContent = dark ? 'Light mode' : 'Dark mode'; }
@@ -250,5 +269,5 @@ void act(async () => {
   if (Number.isInteger(saved.start) && saved.start! >= 0 && saved.start! < 16) start = saved.start!;
   const ids = Array.isArray(saved.ids) ? [...new Set(saved.ids)].slice(0, 16 - start) : [];
   const restore = ids.flatMap(id => { const e = entries.find(e => e.contentId === id); return e ? [e] : []; }); selection = await Promise.all(restore.map(load));
-  status(`${entries.length} machines ready. ${selection.length ? 'Restored your saved selection.' : 'Choose a family or add individual machines to your bank.'}`);
+  status('');
 });
