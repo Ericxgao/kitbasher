@@ -14,9 +14,9 @@ export class BrowserMdsTransport implements MdsTransport {
     else if (this.queue.length < 64) this.queue.push(b);
     else this.fail(new Error('MIDI reply queue overflow. Disconnect and retry.'));
   };
-  private onState = () => { if (this.input.state !== 'connected' || this.output.state !== 'connected') this.fail(new Error('MIDI device disconnected. Read the bank before retrying.')); };
+  private onState = () => { if (this.input.state !== 'connected' || this.output.state !== 'connected') this.fail(new Error('MIDI device disconnected. Reconnect both MIDI directions before retrying.')); };
   private fail(error: Error) { this.closed = true; if (this.pending) { clearTimeout(this.pending.timer); this.pending.reject(error); this.pending = undefined; } }
-  send(bytes: Uint8Array) { if (this.closed) throw new Error('MIDI connection is closed.'); this.output.send(Array.from(bytes)); }
+  send(bytes: Uint8Array) { this.onState(); if (this.closed) throw new Error('MIDI connection is closed. Both MIDI input and output must be connected.'); this.output.send(Array.from(bytes)); }
   receive(timeoutMs: number): Promise<Uint8Array | null> {
     if (this.closed) return Promise.reject(new Error('MIDI connection is closed.'));
     if (this.pending) return Promise.reject(new Error('A MIDI read is already active.'));

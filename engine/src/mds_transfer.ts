@@ -28,7 +28,7 @@ export class MdsClient {
         if ((reply.command === CMD.nak || reply.command === CMD.cancel) && reply.body[0] === command) throw rejection(reply);
       }
     }
-    throw new Error('No MDS reply. Check both MIDI directions, the selected ports, and X.20 firmware.');
+    throw new Error('No MDS reply. Connect Machinedrum OUT to your MIDI interface input and the interface output to Machinedrum IN. Return replies are required to pace the sends. Check the selected ports and X.20 firmware. No machine data was sent by this connection check.');
   }
   async snapshot(): Promise<MdsSnapshot> {
     const first = parseSlots(await this.query(CMD.slots, CMD.slotsReply));
@@ -85,7 +85,7 @@ export class MdsClient {
   }
   async install(assignments: MdsAssignment[], reviewed: MdsSnapshot, progress: (p: TransferProgress) => void, stopAfterMachine: () => boolean = () => false): Promise<{ snapshot: MdsSnapshot; stopped: boolean }> {
     let current = await this.snapshot();
-    requireMds(sameLibrary(reviewed, current), 'The device bank changed since review. Read it and review the destinations again.');
+    requireMds(sameLibrary(reviewed, current), 'The device bank changed since the connection check. Check the updated destinations and retry.');
     const plan = planBank(assignments, current); requireMds(!plan.problems.length, plan.problems.join(' '));
     for (const a of plan.changes) {
       if (stopAfterMachine()) return { snapshot: current, stopped: true };

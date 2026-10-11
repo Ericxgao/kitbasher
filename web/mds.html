@@ -13,38 +13,40 @@
 <body class="bench mds-page"><main>
   <header class="page-head"><a class="brand" href="index.html">Kitbasher</a><button type="button" id="theme-toggle" class="theme-toggle">Dark mode</button></header>
   <nav class="site-nav" aria-label="Main navigation"><a href="index.html">Firmware builder</a><a href="mds.html" aria-current="page">MDS machines</a></nav>
-  <div class="mds-intro"><div><h1>Your next machine bank.</h1><p>Core and community synthesis for Machinedrum X.20. Pick your machines, arrange their slots, and make them yours.</p></div><button type="button" id="connect-midi">Connect MIDI</button></div>
-  <section class="mds-connection" id="connection" aria-labelledby="connection-title" hidden>
-    <div><h2 id="connection-title">Machinedrum connection</h2><p>Use Chrome on HTTPS or localhost. Connect both MIDI directions and select the destination Machine Bank on the Machinedrum.</p></div>
-    <label>MIDI input<select id="midi-input"></select></label><label>MIDI output<select id="midi-output"></select></label>
-    <div class="mds-actions"><button type="button" id="read-bank">Read bank</button><button type="button" id="disconnect-midi">Disconnect</button></div>
-  </section>
+  <div class="mds-intro"><div><h1>Your next machine bank.</h1><p>Core and community synthesis for Machinedrum X.20. Pick your machines, arrange their slots, and make them yours.</p></div></div>
   <p id="mds-status" role="status" aria-live="polite">Loading the machine library…</p>
   <div class="mds-workspace">
     <section class="mds-library" aria-labelledby="library-title">
       <div class="mds-section-head"><h2 id="library-title">Machine library <span id="catalog-count"></span></h2><label class="mds-file">Import .syx / .mds<input type="file" id="import-machines" accept=".syx,.mds" multiple></label></div>
       <div class="mds-filters"><label class="mds-search">Find a machine<input id="machine-search" type="search" placeholder="Search name, family or author"></label><label>Collection<select id="collection-filter"><option value="all">Core + community</option><option value="core">Core</option><option value="community">Community</option><option value="local">Local imports</option></select></label><label>Sort by<select id="machine-sort"><option value="curated">Curated order</option><option value="name">Name</option><option value="smallest">Smallest first</option><option value="cpu">Lowest CPU cost</option></select></label></div>
-      <div class="mds-family-bar"><div id="family-filters" role="group" aria-label="Filter by family"></div><button type="button" id="add-family" disabled>Add family</button></div>
+      <div class="mds-family-bar"><label>Family<select id="family-filter"><option value="all">All families</option></select></label><button type="button" id="add-family" disabled>Add family</button></div>
       <div class="mds-table-wrap"><table class="mds-table"><thead><tr><th scope="col">Machine</th><th scope="col">Collection</th><th scope="col" class="numeric">DSP words</th><th scope="col"><span class="sr-only">Selection</span></th></tr></thead><tbody id="machine-list"></tbody></table></div>
       <p id="empty-library" hidden>No machines match. Try another family or search.</p>
       <details class="mds-about"><summary>About this library &amp; contributing machines</summary><p>Releases are curated and pinned to exact files. Core machines come from the X.20 USR collection; community entries link to their available source. Local imports stay in your browser and are not published.</p><p><a href="https://github.com/etcetc000/kitbasher/blob/main/mds/README.md" target="_blank" rel="noopener">Add or update a machine</a> · <a href="https://github.com/jmamma/MDS" target="_blank" rel="noopener">MDS documentation</a></p></details>
     </section>
     <aside class="mds-bank" aria-labelledby="bank-title">
       <div class="mds-section-head"><h2 id="bank-title">Your bank</h2><span id="selection-count">0 selected</span></div>
-      <p id="capacity-mode" class="fine">X.20 capacity estimate · empty bank</p>
-      <div id="capacity-meters" class="mds-capacity"></div>
-      <div class="mds-bank-tools"><label>Start at<select id="start-slot" aria-label="First destination slot"></select></label><button type="button" id="sort-selection">Sort A–Z</button><button type="button" id="clear-selection">Clear</button></div>
-      <p class="fine">Drag to order, or use the arrow buttons. Order sets USR slots; category-menu order stays with each machine.</p>
+      <div class="mds-bank-tools"><label>Start at<select id="start-slot" aria-label="First destination slot"></select></label><details class="mds-bank-menu"><summary>Bank options</summary><div><button type="button" id="sort-selection">Sort A–Z</button><button type="button" id="clear-selection">Clear</button><button type="button" id="download-bank" disabled>Download selection .syx</button></div></details></div>
+      <p class="fine">Drag to reorder. Arrow keys move a focused slot.</p>
       <ol id="bank-slots" aria-label="Machine Bank slots"></ol>
-      <p id="bank-problems" role="status"></p>
-      <div class="mds-bank-actions"><button type="button" id="download-bank" disabled>Download selection .syx</button><button type="button" id="review-install" class="mds-primary" disabled>Review installation</button></div>
-      <p class="fine">Unselected slots stay as they are. Read your device bank to include its existing machines in the capacity check.</p>
+      <div class="mds-bank-bottom">
+        <p id="capacity-mode" class="fine">X.20 capacity estimate · empty bank</p>
+        <div id="capacity-meters" class="mds-capacity"></div>
+        <p id="bank-problems" role="status"></p>
+        <div class="mds-midi-head"><span>MIDI connection</span><button type="button" id="connect-midi">Connect MIDI</button><button type="button" id="disconnect-midi" hidden>Disconnect</button></div>
+        <div class="mds-connection" id="connection" hidden>
+          <label>To Machinedrum IN<select id="midi-output" aria-label="MIDI output"></select></label>
+          <label>From Machinedrum OUT<select id="midi-input" aria-label="MIDI input"></select></label>
+        </div>
+        <p id="midi-status" class="fine" role="status" aria-live="polite">Connect both MIDI directions. Machinedrum OUT provides the replies that pace each send.</p>
+        <p class="fine">Select the destination Machine Bank on your Machinedrum. Flashing replaces selected slots; other slots are kept.</p>
+        <button type="button" id="flash-machines" class="mds-primary" disabled>Flash machines</button>
+        <section id="transfer-panel" class="mds-transfer" aria-labelledby="transfer-title" hidden><h2 id="transfer-title">Installing machines</h2><progress id="transfer-progress" max="1" value="0"></progress><p id="transfer-status" role="status" aria-live="polite"></p><button type="button" id="stop-transfer">Stop after this machine</button></section>
+      </div>
     </aside>
   </div>
-  <section id="transfer-panel" class="mds-transfer" aria-labelledby="transfer-title" hidden><h2 id="transfer-title">Installing machines</h2><progress id="transfer-progress" max="1" value="0"></progress><p id="transfer-status" role="status" aria-live="polite"></p><button type="button" id="stop-transfer">Stop after this machine</button></section>
   <footer class="footer-note">MDS v1 for X.20. Machine packages run on the device DSP; install releases from authors you trust. <a href="https://github.com/etcetc000/kitbasher">Kitbasher source</a>.</footer>
 </main>
 <dialog id="machine-details" aria-labelledby="detail-title"><div class="mds-dialog-head"><h2 id="detail-title"></h2><button type="button" id="close-details" aria-label="Close machine details">Close</button></div><div id="detail-body"></div></dialog>
-<dialog id="install-review" aria-labelledby="review-title"><h2 id="review-title">Review destination slots</h2><p>Confirm the selected Machine Bank on the Machinedrum. Replacing a slot changes the machine used by kits that reference that slot. Back up those machines before replacing them.</p><div id="review-rows"></div><p id="review-note"></p><div class="mds-actions"><button type="button" id="cancel-install">Go back</button><button type="button" id="confirm-install" class="mds-primary">Install these machines</button></div></dialog>
 <script type="module" src="mds.js"></script>
 </body></html>

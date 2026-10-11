@@ -116,7 +116,14 @@ test('WAIT has a bounded deadline and CANCEL terminates', async () => {
 test('installation refuses a changed reviewed bank before sending a header', async () => {
   const reviewed = empty(), changed = empty(); changed.generation++;
   const io = new FakeMidi(m => [encodeMessage(m.command === CMD.slots ? CMD.slotsReply : CMD.capsReply, m.transaction, 127, 127, m.command === CMD.slots ? slotsBody(changed) : capsBody(changed))]);
-  await assert.rejects(io.client().install([{ slot: 0, machine: kick }], reviewed, () => {}), /changed since review/); assert.ok(io.sent.every(b => decodeMessage(b).command !== CMD.header));
+  await assert.rejects(io.client().install([{ slot: 0, machine: kick }], reviewed, () => {}), /changed since the connection check/); assert.ok(io.sent.every(b => decodeMessage(b).command !== CMD.header));
+});
+
+test('missing MIDI return path prevents any machine data from being sent', async () => {
+  const io = new FakeMidi(() => []);
+  await assert.rejects(io.client().install([{ slot: 0, machine: kick }], empty(), () => {}), /Connect Machinedrum OUT.*required to pace/);
+  assert.equal(io.sent.length, 3);
+  assert.ok(io.sent.every(bytes => decodeMessage(bytes).command === CMD.slots));
 });
 test('successful installation requires valid readback and preserves untouched slots', async () => {
   const s = empty(); installed(s, 15, bank[1]); const reviewed = structuredClone(s);
