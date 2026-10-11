@@ -1,0 +1,296 @@
+{
+  "schema": "spsx.mds.machine/1",
+  "id": "org.kitbasher.tx6.oh",
+  "category": "TX6",
+  "category_order": 6,
+  "short_label": "OH",
+  "display_name": "TX6 OPEN HAT",
+  "tonal": false,
+  "neighbour": false,
+  "stereo_pair": false,
+  "retrigger": "restart",
+  "params": [
+    {
+      "name": "DEC",
+      "default": 89,
+      "min": 0,
+      "max": 127,
+      "transform": "raw14",
+      "control": "continuous",
+      "linked": false
+    },
+    {
+      "name": "TUNE",
+      "default": 64,
+      "min": 0,
+      "max": 127,
+      "transform": "raw14",
+      "control": "continuous",
+      "linked": false
+    },
+    {
+      "name": "METL",
+      "default": 64,
+      "min": 0,
+      "max": 127,
+      "transform": "raw14",
+      "control": "continuous",
+      "linked": false
+    }
+  ],
+  "machine_version": "1.1",
+  "max_track_cycles": 3948,
+  "program": {
+    "abi_version": 1,
+    "init_symbol": "init",
+    "trig_symbol": "trigger",
+    "render_symbol": "render",
+    "x_workset_words": 26,
+    "y_workset_words": 4,
+    "relocations": [
+      {
+        "symbol": "init",
+        "word_delta": 6
+      },
+      {
+        "symbol": "init",
+        "word_delta": 29
+      },
+      {
+        "symbol": "init",
+        "word_delta": 34
+      },
+      {
+        "symbol": "init",
+        "word_delta": 46
+      },
+      {
+        "symbol": "init",
+        "word_delta": 53
+      },
+      {
+        "symbol": "init",
+        "word_delta": 74
+      },
+      {
+        "symbol": "init",
+        "word_delta": 88
+      },
+      {
+        "symbol": "init",
+        "word_delta": 163
+      },
+      {
+        "symbol": "init",
+        "word_delta": 190
+      },
+      {
+        "symbol": "init",
+        "word_delta": 212
+      },
+      {
+        "symbol": "init",
+        "word_delta": 226
+      },
+      {
+        "symbol": "init",
+        "word_delta": 242
+      },
+      {
+        "symbol": "init",
+        "word_delta": 251
+      }
+    ],
+    "imports": [
+      {
+        "symbol": "init",
+        "word_delta": 161,
+        "abi_symbol": 8,
+        "kind": 4
+      },
+      {
+        "symbol": "init",
+        "word_delta": 174,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 186,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 188,
+        "abi_symbol": 8,
+        "kind": 4
+      },
+      {
+        "symbol": "init",
+        "word_delta": 207,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 221,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 238,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 240,
+        "abi_symbol": 8,
+        "kind": 4
+      }
+    ]
+  },
+  "_build": {
+    "assembly": "oh.asm",
+    "origin": 0,
+    "import_symbols": {
+      "mds_scratch_x": 0,
+      "mds_scratch_y": 0
+    },
+    "symbols": {
+      "init": 0,
+      "init_end": 8,
+      "trigger": 12,
+      "control_1_end": 37,
+      "control_2_end": 56,
+      "render": 83,
+      "noise_end": 172,
+      "filter_end": 204,
+      "tone0_end": 218,
+      "tone1_end": 233,
+      "mix_end": 248,
+      "silent": 249,
+      "zero_end": 253,
+      "control_1": 254,
+      "control_2": 510,
+      "metal_table": 1086
+    },
+    "program_words": 1278,
+    "program_sha256": "cfba0a2669e2989d65e983dafcb59938b6980030a593d79ef10371bd34fa70ee",
+    "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Pass packed big-endian 24-bit words and symbols to upstream MDS tools/mds_pack.py, then export with tools/mds_to_syx.py --slot 6."
+  },
+  "_controls": [
+    {
+      "name": "METL",
+      "default": 64,
+      "resolution": 64,
+      "behavior": "0 = noise only; 64 = original blend; 127 = metal only.",
+      "update": "Captured on trigger."
+    }
+  ],
+  "_validation": {
+    "status": "simulator-qualified control expansion; version 1.1 hardware audition pending",
+    "timing": {
+      "measured_model_max_clocks": 3932,
+      "declared_max_clocks": 3948,
+      "limit": 3951,
+      "scope": "Actual X.20 dispatcher P:$6b through P:$e1, DMA handshakes ready, empty 8x128 instruction cache, additive interlocks, 3 waits per external instruction miss AND external data word, plus 64-clock output-transfer reserve. Busywait latency and interrupts are system scheduling, not bounded here; no hardware timing claim.",
+      "dispatcher_flags_tested": 128,
+      "cache_placements": "All 128 word alignments fit the eight cache sectors for every traced path.",
+      "physical_wait_states_verified": false
+    },
+    "tests": {
+      "controls": 454,
+      "samples": 1409216,
+      "peak": 0.6792894601821899,
+      "clipped_samples": 0,
+      "guards_and_parameters": true,
+      "dirty_entry_registers": true,
+      "init_silent": true,
+      "retrigger": true,
+      "tracer_audio_cycles_equal": true
+    },
+    "long_tail": {
+      "cases": 8,
+      "seeds": [
+        1,
+        1193046,
+        6317574,
+        8388607
+      ],
+      "samples": 2097152,
+      "peak": 0.6278234720230103,
+      "clipped_samples": 0,
+      "layer_contracts": true
+    },
+    "default_preservation": {
+      "reference": "Original version 1.0 installed bank; PR #21",
+      "method": "Bit-exact full-duration PCM at original default and maximum controls, with added controls at defaults; four RNG seeds.",
+      "results": [
+        {
+          "case": "default",
+          "seed": 1,
+          "sha256": "35a5eda2fd8f0dc211b98eba886b667b127404f5ea445a52c0ef8e9c4401ff9f",
+          "bytes": 262144
+        },
+        {
+          "case": "default",
+          "seed": 1193046,
+          "sha256": "ff9a00dd895415fe41af805b425ee8c1d4f35a15cd8040b45671ab8ae678c90c",
+          "bytes": 262144
+        },
+        {
+          "case": "default",
+          "seed": 6317574,
+          "sha256": "6bbbaa5d60fb68abd86fe6f291e1e191714e3610629780fa043fc79c1f811757",
+          "bytes": 262144
+        },
+        {
+          "case": "default",
+          "seed": 8388607,
+          "sha256": "a45e3226e4053efc6f26b3edc4d9056df991e8474982e4350c25a6fbac265992",
+          "bytes": 262144
+        },
+        {
+          "case": "maximum",
+          "seed": 1,
+          "sha256": "374e89cfac03269921822e21a97ff88478b7f948173c3cfe20e63338cfe7491e",
+          "bytes": 262144
+        },
+        {
+          "case": "maximum",
+          "seed": 1193046,
+          "sha256": "747afc241e49996c60db7a43f11e49610e9246cd320389aaf14290052437cac5",
+          "bytes": 262144
+        },
+        {
+          "case": "maximum",
+          "seed": 6317574,
+          "sha256": "243960a3fc1170a0582df349fb856d4b9d5a5c9d5ca9892252778149f865541a",
+          "bytes": 262144
+        },
+        {
+          "case": "maximum",
+          "seed": 8388607,
+          "sha256": "3269aeb5e1e787095004c3d1c44deb3c3614ec225353f5037c83730e79fefaf7",
+          "bytes": 262144
+        }
+      ]
+    },
+    "hardware_tested": false
+  },
+  "_design": {
+    "strategy": "Expose existing layers without additional sample-loop synthesis. Preserve version 1.0 audio at new-control defaults.",
+    "source": "https://github.com/Fadedlimes/Simple606/tree/6aacda7a14a8c097d32836039fd356eb0976ba8e",
+    "license": "MIT; complete notice is embedded in the assembly source."
+  },
+  "_send": {
+    "file": "oh.syx",
+    "destination_slot": 6,
+    "bank_file": "../tx6-bank.syx",
+    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08. Version 1.1 has not been sent to hardware.",
+    "existing_kits": "Existing kits may retain zero in formerly unused parameter positions. Set the new controls to their documented defaults to restore the version 1.0 sound; existing parameter indices are unchanged."
+  }
+}
