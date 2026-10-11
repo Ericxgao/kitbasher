@@ -110,7 +110,7 @@ export class Asm {
       }
       case 'nop': return [[0x4e71, 2]];
       case 'tst.b': case 'tst.l': return W(0x4a00 | ((op === 'tst.l' ? 2 : 0) << 6) | ea6(this.ea(a0, op[4] as 'b' | 'l')), this.ea(a0, op[4] as 'b' | 'l'));
-      case 'clr.l': return W(0x4280 | ea6(this.ea(a0, 'l')), this.ea(a0, 'l'));
+      case 'clr.b': case 'clr.l': return W(0x4200 | ((op === 'clr.l' ? 2 : 0) << 6) | ea6(this.ea(a0, op[4] as 'b' | 'l')), this.ea(a0, op[4] as 'b' | 'l'));
       case 'cmp.l': return W(0xb080 | (D(a1) << 9) | ea6(this.ea(a0, 'l')), this.ea(a0, 'l'));
       case 'add.l': return W(0xd080 | (D(a1) << 9) | ea6(this.ea(a0, 'l')), this.ea(a0, 'l'));
       case 'sub.l': return W(0x9080 | (D(a1) << 9) | ea6(this.ea(a0, 'l')), this.ea(a0, 'l'));

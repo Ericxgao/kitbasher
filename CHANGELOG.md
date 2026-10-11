@@ -12,6 +12,27 @@ All notable changes to Kitbasher are recorded here. The format follows
   same caps, pair padding and "Don't trim" rule, and the meters and the build use
   the swapped bank. The machine map comes from the recipe; the bank's entry
   names are checked against it when the file is read.
+- **MDX X.20 B: menu categories, dynamic knob labels and the unmute fix.**
+  Added machines are grouped on X.20's category pages under the menu categories
+  the other bases use (KIK, SNR, HAT, ...); `--family-menus` keeps X.20's own
+  families only. Machines whose packs give dynamic labels show the captions of
+  their current MODE (`--no-dyn-labels` turns them off). In MUTE mode a TRIG key
+  now acts on press and the sequencer's mute changes at once, so an unmute just
+  before a trig plays it (`--no-unmute-fix`, or the page's unmute option, leaves
+  X.20's behaviour). A machine on 88..95 gets the class-mask fix X.20's mask tests
+  need. The X.20 layout editor shows the menu categories; a layout from an
+  earlier X.20 build gives each machine its sound category.
+
+### Fixed
+
+- **MDX X.20 B builds froze on the first Elektron logo on hardware.** The boot
+  code read the machines' packed code through the flash alias the OS maps only
+  later; it now reads flash at its own address (a gate checks it). The
+  emulator-only upload variant keeps the alias (the emulator maps flash only
+  there at that point) and packs smaller chunks.
+- The parameter-handler lookup on X.20 B goes through a routine (X.20's own
+  table for its machines, the knob callback for added ones) instead of a copy of
+  the table made at boot.
 
 ### Changed (breaking)
 

@@ -7,7 +7,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { idAllowedOnX20, parseRecipe, recipeFor, type X20RecipeFile } from '../src/x20_recipe.js';
-import { allocateX20, buildX20, findX20Layout, planX20, trimX20Bank, x20IdProblem, x20IdSlots } from '../src/x20.js';
+import { allocateX20, buildX20, findX20Layout, planX20, trimX20Bank, X20_CATEGORIES, x20IdProblem, x20IdSlots } from '../src/x20.js';
 import { buildBank, ENTRIES, E12B_FLASH } from '../src/e12b.js';
 import { encodeLayout, LAYOUT_FORMAT, parseLayout, type Layout } from '../src/layout.js';
 import { loadPacks } from '../src/node.js';
@@ -126,9 +126,37 @@ test('x20 flow: more machines than X.20 has records for is a problem the page sh
   assert.throws(() => parseRecipe(bad), /stock record cap/);
 });
 
-test('x20 flow: the layout editor\'s categories are X.20\'s menu families; a layout moves machines between them and round-trips', () => {
+test('x20 flow: the menu categories (the default): each machine under its sound category\'s code, in the family that code goes in; a layout moves it', () => {
   const cut = trimX20Bank(R, bank(2000), TRIM);
   const p = planX20(R, cut, packs, { uw: true });
+  assert.deepEqual(p.table.categories, X20_CATEGORIES);
+  assert.deepEqual(X20_CATEGORIES, ['KIK', 'SNR', 'HAT', 'PRC', 'FM', 'SYN', 'WAV', 'VOX', 'PHY', 'FX', 'OTH']);
+  const bd = p.sel.find((s) => s.m.name.trim() === 'VADBD')!;
+  assert.equal(p.table.machines[bd.m.key].category, 'KIK');
+  assert.equal(p.family[bd.m.key], 'TRX');
+  const fx = p.sel.find((s) => s.m.name.trim() === 'NFX4P')!;
+  assert.equal(p.table.machines[fx.m.key].category, 'FX');
+  assert.equal(p.family[fx.m.key], 'NFX');
+  // the user moves the kick to FM: it goes in X.20's EFM family too
+  const map: Layout = structuredClone(p.table);
+  delete map.uw;
+  map.machines[bd.m.key] = { ...map.machines[bd.m.key], category: 'FM' };
+  const q = planX20(R, cut, packs, { uw: true, layout: map });
+  assert.equal(q.table.machines[bd.m.key].category, 'FM');
+  assert.equal(q.family[bd.m.key], 'EFM');
+  // a layout an earlier X.20 build carried (X.20's families as categories): each machine gets its sound category
+  const old: Layout = { format: LAYOUT_FORMAT, base: 'x20', categories: ['GND', 'TRX', 'EFM', 'NFX'], machines: { [bd.m.key]: { id: bd.id, category: 'EFM', order: 0 } } };
+  const o = planX20(R, cut, packs, { uw: true, layout: old });
+  assert.equal(o.table.machines[bd.m.key].category, 'KIK');
+  assert.equal(o.sel.find((s) => s.m.key === bd.m.key)!.id, bd.id);
+  // every code goes in one of X.20's families
+  for (const c of X20_CATEGORIES) assert.ok(R.families[R.categoryFamily[c]] !== undefined, c);
+});
+
+test('x20 flow: with the categories feature off (--family-menus) the layout editor\'s categories are X.20\'s menu families; a layout moves machines between them and round-trips', () => {
+  const cut = trimX20Bank(R, bank(2000), TRIM);
+  const off = { categories: false };
+  const p = planX20(R, cut, packs, { uw: true, features: off });
   assert.deepEqual(p.menus.map((f) => f.name), Object.keys(R.families));
   assert.deepEqual(p.table.categories, ['GND', 'TRX', 'EFM', 'NFX']);
   assert.equal(p.table.uw, true);
@@ -141,14 +169,14 @@ test('x20 flow: the layout editor\'s categories are X.20\'s menu families; a lay
   delete map.uw;
   const newId = R.usable.find((id) => !p.sel.some((s) => s.id === id))!;
   map.machines[an.m.key] = { id: newId, category: 'EFM', order: 0 };
-  const q = planX20(R, cut, packs, { uw: true, layout: map });
+  const q = planX20(R, cut, packs, { uw: true, layout: map, features: off });
   assert.equal(q.family[an.m.key], 'EFM');
   assert.equal(q.sel.find((s) => s.m.key === an.m.key)!.id, newId);
   assert.ok(q.menus.find((f) => f.name === 'EFM')!.models.some((m) => m.key === an.m.key));
   assert.equal(q.layout!.machines[an.m.key].category, 'EFM');
   // a layout made for another OS: its categories are not X.20's, so the families stay the recipe's
   const other: Layout = { format: LAYOUT_FORMAT, base: 'x20', categories: ['AN'], machines: { [an.m.key]: { id: newId, category: 'AN', order: 0 } } };
-  assert.equal(planX20(R, cut, packs, { uw: true, layout: other }).family[an.m.key], 'TRX');
+  assert.equal(planX20(R, cut, packs, { uw: true, layout: other, features: off }).family[an.m.key], 'TRX');
   // the table the build writes reads back from a .syx: the layout, the IDs and the UW answer
   const table = encodeLayout(q.table);
   const cont = new Uint8Array(0xf0000 - OS_START).fill(0xff);
@@ -198,13 +226,41 @@ test('firmware: X.20 B builds with the user\'s choices -- trim, unticked machine
   const plain = await buildX20(syx, file(), packs, core, { uw: true, trim });
   const an = plain.report.machines.find((m) => m.family === 'AN')!;
   const newId = R.usable.find((id) => !plain.report.machines.some((m) => m.id === id))!;
-  const map: Layout = { ...plain.report.layout, machines: { ...plain.report.layout.machines, [an.key]: { id: newId, category: 'EFM', order: 0 } } };
+  const map: Layout = { ...plain.report.layout, machines: { ...plain.report.layout.machines, [an.key]: { id: newId, category: 'FM', order: 0 } } };
   delete map.uw;
   const exclude = [models[models.length - 1].m.module];
   const r = await buildX20(syx, file(), packs, core, { uw: true, trim, layout: map, exclude });
   assert.ok(r.report.gates.every((g) => g.ok));
   assert.equal(r.report.machines.find((m) => m.key === an.key)!.id, newId);
-  assert.equal(r.report.layout.machines[an.key].category, 'EFM');
+  assert.equal(r.report.layout.machines[an.key].category, 'FM');
+  // boot-time chunk reads: flash's own address on hardware (the alias froze every build on the first logo), the
+  // alias only in the emulator-only upload variant (the emulator reads flash only there at that point)
+  assert.ok(plain.report.gates.some((g) => g.ok && /flash at its own address/.test(g.name)), plain.report.gates.map((g) => g.name).join('; '));
+  assert.ok(plain.report.flash.chunks_pre.every(([a]) => parseInt(a, 16) < 0x100000));
+  const up = await buildX20(syx, file(), packs, core, { uw: true, trim, dsp2Load: 'upload' });
+  assert.ok(up.report.gates.some((g) => g.ok && /through the flash alias \(emulator-only/.test(g.name)), up.report.gates.map((g) => g.name).join('; '));
+  // the features: unmute, categories and dynamic labels by default; the ID fixes only when an ID needs them
+  const fs = (x: typeof r) => x.report.features.map((f) => f.name);
+  assert.ok(['unmute', 'categories', 'dyn_labels'].every((f) => fs(plain).includes(f)), fs(plain).join());
+  assert.equal(fs(plain).includes('title_rom'), plain.report.machines.some((m) => (m.id >= 128 && m.id <= 159) || (m.id >= 176 && m.id <= 191)));
+  assert.equal(fs(plain).includes('id_masks'), plain.report.machines.some((m) => (m.id >= 88 && m.id <= 95) || (m.id >= 114 && m.id <= 127)));
+  // each switch takes its feature out (and the categories' title site gives the records site back)
+  const none = await buildX20(syx, file(), packs, core, { uw: true, trim, features: { unmute: false, categories: false, dynLabels: false } });
+  assert.ok(none.report.gates.every((g) => g.ok));
+  assert.ok(!['unmute', 'categories', 'dyn_labels'].some((f) => fs(none).includes(f)), fs(none).join());
+  assert.deepEqual(none.report.layout.categories, ['GND', 'TRX', 'EFM', 'NFX']);
+  // the recipe gives out no ROM-range ID (128..159, 176..191 are X.20's ROM machines), so the title fix stays out
+  assert.ok(!R.usable.some((id) => (id >= 128 && id <= 159) || (id >= 176 && id <= 191)));
+  assert.ok(!fs(plain).includes('title_rom'));
+  // a machine moved onto a class-masked ID (88..95): the class-mask fix goes in, for that ID
+  const free = R.usable.find((id) => id >= 88 && id <= 95 && !plain.report.machines.some((m) => m.id === id))!;
+  const k1 = plain.report.machines[0].key;
+  const map2: Layout = { ...plain.report.layout, machines: { ...plain.report.layout.machines, [k1]: { ...plain.report.layout.machines[k1], id: free } } };
+  delete map2.uw;
+  const masked = await buildX20(syx, file(), packs, core, { uw: true, trim, layout: map2 });
+  assert.ok(masked.report.gates.every((g) => g.ok));
+  assert.ok(fs(masked).includes('id_masks'), fs(masked).join());
+  assert.ok(masked.report.notes.some((n) => n.includes(`class-mask fix for IDs`) && n.includes(String(free))), masked.report.notes.join('; '));
   assert.equal(r.report.machines.length, plain.report.machines.length - 1);
   assert.ok(r.report.flash.used <= r.report.flash.capacity && r.report.flash.layout);
   const back = findX20Layout(r.output, [R.id])!;

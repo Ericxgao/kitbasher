@@ -26,6 +26,17 @@ export type SiteValue = { u32: string } | { u16: string } | { hex: string } | { 
 
 export interface RecipeSite { group: string; at: Hex; old: string; new: SiteValue; what?: string }
 
+/** The optional patches a build may add (engine/src/x20.ts X20_FEATURES), each with its sites and the stock bytes its code relies on. */
+export type X20FeatureName = 'unmute' | 'title_rom' | 'categories' | 'id_masks' | 'dyn_labels';
+export interface RecipeFeature {
+  about: string;
+  sites: RecipeSite[];
+  /** stock bytes the feature's routines rely on without patching them (checked offline, as the sites' anchors) */
+  anchors?: { at: Hex; old: string; what: string }[];
+  /** base sites this feature's sites take the place of (each lies inside one of them) */
+  replaces?: Hex[];
+}
+
 export interface X20RecipeFile {
   format: string;
   id: string;
@@ -71,8 +82,14 @@ export interface X20RecipeFile {
   key_menu?: Record<string, string>;
   /** the offline relocation audit's scope and allowlist (engine/src/x20_audit.ts) */
   audit?: AuditSpec & { about?: string };
+  /** the optional patches, by name */
+  features?: Partial<Record<X20FeatureName, RecipeFeature>>;
+  /** the X.20 menu family each menu category's machines go in (with the categories feature) */
+  category_family?: Record<string, string>;
   sites: RecipeSite[];
 }
+
+export type ParsedSite = { group: string; at: number; old: Uint8Array; value: SiteValue; what: string };
 
 type Table = { init: number; trigger: number; render: number; entries: number };
 
@@ -96,13 +113,16 @@ export interface X20Recipe {
           pi: PiSlices; usrBankEnd: number; boot: { receiver: number; wiper: number; save: number; saveEnd: number; rdy: number } };
   usable: number[];
   families: Record<string, number>;
-  sites: { group: string; at: number; old: Uint8Array; value: SiteValue; what: string }[];
+  categoryFamily: Record<string, string>;
+  sites: ParsedSite[];
+  features: Partial<Record<X20FeatureName, { sites: ParsedSite[]; anchors: { at: number; old: Uint8Array; what: string }[]; replaces: number[] }>>;
 }
 
 const bytesOf = (hex: string): Uint8Array => {
   if (!/^([0-9a-f]{2})+$/.test(hex)) throw new Error(`recipe: "${hex}" is not hex bytes`);
   return Uint8Array.from(hex.match(/../g)!.map((b) => parseInt(b, 16)));
 };
+const parseSite = (s: RecipeSite): ParsedSite => ({ group: s.group, at: num(s.at), old: bytesOf(s.old), value: s.new, what: s.what ?? s.group });
 const table = (t: X20RecipeFile['dsp2']['dispatch']): Table =>
   ({ init: num(t.init), trigger: num(t.trigger), render: num(t.render), entries: t.entries });
 
@@ -135,7 +155,13 @@ export function parseRecipe(f: X20RecipeFile): X20Recipe {
         saveEnd: num(D.boot_loader.save_end), rdy: num(D.boot_loader.rdy) } },
     usable: [...f.ids.usable].sort((a, b) => a - b),
     families: f.families,
-    sites: f.sites.map((s) => ({ group: s.group, at: num(s.at), old: bytesOf(s.old), value: s.new, what: s.what ?? s.group })),
+    categoryFamily: f.category_family ?? {},
+    sites: f.sites.map(parseSite),
+    features: Object.fromEntries(Object.entries(f.features ?? {}).map(([k, v]) => [k, {
+      sites: v!.sites.map(parseSite),
+      anchors: (v!.anchors ?? []).map((a) => ({ at: num(a.at), old: bytesOf(a.old), what: a.what })),
+      replaces: (v!.replaces ?? []).map(num),
+    }])),
   };
   checkRecipe(r);
   return r;
@@ -153,6 +179,27 @@ export function checkRecipe(r: X20Recipe): void {
       seen.set(s.at + k, s.at);
     }
   }
+  // feature sites: inside the OS image, never overlapping each other (any set of features can be on together),
+  // and overlapping a base site only where they name it in `replaces` and cover it whole
+  const fseen = new Map<number, number>();
+  for (const [name, F] of Object.entries(r.features)) {
+    for (const at of F!.replaces) {
+      const b = r.sites.find((s) => s.at === at);
+      if (!b) bad(`feature ${name} replaces 0x${at.toString(16)}, which is no base site`);
+      if (!F!.sites.some((s) => s.at <= b!.at && b!.at + b!.old.length <= s.at + s.old.length)) bad(`feature ${name}: no site of its covers the base site 0x${at.toString(16)} it replaces`);
+    }
+    for (const s of F!.sites) {
+      if (s.at < lo || s.at + s.old.length > hi) bad(`feature ${name}: site 0x${s.at.toString(16)} is outside the OS image`);
+      for (let k = 0; k < s.old.length; k++) {
+        const a = s.at + k;
+        if (fseen.has(a)) bad(`feature sites 0x${fseen.get(a)!.toString(16)} and 0x${s.at.toString(16)} overlap`);
+        fseen.set(a, s.at);
+        const base = seen.get(a);
+        if (base !== undefined && !F!.replaces.includes(base)) bad(`feature ${name}: site 0x${s.at.toString(16)} overlaps the base site 0x${base.toString(16)}`);
+      }
+    }
+  }
+  for (const [cat, fam] of Object.entries(r.categoryFamily)) if (r.families[fam] === undefined) bad(`category ${cat} goes in the menu family ${fam}, which the recipe does not have`);
   if (r.ram.records + r.ram.recordCap * 24 > r.ram.stackBottom) bad('the record table runs into the stack region');
   if (r.ram.menu + r.ram.menuFields.usrCount - r.ram.menuFields.indexEntries + r.ram.recordCap + 4 > r.ram.records) bad('the menu struct runs into the records');
   if (r.ram.recordCap > 0xff) bad('the menu frame keeps one byte per record below 0x100');

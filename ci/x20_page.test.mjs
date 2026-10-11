@@ -61,11 +61,15 @@ test('X.20: swapped samples reach the plan, the build and the Samples step\'s ba
 test('X.20: what it does not have is shown turned off with the reason, not left out', () => {
   assert.match(html, /<p id="x20-unavailable" class="fine" hidden><\/p>/);
   const off = slice('const X20_OFF =', ';\nconst X20_FIXED_WHY');
-  for (const f of ['unmute-latency fix', 'MIDI chromatic note input', 'pitch note names', 'INP IDs 80\\.\\.85'])
+  for (const f of ['MIDI chromatic note input', 'pitch note names', 'INP IDs 80\\.\\.85'])
     assert.match(off, new RegExp(f));
   assert.doesNotMatch(off, /INTERNAL|E12/);                     // sample swapping is offered on X.20
+  assert.doesNotMatch(off, /unmute/);                           // so is the unmute fix (the recipe's own, for X.20's mute keys)
   const sync = slice('function syncChromaOption(', 'function syncMeters(');
   assert.match(sync, /box\.disabled = !!x20;/);
+  assert.match(sync, /\$<HTMLInputElement>\('unmute-fix'\)\.disabled = false;/);
+  // the X.20 build takes the unmute checkbox
+  assert.match(app, /features: \{ unmute: \$<HTMLInputElement>\('unmute-fix'\)\.checked \}/);
   assert.match(sync, /\$\('midi-chroma-option'\)\.hidden = !x20 && /);
   // a project never records an option X.20 cannot have
   assert.match(app, /midiChroma: !x20 && chromaTicked\(\)/);

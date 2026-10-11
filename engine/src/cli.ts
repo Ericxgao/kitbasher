@@ -108,7 +108,8 @@
 // The output has the input's shape: a .syx for a .syx, a flash image for a flash image.
 //
 // MDX X.20 B (bases/x20.json, engine/src/x20.ts) is recognised by its .syx hash and built with a fixed
-// recipe: --uw/--no-uw, --families, --exclude, --trim-db/--trim-min/--trim-cap, --cache-align, --map, --restore and --report
+// recipe: --uw/--no-uw, --families, --exclude, --trim-db/--trim-min/--trim-cap, --cache-align, --map, --restore, --report,
+// --no-unmute-fix, --no-dyn-labels and --family-menus (X.20's own menu families instead of the menu categories)
 // apply (a layout keeps IDs X.20 gives out and X.20 menu families as categories); the chroma and pitch-label options do not. The output is a .syx.
 //   --dsp2-load upload   emulator only: the machines' code goes to DSP2 after it starts (default preboot:
 //                        through DSP2's bootstrap, the way real hardware needs it)
@@ -248,8 +249,11 @@ async function main(): Promise<void> {
       exclude: a.exclude ? a.exclude.split(',') : undefined,
       trim: { db: Number(a['trim-db'] ?? -30), minSeconds: Number(a['trim-min'] ?? 0.5), cap: (a['trim-cap'] === undefined ? 0.55 : Number(a['trim-cap'])) || null },
       align: a['cache-align'] ? true : undefined, dsp2Load: load,
+      features: { unmute: unmuteFlag(a) === false ? false : undefined, dynLabels: a['no-dyn-labels'] ? false : undefined,
+        categories: a['family-menus'] ? false : undefined },
     });
     writeFileSync(a.out, r.output);
+    console.log(`features: ${r.report.features.map((f) => f.name).join(', ') || 'none'}`);
     for (const m of r.report.machines) console.log(`  ${m.name.padEnd(6)} ID ${String(m.id).padStart(3)}  ${m.family}  ${m.words} words at ${m.org}`);
     for (const g of r.report.gates) console.log(`  gate ${g.ok ? 'passed' : 'FAILED'}: ${g.name} (${g.detail})`);
     for (const n of r.report.notes) console.log(`  ${n}`);

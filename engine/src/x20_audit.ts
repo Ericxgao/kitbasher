@@ -17,7 +17,8 @@ export const OS_BASE = 0x200000;
 
 export function anchorMismatches(R: X20Recipe, os: Uint8Array): string[] {
   const out: string[] = [];
-  for (const s of R.sites) {
+  const feats = Object.entries(R.features).flatMap(([name, F]) => [...F!.sites, ...F!.anchors.map((x) => ({ ...x, what: `${name}: ${x.what}` }))]);
+  for (const s of [...R.sites, ...feats]) {
     const o = s.at - OS_BASE;
     const got = os.subarray(o, o + s.old.length);
     if (got.length !== s.old.length || got.some((b, k) => b !== s.old[k]))

@@ -179,7 +179,15 @@ What a build changes (engine/src/x20.ts):
 - **DSP2 load.** The machines' code goes into DSP2 before DSP2's own loader runs:
   the build sends a short receiver through the bootstrap's `ELD` command, the
   code follows, and the receiver's wiper hands DSP2 back to its bootstrap. The
-  dispatch words go after DSP2 starts, through the OS's own block write.
+  dispatch words go after DSP2 starts, through the OS's own block write. Both read
+  their packed chunks while X.20's loader still runs, so they read flash at its own
+  address: the `0x10000000` alias the OS uses later is not mapped yet on hardware
+  (reading through it froze every build on the first logo). The emulator is the
+  other way round at that point, so the emulator-only upload variant reads through
+  the alias; a gate checks which one each build uses. That variant also packs
+  small chunks (40000 bytes): with larger ones the emulated OS sometimes missed
+  DSP2's startup messages, which looked like a boot hang that came and went with
+  the build's layout.
   Uploading all the code after DSP2 starts makes the OS miss DSP2's startup
   messages on hardware; `--dsp2-load upload` does it anyway, for the emulator
   only (whose DSP does not run code written through X memory). If the pre-boot
@@ -187,8 +195,30 @@ What a build changes (engine/src/x20.ts):
   either, so the OS boots with its stock machines rather than jumping into
   missing code. **This path is untested on hardware for the public build**; it is
   checked offline against X.20 B's own DSP load map.
-- Added machines go into X.20's own menu families (analog drums in TRX, FM
-  voices in EFM, effects in NFX, the rest in GND).
+- **Menu categories.** Added machines are grouped on X.20's category pages
+  under the same menu categories the other bases use (KIK, SNR, HAT, PRC, FM,
+  SYN, WAV, VOX, PHY, FX, OTH): they take the user-machine path there, group by
+  category and the page is titled with the category's code. Each category also
+  puts its machines in one of X.20's own menu families (drums in TRX, FM in EFM,
+  effects in NFX, the rest in GND). `--family-menus` builds without the category
+  pages, with X.20's families as the layout's categories (as earlier builds did).
+- **Unmute fix.** In MUTE mode a TRIG key acts on press (stock X.20 B toggles the
+  mute on release) and the sequencer's mute word changes at once (stock waits for
+  its next message drain), so an unmute just before a trig plays it. On by default;
+  `--no-unmute-fix` leaves X.20's behaviour.
+- **Dynamic knob labels.** Machines whose packs give dynamic labels show the
+  captions of their current MODE: the parameter page's record lookup goes through
+  a routine that overlays them (caption data in E12B flash, read only by the UI
+  task). `--no-dyn-labels` keeps the static labels.
+- **Class-mask fix**, only when an added machine takes 88..95: X.20 classifies
+  machines with mask and range tests that would read such an ID as an INP, MIDI
+  or control machine; those 15 sites call routines that give X.20's own result for
+  every other ID. The machine-title fix (no ROM number after the name of an added
+  machine on 128..159 or 176..191) is in the recipe too, for when its usable IDs
+  reach that range; today they do not.
+- **Class handler fetch.** The parameter handler lookup goes through a routine:
+  X.20's own table for its classes, the knob callback for added machines (an
+  earlier build copied X.20's table into its own RAM at boot instead).
 
 On the page an X.20 B file goes through the same steps as the other bases. Its
 plan (`planX20`, the same selection, trim and DSP2 placement the build does,
@@ -199,10 +229,12 @@ per added machine, against the 200 the build allows). Firmware storage is the
 E12B flash the trim frees, checked by a background build as on the other bases.
 Auto trim finds the gentlest threshold whose placement fits.
 
-The layout editor shows X.20's menu families (GND, TRX, EFM, NFX) as fixed
-categories: a machine moves between them, but categories cannot be added,
-renamed or reordered, and the order within a family is not set (the recipe sets
-each machine's family only). IDs follow the layout where X.20 gives them out (a
+The layout editor shows the menu categories (KIK, SNR, HAT, ...; with
+`--family-menus`, X.20's families GND, TRX, EFM, NFX) as fixed categories: a
+machine moves between them, but categories cannot be added, renamed or
+reordered, and the order within a category is not set (the recipe sets each
+machine's category only). A layout from an earlier X.20 build (families as
+categories) gives each machine its sound category. IDs follow the layout where X.20 gives them out (a
 usable ID, below 128 without UW, not taken); the others move to the lowest free
 one and the page lists the move. Every build carries its layout as the same
 md-layout/1 table the 1.63-lineage bases use, in E12B flash after the
@@ -211,7 +243,7 @@ families; layout files and projects (which name X.20 B by its file hashes) save
 and load as on the other bases.
 
 Not available on X.20 (shown turned off on the page, with the reason): MIDI
-chromatic input, pitch note names and the unmute fix. Reusing the
+chromatic input and pitch note names. Reusing the
 stock INP IDs 80..85 is not offered: the VALID hook decides per ID, so it cannot
 hide the stock INP machine on an ID while one of ours takes it. DSP1 is not patched: X.20's DSP1
 bootstrap runs a `PFLUSH` on an `ELD` with its instruction cache off, which is an
@@ -221,8 +253,10 @@ Gates, all hard failures: the file's hash; every ColdFire instruction the build
 adds, in its own routines and at every OS and loader site, decodes as ISA_A
 (MCF5206e: the emulators run 68k forms such as `btst #n,abs.l` and
 `move.l #imm,d16(An)` that the CPU traps on); the DSP boot code holds no cache
-instruction. Offline, with a decoded X.20 B image (`KB_X20_OS`, see
-[Testing](TESTING.md)), the tests check every anchor and run a relocation audit:
+instruction; boot-time chunk reads use flash's own address (the alias only in the
+emulator-only upload variant). Offline, with a decoded X.20 B image (`KB_X20_OS`, see
+[Testing](TESTING.md)), the tests check every anchor (the optional features' sites
+and the stock code their routines rely on included) and run a relocation audit:
 every instruction that reaches a table the recipe moves is patched or explained
 in the recipe's `audit` list.
 

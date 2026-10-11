@@ -65,9 +65,27 @@ export function siteBytes(v: SiteValue, names: Record<string, number>, labels: R
 /** Whether a site value replaces whole instructions (so its bytes are code the ISA gate decodes). */
 export const isCode = (v: SiteValue): boolean => !('u32' in v) && !('u16' in v);
 
+/** The optional routines window A carries (engine/src/x20.ts decides which; the recipe's features hold their sites). */
+export interface WindowFeatures {
+  /** PMUTE: the panel mute writes the sequencer's mute word at once */
+  unmute?: boolean;
+  /** TITLEROM: no ROM number in the machine title of an added machine */
+  titleRom?: boolean;
+  /** USRTEST, CMP3, TITLE: added machines grouped on the category pages; catidx[id] = 1-based index into the codes */
+  categories?: { catidx: Uint8Array; codes: string[] };
+  /** the class-mask thunks; the IDs they treat as added */
+  idMasks?: number[];
+  /** DLREC: dynamic knob labels; the caption data's address (read under the OS) and how many machines have them */
+  dynLabels?: { dataAt: number; models: number };
+}
+
+/** The class-mask sites' registers and masks (bases/x20.json features.id_masks), for the thunks window A carries. */
+export const ID_MASK_THUNKS: [number, number][] = [[3, 0xe0], [1, 0xe0], [0, 0xe0], [3, 0xf0], [0, 0xf0], [2, 0xf0], [6, 0xf0], [2, 0xf8], [0, 0xf8], [1, 0xd0]];
+export const ID_SUB_THUNKS = [1, 4, 0];
+
 export interface WindowA {
   asm: Assembled;
-  /** the handler table, filled at boot from X.20's (the applier), entry `classes` = the knob callback */
+  /** HTAB: the class handler fetch (X.20's own table for its classes, the knob callback for class `classes`) */
   htab: number; knobcb: number; classes: number;
 }
 
@@ -75,7 +93,7 @@ export interface WindowA {
  * Window A: the routines the OS sites jump to, and their tables. Preloaded by stage 1 (it rides in
  * the stage image); the handler table is filled by the applier from X.20's own at boot.
  */
-export function windowA(R: X20Recipe, M: X20Map, ours: Map<number, number>, knobCallback: Uint8Array, listFlash: number): WindowA {
+export function windowA(R: X20Recipe, M: X20Map, ours: Map<number, number>, knobCallback: Uint8Array, listFlash: number, feat: WindowFeatures = {}): WindowA {
   const a = new Asm(R.ram.window[0]);
   const I = (...x: string[]): void => a.i(x[0], ...x.slice(1));
   const bitmap = new Uint8Array(32), famtab = new Uint8Array(256);
@@ -128,15 +146,168 @@ export function windowA(R: X20Recipe, M: X20Map, ours: Map<number, number>, knob
   a.label('USRINSMENU'); I('lea', `${h(M.menu)}.l`, 'a0'); I('move.l', 'a0', '-96(a6)'); I('rts');
   a.label('USRREM'); I('lea', `${h(M.recs)}.l`, 'a0'); I('moveq', '#0', 'd2'); I('move.l', 'a0', 'a5');
   I('moveq', '#0', 'd1'); I('move.b', 'd0', 'd1'); I('move.l', 'd1', 'd0'); I('rts');
+  if (feat.unmute) {
+    // panel mute (MUTE-mode TRIG key, 0x231ae6(kit ctx, mask)): stock stores the kit's mask ($245e) and posts a message
+    // to the sequencer (kit ctx + $2f2c), which writes its mute word ($295a, read when a trig plays) only when it next
+    // drains its queue. Write the sequencer's word now too (the message still follows with the same mask).
+    // Z = ($24a2 == 0) on return, as the replaced tst.b left it.
+    a.label('PMUTE');
+    I('move.w', 'd1', '9310(a0)'); I('tst.b', '9378(a0)'); I('bne.b', 'pm_out');
+    I('move.w', 'd1', '22662(a0)'); I('tst.b', '9378(a0)');
+    a.label('pm_out'); I('rts');
+  }
+  if (feat.titleRom) {
+    // machine title (0x276fb8): the two ROM-range tests fail for an added machine (d5 = $ff, d4 = 0; the normal
+    // path reads neither again), so its title is drawn as any other machine's
+    a.label('TITLEROM');
+    I('move.l', 'd4', 'd5'); I('sub.l', '#128', 'd5');
+    I('lea', '-8(a7)', 'a7'); I('movem.l', 'd1/a0', '(a7)');
+    I('move.l', 'd4', 'd1'); I('and.l', '#0xff', 'd1'); I('lsr.l', '#3', 'd1'); I('lea', '@bitmap', 'a0'); I('adda.l', 'd1', 'a0');
+    I('move.l', 'd4', 'd1'); I('btst', 'd1', '(a0)'); I('beq.b', 'tr_out');
+    I('move.l', '#0xff', 'd5'); I('moveq', '#0', 'd4');
+    a.label('tr_out'); I('movem.l', '(a7)', 'd1/a0'); I('lea', '8(a7)', 'a7'); I('rts');
+  }
+  if (feat.categories) {
+    // category pages: an added machine takes the user-machine path (d0 = 0); X.20's own, as stock ((id + $3e) & $ff)
+    a.label('USRTEST');
+    I('lea', '-8(a7)', 'a7'); I('movem.l', 'd1/a0', '(a7)');
+    I('and.l', '#0xff', 'd0'); I('move.l', 'd0', 'd1'); I('lsr.l', '#3', 'd1'); I('lea', '@bitmap', 'a0'); I('adda.l', 'd1', 'a0');
+    I('btst', 'd0', '(a0)'); I('beq.b', 'ut_stock'); I('moveq', '#0', 'd0'); I('bra.b', 'ut_out');
+    a.label('ut_stock'); I('add.l', '#0x3e', 'd0'); I('and.l', '#0xff', 'd0');
+    a.label('ut_out'); I('movem.l', '(a7)', 'd1/a0'); I('lea', '8(a7)', 'a7'); I('rts');
+    // grouping compare (in place of strncmp(p1, p2, 3) on record names): added machines group by category
+    a.label('CMP3');
+    I('lea', '-12(a7)', 'a7'); I('movem.l', 'd1/a0-a1', '(a7)');
+    I('lea', '@catidx', 'a1');
+    I('move.l', '16(a7)', 'a0'); I('moveq', '#0', 'd0'); I('move.b', '-1(a0)', 'd0'); I('moveq', '#0', 'd1'); I('move.b', '(a1,d0.l)', 'd1');
+    I('move.l', '20(a7)', 'a0'); I('moveq', '#0', 'd0'); I('move.b', '-1(a0)', 'd0'); I('move.b', '(a1,d0.l)', 'd0');
+    I('tst.l', 'd1'); I('bne.b', 'c3_ours'); I('tst.l', 'd0'); I('bne.b', 'c3_ours');
+    I('movem.l', '(a7)', 'd1/a0-a1'); I('lea', '12(a7)', 'a7'); I('jmp', '0x2663c0.l');
+    a.label('c3_ours'); I('cmp.l', 'd1', 'd0'); I('beq.b', 'c3_eq'); I('moveq', '#1', 'd0'); I('bra.b', 'c3_out');
+    a.label('c3_eq'); I('moveq', '#0', 'd0');
+    a.label('c3_out'); I('movem.l', '(a7)', 'd1/a0-a1'); I('lea', '12(a7)', 'a7'); I('rts');
+    // page title (in place of adda.l #records+1,a0): an added machine's group is titled with its category's code
+    a.label('TITLE');
+    I('adda.l', `#${M.recs + 1}`, 'a0');
+    I('moveq', '#0', 'd0'); I('move.b', '-1(a0)', 'd0'); I('move.l', 'a1', '-(a7)'); I('lea', '@catidx', 'a1'); I('move.b', '(a1,d0.l)', 'd0'); I('move.l', '(a7)+', 'a1');
+    I('tst.b', 'd0'); I('beq.b', 'ti_out'); I('and.l', '#0xff', 'd0'); I('subq.l', '#1', 'd0'); I('lsl.l', '#2', 'd0'); I('lea', '@catnames', 'a0'); I('adda.l', 'd0', 'a0');
+    a.label('ti_out'); I('rts');
+  }
+  if (feat.idMasks) {
+    // class-mask thunks: exactly `andi.l #M,dN` / `addi.l #-$78,dN` for every ID but an added one, which gets a value
+    // no class constant equals (the flags are recomputed by the compare after each site)
+    for (const [r, m] of ID_MASK_THUNKS) {
+      const d = `d${r}`, t = `${r}_${m.toString(16)}`;
+      a.label(`IM_${t}`);
+      I('move.l', d, '-(a7)'); I('bsr.w', 'im_core'); I('addq.l', '#4', 'a7'); I('bne.b', `im_inj_${t}`);
+      I('and.l', `#0x${m.toString(16)}`, d); I('rts');
+      a.label(`im_inj_${t}`); I('move.l', '#0x100', d); I('rts');
+    }
+    for (const r of ID_SUB_THUNKS) {
+      const d = `d${r}`;
+      a.label(`IS_${r}`);
+      I('move.l', d, '-(a7)'); I('bsr.w', 'im_core'); I('addq.l', '#4', 'a7'); I('bne.b', `is_inj_${r}`);
+      I('add.l', '#-120', d); I('rts');
+      a.label(`is_inj_${r}`); I('move.l', '#0x80', d); I('rts');
+    }
+    // Z clear iff the low byte of the long at 4(a7) is an added ID in the masked ranges; every register kept
+    a.label('im_core');
+    I('lea', '-8(a7)', 'a7'); I('movem.l', 'd0/a0', '(a7)');
+    I('moveq', '#0', 'd0'); I('move.b', '15(a7)', 'd0'); I('lsr.l', '#3', 'd0');
+    I('lea', '@imbits', 'a0'); I('adda.l', 'd0', 'a0'); I('move.b', '15(a7)', 'd0');
+    I('btst', 'd0', '(a0)');
+    I('movem.l', '(a7)', 'd0/a0'); I('lea', '8(a7)', 'a7'); I('rts');
+  }
+  if (feat.dynLabels) {
+    // dynamic knob labels: in place of findRec(id) at 0x229a9e (the parameter page's setup; its a4 = the page, $60(a4)
+    // its track). rec = findRec(id); for a machine in the caption data: copy the record's names into its 44-byte buffer
+    // ([original names pointer][8 x 5 bytes]), overlay each plan's captions for the stop its knob is on (kit value at
+    // 0x2d798b + 38 track + knob; stop = ((raw >> sa) * n) >> sb, at most stops - 1) and point rec+8 at the buffer.
+    // The data is read through the flash alias: this runs only under the OS (the UI task), never before it.
+    const D = feat.dynLabels;
+    a.label('DLREC');
+    I('move.l', '4(a7)', '-(a7)'); I('jsr', '0x217cee.l'); I('addq.l', '#4', 'a7');
+    I('tst.l', 'd0'); I('bne.b', 'dl_go'); I('rts');
+    a.label('dl_go');
+    I('lea', '-32(a7)', 'a7'); I('movem.l', 'd0-d5/a2-a3', '(a7)');
+    I('move.l', 'd0', 'a2');
+    I('move.l', '96(a4)', 'd3'); I('moveq', '#15', 'd1'); I('cmp.l', 'd3', 'd1'); I('bcs.w', 'dl_out');
+    I('moveq', '#0', 'd2'); I('move.b', '39(a7)', 'd2');
+    I('lea', `${h(D.dataAt)}.l`, 'a0');
+    a.label('dl_find');
+    I('moveq', '#0', 'd1'); I('move.b', '(a0)', 'd1'); I('cmpi.l', '#255', 'd1'); I('beq.w', 'dl_out');
+    I('cmp.l', 'd2', 'd1'); I('beq.b', 'dl_found'); I('addq.l', '#8', 'a0'); I('bra.b', 'dl_find');
+    a.label('dl_found');
+    I('moveq', '#0', 'd1'); I('move.b', '1(a0)', 'd1'); I('moveq', '#44', 'd0'); I('muls.w', 'd0', 'd1');
+    I('lea', '@dlbufs', 'a3'); I('adda.l', 'd1', 'a3');
+    I('moveq', '#0', 'd4'); I('move.b', '2(a0)', 'd4');
+    I('move.l', '4(a0)', 'a0');
+    I('lea', '4(a3)', 'a1'); I('move.l', '8(a2)', 'd0'); I('cmp.l', 'a1', 'd0'); I('beq.b', 'dl_have');
+    I('move.l', 'd0', '(a3)');
+    a.label('dl_have');
+    I('move.l', '(a3)', 'a1'); I('moveq', '#10', 'd0');
+    I('move.l', 'a3', 'd5'); I('addq.l', '#4', 'd5');
+    I('move.l', 'a0', '-(a7)'); I('move.l', 'd5', 'a0');
+    a.label('dl_cp');
+    I('move.l', '(a1)+', '(a0)+'); I('subq.l', '#1', 'd0'); I('bne.b', 'dl_cp');
+    I('move.l', '(a7)+', 'a0');
+    a.label('dl_plan');
+    I('moveq', '#38', 'd0'); I('muls.w', 'd3', 'd0'); I('moveq', '#0', 'd1'); I('move.b', '(a0)', 'd1'); I('add.l', 'd1', 'd0');
+    I('lea', '0x2d798b.l', 'a1'); I('moveq', '#0', 'd2'); I('move.b', '(a1,d0.l)', 'd2');
+    I('moveq', '#0', 'd1'); I('move.b', '2(a0)', 'd1'); I('lsr.l', 'd1', 'd2');
+    I('moveq', '#0', 'd1'); I('move.b', '3(a0)', 'd1'); I('muls.w', 'd1', 'd2');
+    I('moveq', '#0', 'd1'); I('move.b', '4(a0)', 'd1'); I('lsr.l', 'd1', 'd2');
+    I('moveq', '#0', 'd1'); I('move.b', '5(a0)', 'd1'); I('cmp.l', 'd1', 'd2'); I('bcs.b', 'dl_st'); I('move.l', 'd1', 'd2'); I('subq.l', '#1', 'd2');
+    a.label('dl_st');
+    I('moveq', '#0', 'd1'); I('move.b', '1(a0)', 'd1'); I('moveq', '#0', 'd0');
+    a.label('dl_pc');
+    I('tst.l', 'd1'); I('beq.b', 'dl_pcd'); I('btst', '#0', 'd1'); I('beq.b', 'dl_pcn'); I('addq.l', '#4', 'd0');
+    a.label('dl_pcn');
+    I('lsr.l', '#1', 'd1'); I('bra.b', 'dl_pc');
+    a.label('dl_pcd');
+    I('muls.w', 'd0', 'd2'); I('move.l', '8(a0)', 'a1'); I('adda.l', 'd2', 'a1');
+    I('moveq', '#0', 'd1'); I('move.b', '1(a0)', 'd1'); I('move.l', 'd5', 'd2');
+    a.label('dl_k');
+    I('tst.l', 'd1'); I('beq.b', 'dl_kd'); I('btst', '#0', 'd1'); I('beq.b', 'dl_kn');
+    I('move.l', 'a0', '-(a7)'); I('move.l', 'd2', 'a0');
+    I('move.b', '(a1)+', '(a0)+'); I('move.b', '(a1)+', '(a0)+'); I('move.b', '(a1)+', '(a0)+'); I('move.b', '(a1)+', '(a0)+'); I('clr.b', '(a0)');
+    I('move.l', '(a7)+', 'a0');
+    a.label('dl_kn');
+    I('addq.l', '#5', 'd2'); I('lsr.l', '#1', 'd1'); I('bra.b', 'dl_k');
+    a.label('dl_kd');
+    I('lea', '12(a0)', 'a0'); I('subq.l', '#1', 'd4'); I('bne.w', 'dl_plan');
+    I('move.l', 'd5', '8(a2)');
+    a.label('dl_out');
+    I('movem.l', '(a7)', 'd0-d5/a2-a3'); I('lea', '32(a7)', 'a7'); I('rts');
+  }
   a.align(4);
   a.bytes('bitmap', bitmap);
   a.bytes('famtab', famtab);
+  if (feat.categories) {
+    if (feat.categories.catidx.length !== 256) throw new Error('catidx: 256 entries');
+    a.bytes('catidx', feat.categories.catidx);
+    a.bytes('catnames', Uint8Array.from(feat.categories.codes.flatMap((c) => [...c.slice(0, 4).padEnd(4, ' ')].map((ch) => ch.charCodeAt(0) & 0xff))));
+    a.align(4);
+  }
+  if (feat.idMasks) {
+    const im = new Uint8Array(32);
+    for (const id of feat.idMasks) im[id >> 3] |= 1 << (id & 7);
+    a.bytes('imbits', im);
+  }
+  if (feat.dynLabels) { a.align(4); a.bytes('dlbufs', new Uint8Array(44 * feat.dynLabels.models)); }
+  // class handler fetch (in place of `lea table,a0; move.l (a0,d0.l*4),d4` at 0x294758): X.20's own classes from its
+  // own table, ours (class `classes`) the knob callback. No copy of the table at boot (an earlier build made one in
+  // window A): nothing for the applier to do, and nothing in X.20's RAM to keep in step with it.
+  const C = R.ram.handlerTable.classes;
+  a.label('HTAB'); I('cmpi.l', `#${C}`, 'd0'); I('bcc.b', 'ht_x');
+  I('lea', `${h(R.ram.handlerTable.at)}.l`, 'a0'); I('move.l', '(a0,d0.l*4)', 'd4'); I('rts');
+  a.label('ht_x'); I('lea', '@htx', 'a0'); I('move.l', '(a0)', 'd4'); I('rts');
   a.align(4);
-  a.bytes('htab', new Uint8Array((R.ram.handlerTable.classes + 1) * 4));
+  a.label('htx'); I('dc.l', '@knobcb');
   a.bytes('knobcb', knobCallback);
   a.align(4);
   const asm = a.assemble();
-  return { asm, htab: asm.labels.htab, knobcb: asm.labels.knobcb, classes: R.ram.handlerTable.classes };
+  return { asm, htab: asm.labels.HTAB, knobcb: asm.labels.knobcb, classes: R.ram.handlerTable.classes };
 }
 
 /** DSP2 words of the boot loader's receiver (at P:receiver, sent by ELD) and wiper (placed by the receiver itself). */
@@ -214,10 +385,6 @@ export function stageCode(R: X20Recipe, list: Uint8Array, preChunks: number[], p
   s.label('ap_copy'); S('move.b', '(a0)+', '(a1)+'); S('subq.l', '#1', 'd0'); S('bne.b', 'ap_copy');
   S('move.l', 'a0', 'd1'); S('addq.l', '#1', 'd1'); S('and.l', '#-2', 'd1'); S('move.l', 'd1', 'a0'); S('bra.b', 'ap_loop');
   s.label('ap_done');
-  // X.20's per-class parameter handlers into window A, then ours (the knob callback) after them
-  S('lea', `${h(R.ram.handlerTable.at)}.l`, 'a0'); S('lea', `${h(wa.htab)}.l`, 'a1'); S('move.l', `#${wa.classes}`, 'd0');
-  s.label('ap_h'); S('move.l', '(a0)+', '(a1)+'); S('subq.l', '#1', 'd0'); S('bne.b', 'ap_h');
-  S('move.l', `#${wa.knobcb}`, 'd0'); S('move.l', 'd0', '(a1)');
   S('jsr', '@UPLOAD');
   // The boot code lies in X.20's heap, which the OS uses without clearing: leave it as zeros (everything
   // after this routine's last instruction, to the heap's end), or what the boot code leaves behind

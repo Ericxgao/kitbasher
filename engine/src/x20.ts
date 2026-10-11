@@ -26,8 +26,9 @@ import { needsUwSamples } from './packs.js';
 import { select, type Family, type IdMove, type Selected } from './selection.js';
 import { decodeSyx, encodeSyx, OS_START } from './syx.js';
 import { uclPack } from './ucl.js';
-import { cacheOpsIn, dsp2BootLoader, isCode, siteBytes, stageCode, windowA, writeList, x20Map } from './x20_cf.js';
-import { idAllowedOnX20, parseRecipe, type X20Recipe, type X20RecipeFile } from './x20_recipe.js';
+import { cacheOpsIn, dsp2BootLoader, ID_MASK_THUNKS, ID_SUB_THUNKS, isCode, siteBytes, stageCode, windowA, writeList, x20Map, type WindowFeatures } from './x20_cf.js';
+import { idAllowedOnX20, parseRecipe, type ParsedSite, type X20FeatureName, type X20Recipe, type X20RecipeFile } from './x20_recipe.js';
+import { MENU_CODES, menuCategory, menuOrder } from './sound_catalog.js';
 import { fromBase64 } from './bytes.js';
 import { decodeLayout, encodeLayout, LAYOUT_FORMAT, type IdSlot, type Layout, type MachinePlace } from './layout.js';
 import { capSamples, NO_EDITS, type BankEntry, type E12Bank, type E12Machine, type SampleEdits } from './samples.js';
@@ -56,7 +57,27 @@ export interface X20Options {
   layout?: Layout;
   /** the user's E12 samples (engine/src/samples.ts): swapped entries and entries the trim leaves whole */
   samples?: SampleEdits;
+  /**
+   * The optional patches (bases/x20.json features), each on unless set to false: `unmute` (MUTE-mode TRIG keys act
+   * on press, the sequencer's mute word at once), `categories` (machines grouped by menu category on X.20's category
+   * pages; without it, by X.20's menu families only), `dynLabels` (knob captions that follow a MODE knob). The
+   * machine-title and class-mask fixes go in by themselves when a machine takes an ID that needs them.
+   */
+  features?: { unmute?: boolean; categories?: boolean; dynLabels?: boolean };
 }
+
+/** The menu categories with the categories feature: the sound categories' codes, in browsing order (fixed). */
+export const X20_CATEGORIES: string[] = [...new Set(Object.values(MENU_CODES))].sort((a, b) => menuOrder(a) - menuOrder(b));
+export const x20Categories = (opt: Pick<X20Options, 'features'>): boolean => opt.features?.categories !== false;
+/** A machine's menu category with the categories feature: the layout's when it is one of the codes, else its sound category's. */
+export function x20Category(s: Pick<Selected, 'm'>, layout?: Layout): string {
+  const want = layout?.machines[s.m.key]?.category;
+  return want !== undefined && X20_CATEGORIES.includes(want) ? want : menuCategory(s.m);
+}
+/** Machine IDs whose class X.20 tests with masks that would misread an added machine (the id_masks feature). */
+export const x20MaskedId = (id: number): boolean => (id >= 88 && id <= 95) || (id >= 114 && id <= 127);
+/** Machine IDs X.20 titles with a ROM number (the title_rom feature). */
+export const x20RomTitleId = (id: number): boolean => (id >= 128 && id <= 159) || (id >= 176 && id <= 191);
 
 export interface X20Report {
   base: string;
@@ -74,12 +95,15 @@ export interface X20Report {
   /** machines the layout put on IDs X.20 cannot give them, and the IDs they took */
   moves: IdMove[];
   stage: { boot_code: string; window: string; packed: number; room: number };
+  /** the optional patches this build carries (bases/x20.json features) */
+  features: { name: string; sites: number }[];
   gates: { name: string; ok: boolean; detail: string }[];
   notes: string[];
 }
 
 const SR = 44100, FADE = 256, LEN_EXTRA = 34;
 const RAW_MAX_DEFAULT = 0x2b000;
+const RAW_MAX_UPLOAD = 40000;    // the emulator-only upload variant (see rawMax in buildX20): 100000 still lost the race for some builds
 
 /**
  * The E12 trim (the 1.63-lineage rule, on X.20's decoded samples): per entry the new 12-bit samples, and per
@@ -185,7 +209,8 @@ export function x20E12Bank(R: X20Recipe, bank0: { names: Uint8Array[]; samples: 
 
 /** X.20's menu family for a model: the layout's category when it is one of X.20's families, else the recipe's
  *  per-key-prefix map, its per-pack map, else its default. */
-export function menuFamilyName(R: X20Recipe, s: Selected, layout?: Layout): string {
+export function menuFamilyName(R: X20Recipe, s: Selected, layout?: Layout, categories = false): string {
+  if (categories) return R.categoryFamily[x20Category(s, layout)] ?? (R.file.pack_menu ?? {})['*'] ?? 'GND';
   const want = layout?.machines[s.m.key]?.category;
   if (want !== undefined && R.families[want] !== undefined) return want;
   const byKey = R.file.key_menu ?? {};
@@ -193,8 +218,8 @@ export function menuFamilyName(R: X20Recipe, s: Selected, layout?: Layout): stri
   return pref ? byKey[pref] : (R.file.pack_menu ?? {})[s.family] ?? (R.file.pack_menu ?? {})['*'] ?? 'GND';
 }
 
-function menuFamily(R: X20Recipe, s: Selected, layout?: Layout): number {
-  const name = menuFamilyName(R, s, layout);
+function menuFamily(R: X20Recipe, s: Selected, layout?: Layout, categories = false): number {
+  const name = menuFamilyName(R, s, layout, categories);
   const f = R.families[name];
   if (f === undefined) throw new Error(`recipe ${R.id}: no menu family ${name}`);
   return f;
@@ -491,19 +516,23 @@ export function planX20(R: X20Recipe, t: X20Trimmed, packs: Pack[], opt: Omit<X2
   if (records && records.used > records.cap) {
     problems.push(`X.20's own machines can fill up to ${records.stock} of the ${records.cap} machine records, which leaves room for ${records.cap - records.stock} added machines: untick ${records.used - records.cap}`);
   }
-  // families and the layout
+  // families (X.20's, for its family pages) and the layout's categories: with the categories feature the menu
+  // categories (the sound categories' codes), else X.20's families
+  const cats = x20Categories(opt) && !!R.features.categories;
   const familyNames = Object.keys(R.families);
   const family: Record<string, string> = {};
-  for (const s of sel) family[s.m.key] = menuFamilyName(R, s, opt.layout);
-  const menus: Family[] = familyNames.map((name) => ({ name, models: sel.filter((s) => family[s.m.key] === name).map((s) => s.m) }));
+  for (const s of sel) family[s.m.key] = menuFamilyName(R, s, opt.layout, cats);
+  const categoryNames = cats ? X20_CATEGORIES : familyNames;
+  const categoryOf = (s: Selected): string => cats ? x20Category(s, opt.layout) : family[s.m.key];
+  const menus: Family[] = categoryNames.map((name) => ({ name, models: sel.filter((s) => categoryOf(s) === name).map((s) => s.m) }));
   const machines: Record<string, MachinePlace> = {};
   if (opt.layout) {
-    // the map's other machines (not selected now) keep their places when they name an X.20 family
-    for (const [k, m] of Object.entries(opt.layout.machines)) if (R.families[m.category] !== undefined) machines[k] = { ...m };
+    // the map's other machines (not selected now) keep their places when they name one of this build's categories
+    for (const [k, m] of Object.entries(opt.layout.machines)) if (categoryNames.includes(m.category)) machines[k] = { ...m };
   }
   const idOf = new Map(sel.map((s) => [s.m.key, s.id]));
   for (const f of menus) f.models.forEach((m, i) => { machines[m.key] = { id: idOf.get(m.key)!, category: f.name, order: i }; });
-  const merged: Layout = { format: LAYOUT_FORMAT, base: R.id, categories: familyNames, machines };
+  const merged: Layout = { format: LAYOUT_FORMAT, base: R.id, categories: categoryNames, machines };
   const layout = opt.layout ? { ...merged, ...(opt.layout.uw === undefined ? {} : { uw: opt.layout.uw }) } : null;
   const fits = placed.overflow === null && !wsProblem;
   return {
@@ -616,7 +645,10 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
 
   // ---- flash: chunks, then our list entries, in the flash the bank frees
   const spans = freeFlash(bank).map(([a, b]) => [a, b] as [number, number]);
-  const rawMax = Math.min(RAW_MAX_DEFAULT, R.ram.uploadBuffer[1] - R.ram.uploadBuffer[0]);
+  // the emulator-only upload variant sends every chunk after DSP2 starts; the emulated OS misses DSP2's startup
+  // messages when one chunk takes too long to unpack, so that variant packs smaller chunks (KB_X20_RAWMAX overrides)
+  const envRaw = Number((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.KB_X20_RAWMAX ?? NaN);
+  const rawMax = Math.min(Number.isFinite(envRaw) ? envRaw : upload ? RAW_MAX_UPLOAD : RAW_MAX_DEFAULT, R.ram.uploadBuffer[1] - R.ram.uploadBuffer[0]);
   const flashCapacity = spans.reduce((n, [a, b]) => n + b - a, 0);
   const preC = await chunks(pre, spans, rawMax, flashCapacity);
   const postC = await chunks(post, spans, rawMax, flashCapacity);
@@ -638,33 +670,71 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   cont.set(list, at(listFlash));
   cont.set(table, at(tableFlash));
 
+  // ---- the optional patches (the recipe's features): which go in, and the data they need
+  const fo = opt.features ?? {};
+  const cats = x20Categories(opt) && !!R.features.categories;
+  const enabled = new Set<X20FeatureName>();
+  if (fo.unmute !== false && R.features.unmute) enabled.add('unmute');
+  if (cats) enabled.add('categories');
+  if (R.features.title_rom && sel.some((s) => x20RomTitleId(s.id))) enabled.add('title_rom');
+  const masked = sel.map((s) => s.id).filter(x20MaskedId);
+  if (R.features.id_masks && masked.length) enabled.add('id_masks');
+  const dm = fo.dynLabels === false || !R.features.dyn_labels ? [] : x20DynModels(sel);
+  if (dm.length) enabled.add('dyn_labels');
+  let dynFlash: number | null = null;
+  if (dm.length) {
+    const len = x20DynData(dm, 0).length;
+    const di = spans.findIndex(([a, b]) => b - ((a + 3) & ~3) >= len);
+    if (di < 0) throw new X20FlashError(flashCapacity + len, flashCapacity, 'no flash left for the dynamic knob labels: trim harder or untick a machine');
+    dynFlash = (spans[di][0] + 3) & ~3;
+    spans[di] = [dynFlash + len, spans[di][1]];
+    cont.set(x20DynData(dm, R.flashAlias + dynFlash), at(dynFlash));
+  }
+
   // ---- 4. ColdFire: window A, the OS writes, the stage code
   const M = x20Map(R, sel.length, bankEnd);
-  const ours = new Map(sel.map((s) => [s.id, menuFamily(R, s, opt.layout)] as [number, number]));
-  const wa = windowA(R, M, ours, fromBase64(core.knob_callback), listFlash);
-  if (wa.asm.bytes.length + R.ram.window[0] > R.ram.window[1]) throw new Error('window A overflows');
+  const ours = new Map(sel.map((s) => [s.id, menuFamily(R, s, opt.layout, cats)] as [number, number]));
+  const wf: WindowFeatures = {};
+  if (enabled.has('unmute')) wf.unmute = true;
+  if (enabled.has('title_rom')) wf.titleRom = true;
+  if (enabled.has('categories')) {
+    const catidx = new Uint8Array(256);
+    for (const s of sel) catidx[s.id] = X20_CATEGORIES.indexOf(x20Category(s, opt.layout)) + 1;
+    wf.categories = { catidx, codes: X20_CATEGORIES };
+  }
+  if (enabled.has('id_masks')) wf.idMasks = masked;
+  // the caption data is read through the flash alias: DLREC runs only under the OS
+  if (dynFlash !== null) wf.dynLabels = { dataAt: R.flashAlias + dynFlash, models: dm.length };
+  const wa = windowA(R, M, ours, fromBase64(core.knob_callback), listFlash, wf);
+  if (wa.asm.bytes.length + R.ram.window[0] > R.ram.window[1]) throw new Error(`window A overflows: ${wa.asm.bytes.length} bytes, ${R.ram.window[1] - R.ram.window[0]} fit`);
   const names: Record<string, number> = { STACK: M.stack, RECS: M.recs, CAP: M.cap, MENU: M.menu, M_U: M.mU, M_L: M.mL,
-    LIST: M.list, LIST_N: M.listN, BANK_END: bankEnd, HTAB: wa.htab };
+    LIST: M.list, LIST_N: M.listN, BANK_END: bankEnd, HTAB: wa.htab, ...(wa.asm.labels.DLREC !== undefined ? { DLREC: wa.asm.labels.DLREC } : {}) };
   const writes: [number, Uint8Array][] = [];
   const siteCode: { at: number; bytes: Uint8Array }[] = [];
-  for (const s of R.sites) {
+  const replaced = new Set([...enabled].flatMap((f) => R.features[f]!.replaces));
+  const sites: ParsedSite[] = [...R.sites.filter((s) => !replaced.has(s.at)), ...[...enabled].flatMap((f) => R.features[f]!.sites)];
+  for (const s of sites) {
     const b = siteBytes(s.value, names, wa.asm.labels);
     if (b.length !== s.old.length) throw new Error(`recipe site ${h(s.at)} (${s.what}): ${b.length} bytes for a ${s.old.length}-byte anchor`);
     writes.push([s.at, b]);
     if (isCode(s.value)) siteCode.push({ at: s.at, bytes: b });
   }
-  // The stage code reads its chunks while X.20's loader still runs: flash at its own address (0x0..), not the
-  // 0x10000000 alias, which the OS maps only later (the emulator maps it from the start; real hardware froze
-  // on the first logo). Code that runs under the OS (COPYLIST, ...) keeps the alias.
-  const bootReads = [...preC, ...postC].map((c) => c.at);
-  const aliased = bootReads.filter((a) => a >= R.flashAlias || a < E12B_FLASH || a >= E12B_END);
-  gates.push({ name: 'boot-time chunk reads: flash at its own address (no alias, inside E12B)', ok: !aliased.length,
-    detail: aliased.length ? aliased.map(h).join(', ') : `${bootReads.length} chunks` });
-  if (aliased.length) throw new Error(`boot-time chunks must be read at flash's own address: ${aliased.map(h).join(', ')}`);
+  // The stage code reads its chunks while X.20's loader still runs: on hardware, flash at its own address (0x0..),
+  // not the 0x10000000 alias, which the OS maps only later (real hardware froze on the first logo with the alias).
+  // The emulator is the other way round at that point (only the alias reads flash), so the emulator-only upload
+  // variant keeps the alias. Code that runs under the OS (COPYLIST, DLREC) keeps the alias.
+  const bootBase = upload ? R.flashAlias : 0;
+  const bootReads = [...preC, ...postC].map((c) => bootBase + c.at);
+  const wrong = bootReads.filter((a) => a - bootBase < E12B_FLASH || a - bootBase >= E12B_END);
+  gates.push({ name: upload ? 'boot-time chunk reads: through the flash alias (emulator-only upload variant)' : 'boot-time chunk reads: flash at its own address (no alias, inside E12B)',
+    ok: !wrong.length, detail: wrong.length ? wrong.map(h).join(', ') : `${bootReads.length} chunks` });
+  if (wrong.length) throw new Error(`boot-time chunks outside E12B flash: ${wrong.map(h).join(', ')}`);
   const st = stageCode(R, writeList(writes), bootReads.slice(0, preC.length), bootReads.slice(preC.length), wa, boot.receiver);
 
   // ---- gate: ISA_A over everything the ColdFire runs that the build adds
-  const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM'].map((n) => wa.asm.labels[n]), wa.knobcb];
+  const featureEntries = ['PMUTE', 'TITLEROM', 'USRTEST', 'CMP3', 'TITLE', 'DLREC',
+    ...ID_MASK_THUNKS.map(([r, m]) => `IM_${r}_${m.toString(16)}`), ...ID_SUB_THUNKS.map((r) => `IS_${r}`)].filter((n) => wa.asm.labels[n] !== undefined);
+  const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'HTAB', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM', ...featureEntries].map((n) => wa.asm.labels[n]), wa.knobcb];
   const codeMem: CodeMem[] = [{ what: 'boot code', ram: R.ram.bootCode[0], bytes: st.asm.bytes }, { what: 'window A', ram: R.ram.window[0], bytes: wa.asm.bytes }];
   const inOurs = (a: number): boolean => codeMem.some((m) => a >= m.ram && a < m.ram + m.bytes.length);
   const isa = x20IsaGate(codeMem, entries, inOurs, [...siteCode, ...st.sites.map((s) => ({ at: s.at, bytes: s.bytes }))]);
@@ -722,7 +792,57 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
     moves: P.moves,
     stage: { boot_code: `${h(R.ram.bootCode[0])}..${h(R.ram.bootCode[0] + st.asm.bytes.length)}`, window: `${h(R.ram.window[0])}..${h(R.ram.window[0] + wa.asm.bytes.length)}`,
       packed: packed.length, room },
-    gates, notes: [...notes, `${used} bytes of E12B flash used for the machines`],
+    features: [...enabled].map((f) => ({ name: f, sites: R.features[f]!.sites.length })),
+    gates, notes: [...notes, `${used} bytes of E12B flash used for the machines`,
+      ...(dm.length ? [`dynamic knob labels for ${dm.map((d) => d.name).join(', ')} (captions at ${h(dynFlash!)})`] : []),
+      ...(enabled.has('id_masks') ? [`class-mask fix for IDs ${masked.join(', ')}`] : []),
+      ...(enabled.has('title_rom') ? ['machine-title fix (an added machine on a ROM-range ID)'] : [])],
   };
   return { output, report };
+}
+
+/** A machine with dynamic knob labels, as the caption data lays it out. */
+export interface X20DynModel { id: number; name: string; plans: { knob: number; mask: number[]; sa: number; n: number; sb: number; stops: number; blocks: Uint8Array }[] }
+
+/** The selected machines whose packs give dynamic knob labels (each plan's formula checked against its stop table). */
+export function x20DynModels(sel: Selected[]): X20DynModel[] {
+  const out: X20DynModel[] = [];
+  for (const s of sel) {
+    const dl = s.m.dyn_labels;
+    if (!dl?.length) continue;
+    const plans = dl.map((p) => {
+      if (!p.formula) throw new Error(`${s.m.name.trim()}: a dynamic label plan without a formula`);
+      const [sa, n, sb] = p.formula;
+      for (let r = 0; r < 128; r++) if (Math.min(((r >> sa) * n) >> sb, p.stops - 1) !== p.stop_of[r]) throw new Error(`${s.m.name.trim()} knob ${p.knob}: the formula and the stop table differ at ${r}`);
+      const blocks = fromBase64(p.blocks);
+      if (blocks.length !== p.stops * 4 * p.mask.length) throw new Error(`${s.m.name.trim()}: caption blocks size`);
+      if ([...p.mask].sort((a, b) => a - b).join() !== p.mask.join()) throw new Error(`${s.m.name.trim()}: caption mask order`);
+      return { knob: p.knob, mask: p.mask, sa, n, sb, stops: p.stops, blocks };
+    });
+    out.push({ id: s.id, name: s.m.name.trim(), plans });
+  }
+  return out.sort((a, b) => a.id - b.id);
+}
+
+/**
+ * The caption data at `base` (an address the OS reads it at): entries [id, slot, plans, 0, plan address]... then $ff;
+ * plans [knob, mask bits, sa, n, sb, stops, 0, 0, blocks address]; the blocks (4 characters per caption, trailing
+ * spaces as NULs, as X.20's own names end).
+ */
+export function x20DynData(dm: X20DynModel[], base: number): Uint8Array {
+  const head: number[] = [], plans: number[] = [], blocks: number[] = [];
+  const headLen = dm.length * 8 + 4, plansLen = dm.reduce((n, d) => n + d.plans.length, 0) * 12;
+  let pAt = base + headLen, bAt = base + headLen + plansLen;
+  const be = (v: number): number[] => [v >>> 24, (v >>> 16) & 255, (v >>> 8) & 255, v & 255];
+  dm.forEach((d, slot) => {
+    head.push(d.id, slot, d.plans.length, 0, ...be(pAt));
+    for (const p of d.plans) {
+      plans.push(p.knob, p.mask.reduce((m, k) => m | (1 << k), 0), p.sa, p.n, p.sb, p.stops, 0, 0, ...be(bAt));
+      const b = Uint8Array.from(p.blocks);
+      for (let i = 0; i < b.length; i += 4) for (let k = 3; k >= 0 && b[i + k] === 0x20; k--) b[i + k] = 0;
+      blocks.push(...b); bAt += b.length; pAt += 12;
+    }
+  });
+  head.push(0xff, 0xff, 0xff, 0xff);
+  return Uint8Array.from([...head, ...plans, ...blocks]);
 }

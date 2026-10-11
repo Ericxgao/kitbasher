@@ -4,13 +4,13 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { idAllowedOnX20, parseRecipe, recipeFor, type X20RecipeFile } from '../src/x20_recipe.js';
-import { cacheOpsIn, dsp2BootLoader, isCode, siteBytes, stageCode, windowA, writeList, x20Map, evalExpr } from '../src/x20_cf.js';
-import { buildX20, readX20, trimX20, trimX20Bank, x20E12Bank, x20IsaGate, x20NeighbourReads, NEIGHBOUR_1X, NEIGHBOUR_X20 } from '../src/x20.js';
+import { cacheOpsIn, dsp2BootLoader, isCode, siteBytes, stageCode, windowA, writeList, x20Map, evalExpr, ID_MASK_THUNKS, ID_SUB_THUNKS } from '../src/x20_cf.js';
+import { buildX20, readX20, trimX20, trimX20Bank, x20E12Bank, x20IsaGate, x20NeighbourReads, NEIGHBOUR_1X, NEIGHBOUR_X20, X20_CATEGORIES, x20DynData } from '../src/x20.js';
 import { anchorMismatches, preloadConflicts, relocationAudit } from '../src/x20_audit.js';
 import { buildBank, decode as e12Decode, encode as e12Encode, freeFlash, readBank, ENTRIES } from '../src/e12b.js';
 import { decodeLinear } from '../src/isa.js';
 import { loadPacks } from '../src/node.js';
-import { sha256 } from '../src/bytes.js';
+import { sha256, u32 } from '../src/bytes.js';
 import { Asm } from '../src/cf_asm.js';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
@@ -71,7 +71,7 @@ test('x20: every site is as long as its anchor, and every code site decodes as I
   const st = stageCode(R, writeList(writes), [0x100ca2dc], [0x100cfe18], wa, boot.receiver);
   const mem = [{ what: 'boot code', ram: R.ram.bootCode[0], bytes: st.asm.bytes }, { what: 'window A', ram: R.ram.window[0], bytes: wa.asm.bytes }];
   const ours = (a: number): boolean => mem.some((m) => a >= m.ram && a < m.ram + m.bytes.length);
-  const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM'].map((n) => wa.asm.labels[n]), wa.knobcb];
+  const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'HTAB', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM'].map((n) => wa.asm.labels[n]), wa.knobcb];
   const r = x20IsaGate(mem, entries, ours, [...code, ...st.sites]);
   assert.deepEqual(r.rejects.map((i) => `${i.at.toString(16)} ${i.why}`), []);
   assert.ok(r.insns > 300);
@@ -79,6 +79,53 @@ test('x20: every site is as long as its anchor, and every code site decodes as I
   const bad = x20IsaGate([], [], () => false, [{ at: 0x21780e, bytes: Buffer.from('2d7c002fd100ffec', 'hex') }]);
   assert.equal(bad.rejects.length, 1);
   assert.ok(decodeLinear(Buffer.from('4eb9002fc0a04e71', 'hex'), 0).every((i) => i.ok));
+});
+
+test('x20 features: every routine and site with all features on is ISA_A, fits window A, and each site is as long as its anchor', () => {
+  const M = x20Map(R, 25, 0x124c06);
+  const ours = new Map([[6, 1], [42, 10], [88, 0], [130, 0], [180, 0]]);
+  const catidx = new Uint8Array(256); catidx[6] = 1; catidx[42] = 10; catidx[88] = 8; catidx[130] = 6; catidx[180] = 6;
+  const feat = { unmute: true, titleRom: true, categories: { catidx, codes: X20_CATEGORIES }, idMasks: [88], dynLabels: { dataAt: 0x100e6f8c, models: 8 } };
+  const wa = windowA(R, M, ours, Buffer.from('4e75'.repeat(32), 'hex'), 0xe6868, feat);
+  assert.ok(R.ram.window[0] + wa.asm.bytes.length <= R.ram.window[1], `window A: ${wa.asm.bytes.length} bytes`);
+  const names: Record<string, number> = { STACK: M.stack, RECS: M.recs, CAP: M.cap, MENU: M.menu, M_U: M.mU, M_L: M.mL,
+    LIST: M.list, LIST_N: M.listN, BANK_END: 0x124c06, HTAB: wa.htab, DLREC: wa.asm.labels.DLREC };
+  const all = (['unmute', 'title_rom', 'categories', 'id_masks', 'dyn_labels'] as const);
+  const code: { at: number; bytes: Uint8Array }[] = [];
+  for (const f of all) {
+    assert.ok(R.features[f], `the recipe has ${f}`);
+    for (const s of R.features[f]!.sites) {
+      const b = siteBytes(s.value, names, wa.asm.labels);
+      assert.equal(b.length, s.old.length, `${f} site ${s.at.toString(16)}`);
+      if (isCode(s.value)) code.push({ at: s.at, bytes: b });
+    }
+  }
+  // categories take the place of the records site in the page title instruction (0x270df6 covers 0x270df8)
+  assert.deepEqual(R.features.categories!.replaces, [0x270df8]);
+  const mem = [{ what: 'window A', ram: R.ram.window[0], bytes: wa.asm.bytes }];
+  const inOurs = (a: number): boolean => a >= R.ram.window[0] && a < R.ram.window[0] + wa.asm.bytes.length;
+  const labels = ['PMUTE', 'TITLEROM', 'USRTEST', 'CMP3', 'TITLE', 'DLREC', ...ID_MASK_THUNKS.map(([r, m]) => `IM_${r}_${m.toString(16)}`), ...ID_SUB_THUNKS.map((r) => `IS_${r}`)];
+  for (const l of labels) assert.ok(wa.asm.labels[l] !== undefined, l);
+  const r = x20IsaGate(mem, labels.map((l) => wa.asm.labels[l]), inOurs, code);
+  assert.deepEqual(r.rejects.map((i) => `${i.at.toString(16)} ${i.name} ${i.why}`), []);
+  // every class-mask site's register and mask has its thunk (the recipe and window A agree)
+  for (const s of R.features.id_masks!.sites) assert.ok(wa.asm.labels[(s.value as { jsr: string }).jsr] !== undefined, s.what);
+  // the caption data: entries, plans and blocks at the address it is read from; the stop formula checked
+  const d = x20DynData([{ id: 6, name: 'T', plans: [{ knob: 2, mask: [2, 3], sa: 0, n: 7, sb: 7, stops: 7, blocks: new Uint8Array(7 * 4 * 2).fill(0x41) }] }], 0x100e0000);
+  assert.deepEqual([...d.subarray(0, 4)], [6, 0, 1, 0]);
+  assert.equal(u32(d, 4), 0x100e0000 + 12);
+  assert.deepEqual([...d.subarray(8, 12)], [0xff, 0xff, 0xff, 0xff]);
+  assert.equal(d[13], 0b1100);
+  assert.equal(u32(d, 20), 0x100e0000 + 24);
+});
+
+test('x20 features: a recipe whose feature site overlaps a base site it does not replace is refused', () => {
+  const f = file();
+  f.features!.categories!.replaces = [];
+  assert.throws(() => parseRecipe(f), /overlaps the base site 0x270df8/);
+  const g = file();
+  g.features!.unmute!.sites = [...g.features!.unmute!.sites, { ...g.features!.title_rom!.sites[0] }];
+  assert.throws(() => parseRecipe(g), /overlap/);
 });
 
 test('cf_asm: btst #n takes only the ISA_A modes (an absolute address froze hardware)', () => {

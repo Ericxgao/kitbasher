@@ -506,6 +506,470 @@
    "0x2abbe4": "$800(a5): a5 is the base patched at 0x2abbe0 to the moved records"
   }
  },
+ "features": {
+  "unmute": {
+   "about": "MUTE-mode TRIG keys act on press, and the sequencer's mute word changes at once. Stock X.20 B sets only the key's LED bit on press and toggles the mute on release (0x29dace -> 0x231f28), then the sequencer copies the mask ($295a, read when a trig plays) only when it next drains its message queue, so a panel mute lands as late as the key is held. Checked on hardware with the same routines.",
+   "sites": [
+    {
+     "group": "unmute",
+     "at": "0x231b0c",
+     "old": "3141245e4a2824a2",
+     "new": {
+      "parts": [
+       {
+        "jsr": "PMUTE"
+       },
+       {
+        "nop": 1
+       }
+      ]
+     },
+     "what": "panel mute (0x231ae6): the sequencer's mute word at once -> PMUTE"
+    },
+    {
+     "group": "unmute",
+     "at": "0x29daaa",
+     "old": "671e",
+     "new": {
+      "hex": "661e"
+     },
+     "what": "MUTE-mode TRIG key: toggle on press (beq -> bne)"
+    },
+    {
+     "group": "unmute",
+     "at": "0x29daac",
+     "old": "7001e9a8",
+     "new": {
+      "hex": "6000f9fa"
+     },
+     "what": "MUTE-mode TRIG key: release goes to the handler exit (bra.w 0x29d4a8)"
+    }
+   ],
+   "anchors": [
+    {
+     "at": "0x231ae6",
+     "old": "4e56ffec206e00082d48ffec",
+     "what": "mute setter (kit ctx, mask): a0 = kit ctx"
+    },
+    {
+     "at": "0x231b14",
+     "old": "6634",
+     "what": "bne after tst.b $24a2(a0)"
+    },
+    {
+     "at": "0x231b30",
+     "old": "48682f2c",
+     "what": "pea $2f2c(a0): the sequencer ctx is kit ctx + $2f2c"
+    },
+    {
+     "at": "0x29daa8",
+     "old": "4a02",
+     "what": "tst.b d2 (press)"
+    },
+    {
+     "at": "0x29dab0",
+     "old": "322c009c80813940009c2f0c4eb900231e7e2f4c00506000f8e2",
+     "what": "press path: held bit $9c, then the sync"
+    },
+    {
+     "at": "0x29daca",
+     "old": "2f042f0c4eb900231f28508f",
+     "what": "release path: jsr 0x231f28 (toggle)"
+    },
+    {
+     "at": "0x29d4a8",
+     "old": "7001",
+     "what": "handler exit"
+    }
+   ]
+  },
+  "title_rom": {
+   "about": "Machine title: X.20 B draws a ROM-range machine (IDs 128..159, 176..191) as the name's first 3 letters plus the ROM number (id-127 / id-143), so an added machine there reads like 'TX942'. TITLEROM makes both range tests fail for added machines. Applied only when an added machine takes such an ID.",
+   "sites": [
+    {
+     "group": "title_rom",
+     "at": "0x276fb8",
+     "old": "2a040685ffffff80",
+     "new": {
+      "parts": [
+       {
+        "jsr": "TITLEROM"
+       },
+       {
+        "nop": 1
+       }
+      ]
+     },
+     "what": "machine title: no ROM number for added machines -> TITLEROM"
+    }
+   ],
+   "anchors": [
+    {
+     "at": "0x276fc0",
+     "old": "0285000000ff2c0e0686ffffffe0721fb285640017560684000000500284000000ffe88c67001754",
+     "what": "the two ROM-range tests (d5 = id-128 <= 31; ((id+0x50)&0xff)>>4 == 0) and their branches"
+    }
+   ]
+  },
+  "categories": {
+   "about": "Menu categories: added machines take the user-machine path on the category pages (USRTEST), are grouped by their category (CMP3, in place of the 3-letter name compare) and the page is titled with the category's code (TITLE, in place of the record-name pointer). Checked on hardware with the same routines.",
+   "replaces": [
+    "0x270df8"
+   ],
+   "sites": [
+    {
+     "group": "categories",
+     "at": "0x270638",
+     "old": "06800000003e0280000000ff",
+     "new": {
+      "parts": [
+       {
+        "jsr": "USRTEST"
+       },
+       {
+        "nop": 3
+       }
+      ]
+     },
+     "what": "category pages: user-machine test -> USRTEST"
+    },
+    {
+     "group": "categories",
+     "at": "0x2788a4",
+     "old": "06800000003e0280000000ff",
+     "new": {
+      "parts": [
+       {
+        "jsr": "USRTEST"
+       },
+       {
+        "nop": 3
+       }
+      ]
+     },
+     "what": "category pages: user-machine test -> USRTEST"
+    },
+    {
+     "group": "categories",
+     "at": "0x2788f0",
+     "old": "06800000003e0280000000ff",
+     "new": {
+      "parts": [
+       {
+        "jsr": "USRTEST"
+       },
+       {
+        "nop": 3
+       }
+      ]
+     },
+     "what": "category pages: user-machine test -> USRTEST"
+    },
+    {
+     "group": "categories",
+     "at": "0x2706a4",
+     "old": "4eb9002663c0",
+     "new": {
+      "jsr": "CMP3"
+     },
+     "what": "category grouping: 3-letter compare -> CMP3"
+    },
+    {
+     "group": "categories",
+     "at": "0x27890a",
+     "old": "4eb9002663c0",
+     "new": {
+      "jsr": "CMP3"
+     },
+     "what": "category grouping: 3-letter compare -> CMP3"
+    },
+    {
+     "group": "categories",
+     "at": "0x270df6",
+     "old": "d1fc002ce301",
+     "new": {
+      "jsr": "TITLE"
+     },
+     "what": "category page title -> TITLE (replaces the records site at 0x270df8)"
+    }
+   ],
+   "anchors": [
+    {
+     "at": "0x2663c0",
+     "old": "2f0a2f02226f000c",
+     "what": "strncmp(p1, p2, n): CMP3 falls through to it for X.20's own records"
+    }
+   ]
+  },
+  "id_masks": {
+   "about": "Machine-class mask tests: X.20 B classifies IDs with andi.l #M,dN (then an equality test against a class constant) and with addi.l #-0x78,dN range tests (CTR-8P, 120..123). For an added machine on 88..95 or 124..127 these would read it as an INP/MID/CTR machine; each site calls a thunk that gives the stock result for every other ID and, for an added one, a value no class constant equals (0x100; 0x80 for the -0x78 ranges). Applied only when an added machine takes such an ID.",
+   "sites": [
+    {
+     "group": "id_masks",
+     "at": "0x213236",
+     "old": "0283000000e0",
+     "new": {
+      "jsr": "IM_3_e0"
+     },
+     "what": "andi.l #$e0,d3 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x230f46",
+     "old": "0281000000e0",
+     "new": {
+      "jsr": "IM_1_e0"
+     },
+     "what": "andi.l #$e0,d1 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x27eac8",
+     "old": "0280000000e0",
+     "new": {
+      "jsr": "IM_0_e0"
+     },
+     "what": "andi.l #$e0,d0 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x27eb86",
+     "old": "0280000000e0",
+     "new": {
+      "jsr": "IM_0_e0"
+     },
+     "what": "andi.l #$e0,d0 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x213212",
+     "old": "0283000000f0",
+     "new": {
+      "jsr": "IM_3_f0"
+     },
+     "what": "andi.l #$f0,d3 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x2136a8",
+     "old": "0280000000f0",
+     "new": {
+      "jsr": "IM_0_f0"
+     },
+     "what": "andi.l #$f0,d0 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x216f7e",
+     "old": "0282000000f0",
+     "new": {
+      "jsr": "IM_2_f0"
+     },
+     "what": "andi.l #$f0,d2 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x23102e",
+     "old": "0286000000f0",
+     "new": {
+      "jsr": "IM_6_f0"
+     },
+     "what": "andi.l #$f0,d6 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x21148a",
+     "old": "0282000000f8",
+     "new": {
+      "jsr": "IM_2_f8"
+     },
+     "what": "andi.l #$f8,d2 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x27e95e",
+     "old": "0280000000f8",
+     "new": {
+      "jsr": "IM_0_f8"
+     },
+     "what": "andi.l #$f8,d0 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x270b92",
+     "old": "0281000000d0",
+     "new": {
+      "jsr": "IM_1_d0"
+     },
+     "what": "andi.l #$d0,d1 -> class-mask thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x21306e",
+     "old": "0681ffffff88",
+     "new": {
+      "jsr": "IS_1"
+     },
+     "what": "addi.l #-$78,d1 (CTR-8P range) -> thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x217538",
+     "old": "0684ffffff88",
+     "new": {
+      "jsr": "IS_4"
+     },
+     "what": "addi.l #-$78,d4 (CTR-8P range) -> thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x217dfa",
+     "old": "0681ffffff88",
+     "new": {
+      "jsr": "IS_1"
+     },
+     "what": "addi.l #-$78,d1 (CTR-8P range) -> thunk"
+    },
+    {
+     "group": "id_masks",
+     "at": "0x230d8c",
+     "old": "0680ffffff88",
+     "new": {
+      "jsr": "IS_0"
+     },
+     "what": "addi.l #-$78,d0 (CTR-8P range) -> thunk"
+    }
+   ],
+   "anchors": [
+    {
+     "at": "0x21323c",
+     "old": "7a60ba83660476606022",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x230f4c",
+     "old": "20417260b28867567207",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x27eace",
+     "old": "7260b280670001164a87",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x27eb8c",
+     "old": "7260b28067584a87664a",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x213218",
+     "old": "326a11c67a70ba83660a",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x2136ae",
+     "old": "7270b280660e42801002",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x216f84",
+     "old": "7a70ba82670000ee43f2",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x231034",
+     "old": "20467c70bc8866100280",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x211490",
+     "old": "20427478b488660e5381",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x27e964",
+     "old": "7278b2806614600000d6",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x270b98",
+     "old": "7450b48167b422000281",
+     "what": "the class constant and the equality branch after the mask"
+    },
+    {
+     "at": "0x213074",
+     "old": "0281000000ffe489",
+     "what": "the CTR-8P range test after the subtraction"
+    },
+    {
+     "at": "0x21753e",
+     "old": "42801004e4886718",
+     "what": "the CTR-8P range test after the subtraction"
+    },
+    {
+     "at": "0x217e00",
+     "old": "0281000000ffe489",
+     "what": "the CTR-8P range test after the subtraction"
+    },
+    {
+     "at": "0x230d92",
+     "old": "7c03bc8065387c07",
+     "what": "the CTR-8P range test after the subtraction"
+    }
+   ]
+  },
+  "dyn_labels": {
+   "about": "Dynamic knob labels: the parameter page's setup (0x229a6c) looks a machine's record up with findRec (0x217cee) at 0x229a9e; DLREC calls it and, for a machine with dynamic labels, copies the record's names into a RAM buffer, overlays the captions of the stop each labelled knob's MODE is on (the packs' formula) and points rec+8 at the buffer. Caption data in E12B flash, read through the alias from the UI task only. Checked on hardware with the same routines.",
+   "sites": [
+    {
+     "group": "dyn_labels",
+     "at": "0x229aa0",
+     "old": "00217cee",
+     "new": {
+      "u32": "DLREC"
+     },
+     "what": "page setup: record lookup -> DLREC"
+    }
+   ],
+   "anchors": [
+    {
+     "at": "0x229a6c",
+     "old": "4fefffc848d77cfc266f003c286f0040",
+     "what": "page setup: a3/a4 = args (a4 = page)"
+    },
+    {
+     "at": "0x229a8a",
+     "old": "206c0060d1fc002d7348142808b342851a022f05",
+     "what": "page setup: id = kit ID of track $60(a4), pushed"
+    },
+    {
+     "at": "0x229a9e",
+     "old": "4eb900217cee2c40",
+     "what": "page setup: jsr findRec; a6 = rec"
+    },
+    {
+     "at": "0x229ba8",
+     "old": "226f003020690008d1c0",
+     "what": "knob setup reads *(rec+8) + 5p"
+    },
+    {
+     "at": "0x217dc6",
+     "old": "41f2ac00224020290008d088",
+     "what": "name lookup reads *(rec+8) + 5p"
+    },
+    {
+     "at": "0x217cee",
+     "old": "2f032f02242f000c",
+     "what": "findRec(id) entry"
+    },
+    {
+     "at": "0x276720",
+     "old": "4eb900229a6c",
+     "what": "painter calls page setup"
+    }
+   ]
+  }
+ },
  "sites": [
   {
    "group": "stack",
@@ -1117,12 +1581,19 @@
   },
   {
    "group": "hook",
-   "at": "0x29475a",
-   "old": "002b0d04",
+   "at": "0x294758",
+   "old": "41f9002b0d0428300c00",
    "new": {
-    "u32": "HTAB"
+    "parts": [
+     {
+      "jsr": "HTAB"
+     },
+     {
+      "nop": 2
+     }
+    ]
    },
-   "what": "class handler table"
+   "what": "class handler fetch (lea table,a0; move.l (a0,d0.l*4),d4) -> HTAB: X.20's own table for its classes, the knob callback for ours"
   },
   {
    "group": "usr",
@@ -1324,5 +1795,18 @@
    },
    "what": "USR install: menu valid"
   }
- ]
+ ],
+ "category_family": {
+  "KIK": "TRX",
+  "SNR": "TRX",
+  "HAT": "TRX",
+  "PRC": "TRX",
+  "FM": "EFM",
+  "SYN": "GND",
+  "WAV": "GND",
+  "VOX": "GND",
+  "PHY": "GND",
+  "FX": "NFX",
+  "OTH": "GND"
+ }
 }

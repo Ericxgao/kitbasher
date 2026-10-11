@@ -44,7 +44,7 @@ import { parseLayout, type Layout } from '../../engine/src/layout.js';
 import { num } from '../../engine/src/bytes.js';
 import { select } from '../../engine/src/selection.js';
 import { parseRecipe, recipeFor, type X20Recipe, type X20RecipeFile } from '../../engine/src/x20_recipe.js';
-import { buildX20, findX20Layout, planX20, readX20, trimX20Bank, x20E12Bank, x20IdSlots, X20FlashError, type X20Plan, type X20Report, type X20Trimmed } from '../../engine/src/x20.js';
+import { buildX20, findX20Layout, planX20, readX20, trimX20Bank, X20_CATEGORIES, x20E12Bank, x20IdSlots, X20FlashError, type X20Plan, type X20Report, type X20Trimmed } from '../../engine/src/x20.js';
 import { sha256 } from '../../engine/src/bytes.js';
 
 interface Data { bases: BaseSet; packs: Pack[]; core: CorePack | null; source: { commit: string } }
@@ -99,10 +99,10 @@ const x20Trims = new Map<string, X20Trimmed>();  // per trim setting
 type X20Built = { output: Uint8Array; report: X20Report; x20: true };
 type AnyBuild = BuildResult | X20Built;
 /** what X.20 B does not have, and why: shown where the option would be */
-const X20_OFF = 'Not available on MDX OS X.20 B: the unmute-latency fix, MIDI chromatic note input and pitch note names ' +
-  '(the recipe does not patch X.20\'s sequencer, MIDI input or parameter display). ' +
+const X20_OFF = 'Not available on MDX OS X.20 B: MIDI chromatic note input and pitch note names ' +
+  '(the recipe does not patch X.20\'s MIDI input or parameter display). ' +
   'Reusing the stock INP IDs 80..85 is not offered either: the stock INP machine would stay in the menu on the same ID.';
-const X20_FIXED_WHY = 'new, renamed or reordered categories, and the order of machines within a family (the recipe sets each machine\'s family only)';
+const X20_FIXED_WHY = 'new, renamed or reordered categories, and the order of machines within a category (the recipe sets each machine\'s category only)';
 /** an OS is loaded: a 1.63-lineage base or an X.20 recipe file */
 const loaded = (): boolean => !!fw || !!x20;
 /** a plan that passed (the build may still find storage short) */
@@ -350,11 +350,13 @@ function syncChromaOption(): void {
   // on X.20 B the options are shown turned off, with the reason ($('x20-unavailable'))
   $('midi-chroma-option').hidden = !x20 && !base?.support.midiChroma?.ok;
   $('pitch-labels-option').hidden = !x20 && !base?.support.pitchLabels?.ok;
-  for (const id of ['midi-chroma', 'pitch-labels', 'unmute-fix']) {
+  for (const id of ['midi-chroma', 'pitch-labels']) {
     const box = $<HTMLInputElement>(id);
     box.disabled = !!x20;
     if (x20) box.checked = false;
   }
+  // X.20 B has its own unmute fix (the recipe's unmute feature: MUTE-mode TRIG keys act on press)
+  $<HTMLInputElement>('unmute-fix').disabled = false;
   $('x20-unavailable').hidden = !x20;
   $('x20-unavailable').textContent = x20 ? X20_OFF : '';
 }
@@ -613,7 +615,7 @@ async function onFile(f: File): Promise<void> {
       if (request !== fileRequest) return;
       x20 = recipe; x20R = R; x20Bank = bank0;
       input = bytes; inputName = f.name;
-      layoutEd.setX20({ id: R.id, name: R.name, families: Object.keys(R.families), slots: x20IdSlots(R), why: X20_FIXED_WHY });
+      layoutEd.setX20({ id: R.id, name: R.name, families: R.features.categories ? X20_CATEGORIES : Object.keys(R.families), slots: x20IdSlots(R), why: X20_FIXED_WHY });
       try { samples.setBank(x20E12Bank(R, bank0)); }
       catch (e) { samples.setBank(null, `Sample swapping is not available for this file: ${(e as Error).message}`); }
       $('firmware-info').textContent = `${R.name}: a public beta OS. Kitbasher patches this exact file with a fixed recipe. ` +
@@ -760,6 +762,7 @@ function buildWith(trim: TrimOptions): Promise<AnyBuild> {
   const uw = uwForBuild(uwAnswer);
   if (x20) {
     return buildX20(input!, x20, data.packs, data.core!, { uw, exclude: excludes(), layout: layoutEd.mapForPlan(),
+      features: { unmute: $<HTMLInputElement>('unmute-fix').checked },
       trim: { db: trim.db, minSeconds: trim.minSeconds, cap: trim.cap }, samples: samples.edits() }).then((r): X20Built => ({ ...r, x20: true }));
   }
   return build(input!, base!, data.packs, data.core!,
@@ -937,6 +940,8 @@ function downloadX20(result: X20Built, t: number): void {
   status(`Built in ${((performance.now() - t) / 1000).toFixed(1)} s. Untested on hardware.`, 'ok');
 }
 
+const X20_FEATURE_NAMES: Record<string, string> = { unmute: 'the unmute fix (MUTE-mode TRIG keys act on press)', categories: 'menu categories',
+  dyn_labels: 'dynamic knob labels', id_masks: 'the class-mask fix for IDs 88..95', title_rom: 'the machine-title fix' };
 function x20ReportView(r: X20Report): HTMLElement {
   const stat = (k: string, v: string): HTMLElement => el('div', { class: 'stat' }, el('span', { class: 'k' }, k), el('span', { class: 'v' }, v));
   return el('div', { class: 'report' },
@@ -953,7 +958,8 @@ function x20ReportView(r: X20Report): HTMLElement {
     el('details', {}, el('summary', {}, `Checks (${r.gates.filter((g) => g.ok).length} of ${r.gates.length} passed)`),
       el('ul', { class: 'gates' }, ...r.gates.map((g) => el('li', {}, el('b', {}, g.ok ? g.name : `FAILED: ${g.name}`), ' ', g.detail)),
         ...r.notes.map((n) => el('li', {}, n)))),
-    el('details', {}, el('summary', {}, `Menu: your machines in ${r.menus.filter((f) => f.machines.length).length} of X.20's families, layout table at ${r.flash.layout ?? 'none'}`),
+    el('p', { class: 'note', id: 'report-features' }, r.features.length ? `Fixes and features in this build: ${r.features.map((f) => X20_FEATURE_NAMES[f.name] ?? f.name).join(', ')}.` : 'No optional fixes in this build.'),
+    el('details', {}, el('summary', {}, `Menu: your machines in ${r.menus.filter((f) => f.machines.length).length} categories, layout table at ${r.flash.layout ?? 'none'}`),
       el('ul', { class: 'gates', id: 'report-menus' }, ...r.menus.filter((f) => f.machines.length).map((f) => el('li', {}, el('b', {}, f.name), ' ', f.machines.join(', '))))),
     el('details', {}, el('summary', {}, 'Machine IDs'),
       el('table', { class: 'ids' }, el('tr', {}, el('th', {}, 'Machine'), el('th', {}, 'Family'), el('th', {}, 'ID')),
@@ -984,7 +990,7 @@ function projectNow(): Project {
     midiChroma: !x20 && chromaTicked() ? { channel: chromaChannel } : undefined,
     pitchLabels: !x20 && labelsTicked() ? true : undefined,
     // saved only when off, the default being on
-    unmuteFix: x20 || $<HTMLInputElement>('unmute-fix').checked ? undefined : false,
+    unmuteFix: $<HTMLInputElement>('unmute-fix').checked ? undefined : false,
   };
 }
 
@@ -1049,7 +1055,7 @@ function applyProject(p: Project, name: string): boolean {
   chromaChannel = p.midiChroma?.channel ?? MIDI_CHROMA_CHANNEL;
   $<HTMLInputElement>('pitch-labels').checked = !x20 && !!p.pitchLabels;
   projectUnmute = p.unmuteFix !== false;
-  $<HTMLInputElement>('unmute-fix').checked = !x20 && projectUnmute;
+  $<HTMLInputElement>('unmute-fix').checked = projectUnmute;
   const want = new Set(p.models);
   const have = new Set(boxes().map((i) => i.dataset.module!));
   if (p.uw !== undefined) fileAnswer(p.uw, name);
