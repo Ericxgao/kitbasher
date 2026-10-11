@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MDS machine library · Kitbasher</title>
+<meta name="description" content="Choose community and core MDS machines, arrange your Machinedrum bank, check capacity, and install over MIDI from Chrome.">
+<link rel="canonical" href="https://kitbasher.xyz/mds.html">
+<meta name="theme-color" content="#20252b">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem('kitbasher-theme')==='dark'?'dark':'light'}catch(e){}</script>
+<!-- app-styles -->
+<link rel="stylesheet" href="mds.css">
+</head>
+<body class="bench mds-page"><main>
+  <header class="page-head"><a class="brand" href="index.html">Kitbasher</a><button type="button" id="theme-toggle" class="theme-toggle">Dark mode</button></header>
+  <nav class="site-nav" aria-label="Main navigation"><a href="index.html">Firmware builder</a><a href="mds.html" aria-current="page">MDS machines</a></nav>
+  <h1 class="sr-only">MDS machines</h1>
+  <p id="mds-status" role="status" aria-live="polite">Loading the machine library…</p>
+  <div class="mds-workspace">
+    <section class="mds-library" aria-labelledby="library-title">
+      <div class="mds-section-head"><h2 id="library-title">Choose machines <span id="catalog-count"></span></h2><details class="mds-library-menu"><summary>More options</summary><div><label>Show<select id="collection-filter"><option value="all">All machines</option><option value="core">Core</option><option value="community">Community</option><option value="local">My imports</option></select></label><label>Sort<select id="machine-sort"><option value="curated">Default order</option><option value="name">Name</option><option value="smallest">Smallest first</option><option value="cpu">Lowest CPU cost</option></select></label><label class="mds-file">Import machines<input type="file" id="import-machines" accept=".syx,.mds" multiple></label></div></details></div>
+      <div class="mds-filters"><label class="mds-search"><span class="sr-only">Find a machine</span><input id="machine-search" type="search" placeholder="Search machines"></label><label><span class="sr-only">Family</span><select id="family-filter"><option value="all">All families</option></select></label><button type="button" id="add-family" hidden>Add family</button></div>
+      <div class="mds-table-wrap" tabindex="0" role="region" aria-label="Available machines"><table class="mds-table"><thead><tr><th scope="col">Machine</th><th scope="col"><span class="sr-only">Selection</span></th></tr></thead><tbody id="machine-list"></tbody></table></div>
+      <p id="empty-library" hidden>No machines match. Try another family or search.</p>
+      <details class="mds-about"><summary>About &amp; contribute</summary><p>Extra sounds for Machinedrum X.20. Click a machine name for controls, credits and source links.</p><p><a href="https://github.com/etcetc000/kitbasher/blob/main/mds/README.md" target="_blank" rel="noopener">Contribute a machine</a> · <a href="https://github.com/jmamma/MDS" target="_blank" rel="noopener">MDS documentation</a> · <a href="https://github.com/etcetc000/kitbasher">Kitbasher source</a></p></details>
+    </section>
+    <aside class="mds-bank" aria-labelledby="bank-title">
+      <div class="mds-section-head"><h2 id="bank-title">Your selection</h2><span id="selection-count">0 selected</span></div>
+      <div class="mds-bank-tools"><p id="reorder-hint" hidden>Drag to reorder.<span class="sr-only"> Arrow keys move a focused slot.</span></p><details class="mds-bank-menu"><summary>Options</summary><div><label>First slot<select id="start-slot" aria-label="First destination slot"></select></label><button type="button" id="sort-selection">Sort A–Z</button><button type="button" id="clear-selection">Clear selection</button><button type="button" id="download-bank" disabled>Download machines</button><details class="mds-memory-details"><summary>Memory details</summary><p id="capacity-mode"></p><div id="capacity-meters" class="mds-capacity"></div></details></div></details></div>
+      <p id="empty-bank">Add machines from the list.</p>
+      <ol id="bank-slots" aria-label="Machine Bank slots"></ol>
+      <div class="mds-bank-bottom">
+        <div id="space-summary" class="mds-meter"></div>
+        <p id="bank-problems" role="status"></p>
+        <details id="connection" class="mds-midi-settings" hidden><summary>MIDI settings</summary><div class="mds-connection">
+          <label>Send to Machinedrum IN<select id="midi-output" aria-label="MIDI output"></select></label>
+          <label>Receive from Machinedrum OUT<select id="midi-input" aria-label="MIDI input"></select></label>
+        </div><button type="button" id="disconnect-midi" hidden>Disconnect</button></details>
+        <p id="midi-status" role="status" aria-live="polite">Connect your MIDI interface to both IN and OUT on your Machinedrum.</p>
+        <details id="midi-help"><summary>Connection help</summary><p>Use Chrome and Machinedrum X.20. Plug your MIDI interface into your computer, then connect both cables:</p><ul><li>Interface OUT → Machinedrum IN</li><li>Machinedrum OUT → interface IN</li></ul><p>Click Connect MIDI and allow access when Chrome asks.</p></details>
+        <p id="send-hint" hidden>Choose the bank on your Machinedrum. Sending replaces the selected slots.</p>
+        <button type="button" id="flash-machines" class="mds-primary" aria-describedby="midi-status" disabled>Loading machines…</button>
+        <section id="transfer-panel" class="mds-transfer" aria-labelledby="transfer-title" hidden><h2 id="transfer-title">Installing machines</h2><progress id="transfer-progress" max="1" value="0"></progress><p id="transfer-status" role="status" aria-live="polite"></p><button type="button" id="stop-transfer">Stop after this machine</button></section>
+      </div>
+    </aside>
+  </div>
+</main>
+<dialog id="machine-details" aria-labelledby="detail-title"><div class="mds-dialog-head"><h2 id="detail-title"></h2><button type="button" id="close-details" aria-label="Close machine details">Close</button></div><div id="detail-body"></div></dialog>
+<script type="module" src="mds.js"></script>
+</body></html>

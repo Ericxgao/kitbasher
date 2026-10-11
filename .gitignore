@@ -8,3 +8,4 @@ build/
 .local/
 .venv/
 !catalog/uw/*.syx
+!mds/**/*.syx

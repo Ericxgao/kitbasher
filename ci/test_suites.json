@@ -1,5 +1,6 @@
 {
   "unit": [
+    "mds",
     "catalog",
     "golden_catalog",
     "browse",
