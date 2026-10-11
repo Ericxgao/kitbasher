@@ -653,7 +653,15 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
     writes.push([s.at, b]);
     if (isCode(s.value)) siteCode.push({ at: s.at, bytes: b });
   }
-  const st = stageCode(R, writeList(writes), preC.map((c) => R.flashAlias + c.at), postC.map((c) => R.flashAlias + c.at), wa, boot.receiver);
+  // The stage code reads its chunks while X.20's loader still runs: flash at its own address (0x0..), not the
+  // 0x10000000 alias, which the OS maps only later (the emulator maps it from the start; real hardware froze
+  // on the first logo). Code that runs under the OS (COPYLIST, ...) keeps the alias.
+  const bootReads = [...preC, ...postC].map((c) => c.at);
+  const aliased = bootReads.filter((a) => a >= R.flashAlias || a < E12B_FLASH || a >= E12B_END);
+  gates.push({ name: 'boot-time chunk reads: flash at its own address (no alias, inside E12B)', ok: !aliased.length,
+    detail: aliased.length ? aliased.map(h).join(', ') : `${bootReads.length} chunks` });
+  if (aliased.length) throw new Error(`boot-time chunks must be read at flash's own address: ${aliased.map(h).join(', ')}`);
+  const st = stageCode(R, writeList(writes), bootReads.slice(0, preC.length), bootReads.slice(preC.length), wa, boot.receiver);
 
   // ---- gate: ISA_A over everything the ColdFire runs that the build adds
   const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM'].map((n) => wa.asm.labels[n]), wa.knobcb];
