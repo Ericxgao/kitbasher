@@ -1,6 +1,7 @@
 # Documentation
 
 - [Supported bases](BASES.md): which OS versions Kitbasher patches, and what each supports
+- [Firmware versioning](VERSIONING.md): the K.01 identity and source OS provenance
 - [Models](MODELS.md): the model families with source in this repository, their credits and licenses
 - [Model packs](MODEL-PACKS.md): loading packs in the browser and the CLI, bundling them, and the memory a model can declare
 - [Architecture](ARCHITECTURE.md): how a build works, the checks it runs, and where the code lives

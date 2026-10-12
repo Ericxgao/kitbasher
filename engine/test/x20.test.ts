@@ -11,6 +11,7 @@ import { decodeLinear } from '../src/isa.js';
 import { loadPacks } from '../src/node.js';
 import { sha256, u32 } from '../src/bytes.js';
 import { Asm } from '../src/cf_asm.js';
+import { VERSION_WORDS } from '../src/firmware_version.js';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const file = (): X20RecipeFile => JSON.parse(readFileSync(join(ROOT, 'bases/x20.json'), 'utf8'));
@@ -56,7 +57,7 @@ test('x20: recipe expressions', () => {
 test('x20: every site is as long as its anchor, and every code site decodes as ISA_A (no move #imm,(d16,An))', () => {
   const M = x20Map(R, 25, 0x124c06);
   const wa = windowA(R, M, new Map([[6, 0], [42, 10]]), Buffer.from('4e75'.repeat(32), 'hex'), 0xe6868);
-  const names: Record<string, number> = { STACK: M.stack, RECS: M.recs, CAP: M.cap, MENU: M.menu, M_U: M.mU, M_L: M.mL,
+  const names: Record<string, number> = { ...VERSION_WORDS, STACK: M.stack, RECS: M.recs, CAP: M.cap, MENU: M.menu, M_U: M.mU, M_L: M.mL,
     LIST: M.list, LIST_N: M.listN, BANK_END: 0x124c06, HTAB: wa.htab };
   const code: { at: number; bytes: Uint8Array }[] = [];
   const writes: [number, Uint8Array][] = [];
@@ -87,7 +88,7 @@ test('x20 features: every routine and site with all features on is ISA_A, fits w
   const feat = { unmute: true, titleRom: true, categories: { catidx, codes: X20_CATEGORIES }, idMasks: [88], dynLabels: { dataAt: 0x100e6f8c, models: 8 } };
   const wa = windowA(R, M, ours, Buffer.from('4e75'.repeat(32), 'hex'), 0xe6868, feat);
   assert.ok(R.ram.window[0] + wa.asm.bytes.length <= R.ram.window[1], `window A: ${wa.asm.bytes.length} bytes`);
-  const names: Record<string, number> = { STACK: M.stack, RECS: M.recs, CAP: M.cap, MENU: M.menu, M_U: M.mU, M_L: M.mL,
+  const names: Record<string, number> = { ...VERSION_WORDS, STACK: M.stack, RECS: M.recs, CAP: M.cap, MENU: M.menu, M_U: M.mU, M_L: M.mL,
     LIST: M.list, LIST_N: M.listN, BANK_END: 0x124c06, HTAB: wa.htab, DLREC: wa.asm.labels.DLREC };
   const all = (['unmute', 'title_rom', 'categories', 'id_masks', 'dyn_labels'] as const);
   const code: { at: number; bytes: Uint8Array }[] = [];
