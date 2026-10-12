@@ -1,7 +1,6 @@
 ; TX6 CP - Simple606-inspired MDS voice for X.20, version 2.0.
-; New layer controls preserve version 1.0 audio at their defaults.
-; BODY: 0 = remove this layer; 127 = original layer level. Captured on trigger.
-; Controls: TUNE first, DEC second. Version 1.x kits need parameter remapping.
+; 44.1 kHz filtered-noise clap. TGHT compresses the opening burst sequence, then the tail runs at its original decay speed.
+; Controls start with TUNE, DEC.
 ;
 ; MIT License
 ; 
@@ -53,18 +52,18 @@
 ; 17: fast
 ; 18: gain
 ; 19: burstgain
+; 1a: tightstep
 
-; Local instruction compaction; verify against retained native audio.
 init:
     move #>$ffffff,m6
     move #>$ffffff,m0
     clr a r6,r0
-    do #26,init_end
+    do #27,init_end
     move a1,x:(r0)+
 init_end:
     move #>$06c1a9,x0
     move x0,x:(r6+$a)
-    move #>415,x0
+    move #>106240,x0
     move x0,x:(r6+$d)
     rts
 trigger:
@@ -220,15 +219,36 @@ control_3_end:
     move y:(r6+$4),a
     asr #7,a,a
     move a1,x:(r6+$19)
+    move y:(r6+$5),a
+    asr #7,a,a
+    move a1,x0
+    asl #3,a,a
+    sub x0,a
+    asl a
+    add #>256,a
+    move a1,x:(r6+$1a)
     rts
 render:
     move #>$ffffff,m6
     move #>$ffffff,m0
     move x:(r6+$d),a
+    asr #8,a,a
     cmp #>415,a
     jge silent
     move a1,n4
-    add #>1,a
+    cmp #>45,a
+    jge tight_tail
+    move x:(r6+$d),a
+    move x:(r6+$1a),x0
+    add x0,a
+    move #>11520,x0
+    cmp x0,a
+    tgt x0,a
+    jmp tight_advance
+tight_tail:
+    move x:(r6+$d),a
+    add #>256,a
+tight_advance:
     move a1,x:(r6+$d)
     move n4,a
     cmp #>45,a
@@ -341,6 +361,7 @@ burst_level_done:
     mpyr y0,x0,a
     move a1,x:(r6+$18)
 fade_done:
+    move x:(r6+$18),n0
     move x:(r6+$a),x0
     move #>$200000,y1
     move #>$fd43fd,y0
@@ -373,25 +394,19 @@ noise_end:
     asl a
     add b,a a1,y0
     move a1,y1
-    mpy x0,y1,a a1,y:(r5)+
+    mpy x0,y1,a (r5)+
     move x:(r3)+,x0
     asl a x1,b
     add b,a (r3)+n3
     mpy x0,y1,a a1,b
     asl a
-    sub y0,a
-    move a1,x1
+    sub y0,a n0,x0
+    mpy x0,y1,a a1,x1
+    asl #4,a,a
+    move a,y:(r7)+
 filter_end:
     move b1,x:(r6+$b)
     move x1,x:(r6+$c)
-    move x:(r6+$18),x0
-    move #>mds_scratch_y,r5
-    do #32,mix_end
-    move y:(r5)+,y0
-    mpy y0,x0,a
-    asl #4,a,a
-    move a,y:(r7)+
-mix_end:
     rts
 silent:
     clr a

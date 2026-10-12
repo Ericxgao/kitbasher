@@ -45,17 +45,26 @@
       "transform": "raw14",
       "control": "continuous",
       "linked": false
+    },
+    {
+      "name": "TGHT",
+      "default": 0,
+      "min": 0,
+      "max": 127,
+      "transform": "raw14",
+      "control": "continuous",
+      "linked": false
     }
   ],
   "machine_version": "2.0",
-  "max_track_cycles": 3936,
+  "max_track_cycles": 3944,
   "program": {
     "abi_version": 1,
     "init_symbol": "init",
     "trig_symbol": "trigger",
     "render_symbol": "render",
-    "x_workset_words": 26,
-    "y_workset_words": 5,
+    "x_workset_words": 27,
+    "y_workset_words": 6,
     "relocations": [
       {
         "symbol": "init",
@@ -91,43 +100,43 @@
       },
       {
         "symbol": "init",
-        "word_delta": 201
+        "word_delta": 211
       },
       {
         "symbol": "init",
-        "word_delta": 210
+        "word_delta": 216
       },
       {
         "symbol": "init",
-        "word_delta": 219
+        "word_delta": 225
       },
       {
         "symbol": "init",
-        "word_delta": 236
+        "word_delta": 234
       },
       {
         "symbol": "init",
-        "word_delta": 240
+        "word_delta": 243
       },
       {
         "symbol": "init",
-        "word_delta": 247
+        "word_delta": 260
       },
       {
         "symbol": "init",
-        "word_delta": 276
+        "word_delta": 264
       },
       {
         "symbol": "init",
-        "word_delta": 280
+        "word_delta": 271
       },
       {
         "symbol": "init",
-        "word_delta": 296
+        "word_delta": 300
       },
       {
         "symbol": "init",
-        "word_delta": 307
+        "word_delta": 304
       },
       {
         "symbol": "init",
@@ -135,53 +144,51 @@
       },
       {
         "symbol": "init",
-        "word_delta": 323
+        "word_delta": 331
       },
       {
         "symbol": "init",
-        "word_delta": 337
+        "word_delta": 344
       },
       {
         "symbol": "init",
-        "word_delta": 364
+        "word_delta": 347
       },
       {
         "symbol": "init",
-        "word_delta": 384
+        "word_delta": 363
       },
       {
         "symbol": "init",
-        "word_delta": 392
+        "word_delta": 390
+      },
+      {
+        "symbol": "init",
+        "word_delta": 411
       }
     ],
     "imports": [
       {
         "symbol": "init",
-        "word_delta": 335,
+        "word_delta": 361,
         "abi_symbol": 8,
         "kind": 4
       },
       {
         "symbol": "init",
-        "word_delta": 348,
+        "word_delta": 374,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 360,
+        "word_delta": 386,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 362,
-        "abi_symbol": 8,
-        "kind": 4
-      },
-      {
-        "symbol": "init",
-        "word_delta": 382,
+        "word_delta": 388,
         "abi_symbol": 8,
         "kind": 4
       }
@@ -201,30 +208,31 @@
       "control_1_end": 45,
       "control_2_end": 64,
       "control_3_end": 84,
-      "render": 193,
-      "no_tail_start": 215,
-      "no_tail_decay": 224,
-      "foundation_onset": 248,
-      "foundation_inject": 249,
-      "foundation_advance": 255,
-      "air_ready": 278,
-      "burst_ready": 298,
-      "burst_level_done": 312,
-      "fade_done": 329,
-      "noise_end": 346,
-      "filter_end": 378,
-      "mix_end": 389,
-      "silent": 390,
-      "zero_end": 394,
-      "control_1": 395,
-      "control_2": 523,
-      "control_3": 715,
-      "burst_table": 1035,
-      "air_table": 2571,
-      "fade_table": 2807
+      "render": 202,
+      "tight_tail": 226,
+      "tight_advance": 229,
+      "no_tail_start": 239,
+      "no_tail_decay": 248,
+      "foundation_onset": 272,
+      "foundation_inject": 273,
+      "foundation_advance": 279,
+      "air_ready": 302,
+      "burst_ready": 322,
+      "burst_level_done": 336,
+      "fade_done": 353,
+      "noise_end": 372,
+      "filter_end": 406,
+      "silent": 409,
+      "zero_end": 413,
+      "control_1": 414,
+      "control_2": 542,
+      "control_3": 734,
+      "burst_table": 1054,
+      "air_table": 2590,
+      "fade_table": 2826
     },
-    "program_words": 2823,
-    "program_sha256": "667cc276fe15b269848ca36b5afa1e4e6f1f0075e070a2b3b3ad51bf0aebd90d",
+    "program_words": 2842,
+    "program_sha256": "fdb3947646fd5df87a8ce0d40547a9a7d986ffb8eee7762831ef57073e676526",
     "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Pass packed big-endian 24-bit words and symbols to upstream MDS tools/mds_pack.py, then export with tools/mds_to_syx.py --slot 8."
   },
   "_controls": [
@@ -234,13 +242,21 @@
       "resolution": 128,
       "behavior": "0 = remove this layer; 127 = original layer level.",
       "update": "Captured on trigger."
+    },
+    {
+      "name": "TGHT",
+      "default": 0,
+      "resolution": 128,
+      "behavior": "0 = original burst spacing; 127 = tightest spacing. Main tail starts at 32.65 ms at 0 and 4.35 ms at 127; its decay speed is unchanged.",
+      "update": "Captured on trigger."
     }
   ],
   "_validation": {
-    "status": "Control reorder verified against previous release; version 2.0 hardware audition pending.",
+    "status": "Simulator-qualified full-rate revision; hardware audition pending.",
+    "hardware_tested": false,
     "timing": {
-      "measured_model_max_clocks": 3918,
-      "declared_max_clocks": 3936,
+      "measured_model_max_clocks": 3926,
+      "declared_max_clocks": 3944,
       "limit": 3951,
       "scope": "Actual X.20 dispatcher P:$6b through P:$e1, DMA handshakes ready, empty 8x128 instruction cache, additive interlocks, 3 waits per external instruction miss AND external data word, plus 64-clock output-transfer reserve. Busywait latency and interrupts are system scheduling, not bounded here; no hardware timing claim.",
       "dispatcher_flags_tested": 128,
@@ -248,111 +264,52 @@
       "physical_wait_states_verified": false
     },
     "tests": {
-      "controls": 589,
-      "samples": 1828256,
+      "machine": "cp",
+      "controls": 732,
+      "samples": 2272128,
       "peak": 0.6150722503662109,
       "clipped_samples": 0,
       "guards_and_parameters": true,
       "dirty_entry_registers": true,
       "init_silent": true,
       "retrigger": true,
-      "tracer_audio_cycles_equal": true
+      "tracer_audio_cycles_equal": true,
+      "asm_sha256": "73201a0925af36c7f3917f2794b4561553e0a4fb100a63fed69dadb9575c6807"
     },
     "long_tail": {
-      "cases": 9,
       "seeds": [
         1,
         1193046,
         6317574,
         8388607
       ],
-      "samples": 2359296,
-      "peak": 0.5019794702529907,
+      "samples": 524288,
+      "peak": 0.5148570537567139,
       "clipped_samples": 0,
-      "layer_contracts": true
-    },
-    "default_preservation": {
-      "reference": "Original version 1.0 installed bank; PR #21",
-      "method": "Bit-exact full-duration PCM at original default and maximum controls, with added controls at defaults; four RNG seeds.",
-      "results": [
-        {
-          "case": "default",
-          "seed": 1,
-          "sha256": "f19ddb6d9a5c7d29ede2e9dcbf2b51c0a74bf1c334257d35ad4904e0198c24c1",
-          "bytes": 262144
-        },
-        {
-          "case": "default",
-          "seed": 1193046,
-          "sha256": "f25fcd94524e5ffa0f3e1491c5240c11fe3edbce05480b02b1f7c683ac6c9c5c",
-          "bytes": 262144
-        },
-        {
-          "case": "default",
-          "seed": 6317574,
-          "sha256": "343b68ef934a19000a4ae575519185d373536cfe83fe8d8ebd43d47980bd80a6",
-          "bytes": 262144
-        },
-        {
-          "case": "default",
-          "seed": 8388607,
-          "sha256": "e78cae555f08d6fe6dcb02f20ac0d17fc942eca86bcdcab66939853d7e1bd635",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 1,
-          "sha256": "738ce4be85b3c1a0104a92d35d1fd027448adbd2256921b1445505a00db78a62",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 1193046,
-          "sha256": "ff8647f3a5d078d633d2aa1428815574b9e850510dfc85f800dc8cbde9f89b9d",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 6317574,
-          "sha256": "59e4b3d397d549602dfe28f7e36f17c4ce5e546c580819b648c3683cf7dc8b19",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 8388607,
-          "sha256": "b0d3da97bdb12689635bda0319c6aa1e1bd5b606815735afc4aed863b6300047",
-          "bytes": 262144
-        }
-      ]
-    },
-    "hardware_tested": false,
-    "control_order": {
-      "previous_version": "1.1",
-      "new_to_old_positions": [
-        2,
-        1,
-        3,
-        4
+      "ends_silent": true,
+      "cases": 8,
+      "all_128_tight_values_monotonic": true,
+      "tail_onset_ms_endpoints": [
+        32.6530612244898,
+        4.353741496598639
       ],
-      "changed_instruction_words": [
-        29,
-        45,
-        158,
-        177
-      ],
-      "cases": 19,
-      "samples": 622592,
-      "audio_sha256": "17f7ba98309edfc9b31ccdf61dbfd635a41ac4dda961c7e5d3eead67c4b5d31c",
-      "bitexact_audio": true,
-      "identical_emulator_cycles": true,
-      "unchanged_instruction_layout": true,
-      "unchanged_memory_requirements": true
+      "muted_layers_silent": true
+    },
+    "qualified_program_sha256": "fdb3947646fd5df87a8ce0d40547a9a7d986ffb8eee7762831ef57073e676526",
+    "audio_sample_rate": 44100,
+    "tight_zero_parity": {
+      "cases": 13,
+      "samples": 425984,
+      "bitexact": true,
+      "sha256": "0843f983c3f069995728d56f15825b3a68cb0dc5b9acf481dc3339099d9a056e"
     }
   },
   "_design": {
-    "strategy": "Expose existing layers without additional sample-loop synthesis. Preserve version 1.0 audio at new-control defaults.",
+    "strategy": "Full-rate inspired synthesis within the complete MDS admission budget. Envelope/control coefficients may be updated once per 32-sample block.",
     "source": "https://github.com/Fadedlimes/Simple606/tree/6aacda7a14a8c097d32836039fd356eb0976ba8e",
-    "license": "MIT; complete notice is embedded in the assembly source."
+    "license": "MIT; complete notice is embedded in the assembly source.",
+    "description": "44.1 kHz filtered-noise clap. TGHT compresses the opening burst sequence, then the tail runs at its original decay speed.",
+    "audio_sample_rate": 44100
   },
   "_send": {
     "file": "cp.syx",

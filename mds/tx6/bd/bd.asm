@@ -1,8 +1,6 @@
 ; TX6 BD - Simple606-inspired MDS voice for X.20, version 2.0.
-; XL: 0 = normal body decay; 127 = former XL-on decay. Captured on trigger.
-; Intermediate XL values blend the envelope poles; render is unchanged.
-; CLIK: 0 = remove this layer; 127 = original layer level. Captured on trigger.
-; Controls: TUNE first, DEC second. Version 1.x kits need parameter remapping.
+; 44.1 kHz kick: swept fundamental and HEAT-controlled third harmonic, zero-crossing start, full-rate low-pass click. DEC and continuous XL retain their decay curves.
+; Controls start with TUNE, DEC.
 ;
 ; MIT License
 ; 
@@ -52,13 +50,14 @@
 ; 15: previous
 ; 16: bodygain
 ; 17: noisegain
+; 18: harmonic
+; 19: harmonic_previous
 
-; Local instruction compaction; verify against retained native audio.
 init:
     move #>$ffffff,m6
     move #>$ffffff,m0
     clr a r6,r0
-    do #24,init_end
+    do #26,init_end
     move a1,x:(r0)+
 init_end:
     move #>$606606,x0
@@ -69,11 +68,7 @@ trigger:
     move #>$ffffff,m0
     move #>$ffffff,m1
     clr a
-    move a1,x:(r6+$11)
     move a1,x:(r6+$12)
-    move a1,x:(r6+$13)
-    move a1,x:(r6+$14)
-    move a1,x:(r6+$15)
     move y:(r6+$3),a
     asr #8,a,a
     and #>$3f,a
@@ -143,8 +138,6 @@ control_4_end:
     mpy y0,x0,a
     asl #2,a,a
     move a1,x:(r6+$e)
-    ; XL interpolates the body envelope pole once per trigger.
-    ; 128 uniformly spaced weights; both installed endpoints remain exact.
     move y:(r6+$5),a
     asr #7,a,a
     add #>xl_weights,a
@@ -157,10 +150,19 @@ control_4_end:
     mpyr x1,y0,a
     add x0,a
     move a1,x:(r6+$d)
-    move #>$209422,x0
-    move x0,x:(r6+$f)
-    move #>$c8e99a,x0
-    move x0,x:(r6+$10)
+    clr a
+    move a1,x:(r6+$f)
+    move a1,x:(r6+$18)
+    move x:(r6+$1),a
+    asr #2,a,a
+    neg a
+    move a1,x:(r6+$10)
+    asl a a1,x0
+    add x0,a
+    move a1,x0
+    move x:(r6+$9),y0
+    mpyr y0,x0,a
+    move a1,x:(r6+$19)
     move #>16384,x0
     move x0,x:(r6+$c)
     move y:(r6+$6),a
@@ -193,6 +195,7 @@ render:
     move a1,x:(r6+$1)
     add x0,a
     asr a
+    asr a
     move a1,n0
     move x:(r6+$0),x0
     move x:(r6+$d),y0
@@ -212,28 +215,53 @@ render:
     move x:(r6+$5),y0
     mpyr y0,x0,a
     move a1,x:(r6+$17)
-    move x:(r6+$f),x0
-    move x:(r6+$10),x1
-    move n0,y0
-    move x:(r6+$16),y1
-    move #>mds_scratch_x,r4
-    do #16,body_end
-    move x0,a
-    mac -x1,y0,a
+    move n0,a
     move a1,x0
-    move x1,a
-    mac y0,x0,a
-    move a1,x1
-    mpy y1,x1,a
+    mpy x0,x0,a
+    asr a
+    move a1,n1
+    neg a
+    add #>$7fffff,a
+    move a1,x0
+    move #>$400000,x1
+    move #>mds_scratch_x,r4
+    move x:(r6+$f),y0
+    move x:(r6+$10),y1
+    do #32,tone0_end
+    mpy x0,y0,a
+    mac -x1,y1,a y0,y1
+    asl a
+    move a1,y0
     move a1,x:(r4)+
-body_end:
-    move x0,x:(r6+$f)
-    move x1,x:(r6+$10)
+tone0_end:
+    move y0,x:(r6+$f)
+    move y1,x:(r6+$10)
+    move n1,a
+    move a1,x0
+    asl #3,a,a
+    add x0,a
+    neg a
+    add #>$7fffff,a
+    move a1,y0
+    move #>$400000,y1
+    move #>mds_scratch_x,r4
+    move x:(r6+$18),x0
+    move x:(r6+$19),x1
+    do #32,tone1_end
+    mpy y0,x0,a
+    mac -y1,x1,a x0,x1
+    asl a
+    rnd a x:(r4),b
+    add b,a a1,x0
+    move a1,x:(r4)+
+tone1_end:
+    move x0,x:(r6+$18)
+    move x1,x:(r6+$19)
     move x:(r6+$b),x0
     move #>$200000,y1
     move #>$19660d,y0
     move #>mds_scratch_y,r5
-    do #16,white_end
+    do #32,white_end
     mpy y0,x0,a
     asr a
     move a0,a
@@ -245,9 +273,9 @@ white_end:
     move x0,x:(r6+$b)
     move #>mds_scratch_y,r5
     move x:(r6+$12),x0
-    move #>$498e4d,y0
+    move #>$2c8537,y0
     move x:(r6+$17),y1
-    do #16,click_end
+    do #32,click_end
     move y:(r5),a
     sub x0,a
     move a1,x1
@@ -258,53 +286,19 @@ white_end:
     move a1,y:(r5)+
 click_end:
     move x0,x:(r6+$12)
-    move x:(r6+$11),n1
-    move x:(r6+$13),n2
-    move x:(r6+$14),n3
-    move x:(r6+$15),n4
-    move x:(r6+$9),n5
-    move x:(r6+$a),n6
+    move x:(r6+$16),x0
+    move x:(r6+$a),y0
+    mpyr y0,x0,a
+    move a1,y1
     move #>mds_scratch_x,r3
     move #>mds_scratch_y,r5
-    do #16,mix_end
-    move x:(r3)+,a
-    move y:(r5)+,x0
-    add x0,a
-    move a1,x0
-    move n5,y0
-    mpy y0,x0,a
-    asl #4,a,a
-    move #>$7fffff,x0
-    cmp x0,a
-    tgt x0,a
-    move #>$800001,x0
-    cmp x0,a
-    tlt x0,a
-    abs a a1,x0
-    move a1,y0
-    mpy y0,x0,b
-    asr b x0,a
-    sub b,a
-    move a1,x0
-    move n6,y0
-    mpy y0,x0,a
-    asl a n2,x0
-    sub x0,a a1,n2
-    move n3,x0
-    move #>$7eb924,y0
-    macr y0,x0,a
-    move a1,n3
-    move a1,x0
-    move n4,a
-    add x0,a x0,n4
-    asr a
+    do #32,mix_end
+    move x:(r3)+,x1 y:(r5)+,y0
+    mpy y1,x1,a
+    add y0,a
+    asl a
     move a,y:(r7)+
-    move x0,y:(r7)+
 mix_end:
-    move n1,x:(r6+$11)
-    move n2,x:(r6+$13)
-    move n3,x:(r6+$14)
-    move n4,x:(r6+$15)
     rts
 silent:
     clr a
@@ -388,23 +382,22 @@ control_3:
     .dc $2da079,$2ea247,$2fa9c6,$30b715,$31ca57,$32e3ab,$340335,$352918
     .dc $365578,$378878,$38c23f,$3a02f4,$3b4abc,$3c99c0,$3df029,$400000
 control_4:
-    .dc $1243fe,$59999a,$1345ba,$573a73,$144775,$550917,$154930,$53000c
-    .dc $164aec,$511ab5,$174ca7,$4f552d,$184e63,$4dac20,$19501e,$4c1cb1
-    .dc $1a51d9,$4aa466,$1b5395,$494119,$1c5550,$47f0e8,$1d570b,$46b22c
-    .dc $1e58c7,$45836f,$1f5a82,$446366,$205c3e,$4350e9,$215df9,$424af0
-    .dc $225fb4,$415090,$236170,$4060f4,$24632b,$3f7b5b,$2564e6,$3e9f18
-    .dc $2666a2,$3dcb8e,$27685d,$3d002c,$286a19,$3c3c70,$296bd4,$3b7fe2
-    .dc $2a6d8f,$3aca15,$2bf028,$39c52f,$2c7106,$397130,$2d72c1,$38cd67
-    .dc $2e747d,$382ef8,$2f7638,$37959b,$3077f4,$37010c,$3179af,$36710b
-    .dc $327b6a,$35e55e,$337d26,$355dd0,$347ee1,$34da2d,$35809c,$345a45
-    .dc $368258,$33dded,$3804f1,$3329bb,$3885cf,$32ef47,$39878a,$327cae
-    .dc $3a8945,$320d0e,$3b8b01,$31a045,$3c8cbc,$313635,$3d8e77,$30cec3
-    .dc $3e9033,$3069d2,$3f91ee,$30074a,$4093aa,$2fa711,$421643,$2f1ae2
-    .dc $429720,$2eed38,$4398dc,$2e936c,$449a97,$2e3b9c,$459c52,$2de5b6
-    .dc $469e0e,$2d91a7,$479fc9,$2d3f60,$48a185,$2ceed1,$49a340,$2c9fea
-    .dc $4aa4fb,$2c529c,$4ba6b7,$2c06dc,$4ca872,$2bbc9a,$4daa2d,$2b73cb
-    .dc $4eabe9,$2b2c64,$4fada4,$2ae657,$50af60,$2aa19c,$5231f9,$2a3ce3
-
+    .dc $000000,$68f5c3,$00a521,$6938d8,$014a43,$697bee,$01ef64,$69bf03
+    .dc $029485,$6a0219,$0339a7,$6a452e,$03dec8,$6a8844,$0483e9,$6acb59
+    .dc $05290a,$6b0e6f,$05ce2c,$6b5184,$06734d,$6b949a,$07186e,$6bd7af
+    .dc $07bd90,$6c1ac5,$0862b1,$6c5dda,$0907d2,$6ca0f0,$09acf4,$6ce405
+    .dc $0a5215,$6d271b,$0af736,$6d6a31,$0b9c57,$6dad46,$0c4179,$6df05c
+    .dc $0ce69a,$6e3371,$0d8bbb,$6e7687,$0e30dd,$6eb99c,$0ed5fe,$6efcb2
+    .dc $0f7b1f,$6f3fc7,$102041,$6f82dd,$10c562,$6fc5f2,$116a83,$700908
+    .dc $120fa4,$704c1d,$12b4c6,$708f33,$1359e7,$70d248,$13ff08,$71155e
+    .dc $14a42a,$715873,$15494b,$719b89,$15ee6c,$71de9f,$16938e,$7221b4
+    .dc $1738af,$7264ca,$17ddd0,$72a7df,$1882f1,$72eaf5,$192813,$732e0a
+    .dc $19cd34,$737120,$1a7255,$73b435,$1b1777,$73f74b,$1bbc98,$743a60
+    .dc $1c61b9,$747d76,$1d06db,$74c08b,$1dabfc,$7503a1,$1ea3ae,$756841
+    .dc $1ef63e,$7589cc,$1f9b60,$75cce1,$204081,$760ff7,$20e5a2,$76530c
+    .dc $218ac4,$769622,$222fe5,$76d938,$22d506,$771c4d,$237a28,$775f63
+    .dc $241f49,$77a278,$24c46a,$77e58e,$25698b,$7828a3,$260ead,$786bb9
+    .dc $26b3ce,$78aece,$2758ef,$78f1e4,$27fe11,$7934f9,$28f5c3,$79999a
 xl_weights:
     .dc $000000,$010204,$020408,$03060c,$040810,$050a14,$060c18,$070e1c
     .dc $081020,$091224,$0a1428,$0b162c,$0c1830,$0d1a34,$0e1c38,$0f1e3c

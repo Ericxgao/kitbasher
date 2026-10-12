@@ -66,13 +66,13 @@
     }
   ],
   "machine_version": "2.0",
-  "max_track_cycles": 3832,
+  "max_track_cycles": 3896,
   "program": {
     "abi_version": 1,
     "init_symbol": "init",
     "trig_symbol": "trigger",
     "render_symbol": "render",
-    "x_workset_words": 24,
+    "x_workset_words": 26,
     "y_workset_words": 7,
     "relocations": [
       {
@@ -81,55 +81,51 @@
       },
       {
         "symbol": "init",
-        "word_delta": 34
+        "word_delta": 30
       },
       {
         "symbol": "init",
-        "word_delta": 39
+        "word_delta": 35
       },
       {
         "symbol": "init",
-        "word_delta": 50
+        "word_delta": 46
       },
       {
         "symbol": "init",
-        "word_delta": 57
+        "word_delta": 53
       },
       {
         "symbol": "init",
-        "word_delta": 67
+        "word_delta": 63
       },
       {
         "symbol": "init",
-        "word_delta": 74
+        "word_delta": 70
       },
       {
         "symbol": "init",
-        "word_delta": 85
+        "word_delta": 81
       },
       {
         "symbol": "init",
-        "word_delta": 92
+        "word_delta": 88
       },
       {
         "symbol": "init",
-        "word_delta": 108
+        "word_delta": 104
       },
       {
         "symbol": "init",
-        "word_delta": 132
+        "word_delta": 135
       },
       {
         "symbol": "init",
-        "word_delta": 146
+        "word_delta": 149
       },
       {
         "symbol": "init",
-        "word_delta": 187
-      },
-      {
-        "symbol": "init",
-        "word_delta": 206
+        "word_delta": 200
       },
       {
         "symbol": "init",
@@ -137,41 +133,55 @@
       },
       {
         "symbol": "init",
-        "word_delta": 250
+        "word_delta": 240
       },
       {
         "symbol": "init",
-        "word_delta": 298
+        "word_delta": 257
+      },
+      {
+        "symbol": "init",
+        "word_delta": 276
+      },
+      {
+        "symbol": "init",
+        "word_delta": 285
       }
     ],
     "imports": [
       {
         "symbol": "init",
-        "word_delta": 185,
+        "word_delta": 196,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 204,
-        "abi_symbol": 8,
-        "kind": 4
-      },
-      {
-        "symbol": "init",
-        "word_delta": 217,
-        "abi_symbol": 8,
-        "kind": 4
-      },
-      {
-        "symbol": "init",
-        "word_delta": 246,
+        "word_delta": 219,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 248,
+        "word_delta": 238,
+        "abi_symbol": 8,
+        "kind": 4
+      },
+      {
+        "symbol": "init",
+        "word_delta": 251,
+        "abi_symbol": 8,
+        "kind": 4
+      },
+      {
+        "symbol": "init",
+        "word_delta": 272,
+        "abi_symbol": 7,
+        "kind": 3
+      },
+      {
+        "symbol": "init",
+        "word_delta": 274,
         "abi_symbol": 8,
         "kind": 4
       }
@@ -188,26 +198,27 @@
       "init": 0,
       "init_end": 8,
       "trigger": 12,
-      "control_1_end": 42,
-      "control_2_end": 60,
-      "control_3_end": 77,
-      "control_4_end": 95,
-      "layer_done": 138,
-      "render": 139,
-      "body_end": 196,
-      "white_end": 215,
-      "click_end": 232,
-      "mix_end": 287,
-      "silent": 296,
-      "zero_end": 300,
-      "control_1": 301,
-      "control_2": 685,
-      "control_3": 813,
-      "control_4": 877,
-      "xl_weights": 1005
+      "control_1_end": 38,
+      "control_2_end": 56,
+      "control_3_end": 73,
+      "control_4_end": 91,
+      "layer_done": 141,
+      "render": 142,
+      "tone0_end": 206,
+      "tone1_end": 230,
+      "white_end": 249,
+      "click_end": 266,
+      "mix_end": 282,
+      "silent": 283,
+      "zero_end": 287,
+      "control_1": 288,
+      "control_2": 672,
+      "control_3": 800,
+      "control_4": 864,
+      "xl_weights": 992
     },
-    "program_words": 1133,
-    "program_sha256": "170ed020d4b9ee896015d597e24d6aaa75e3b4cb5f1df518472376788676e34e",
+    "program_words": 1120,
+    "program_sha256": "61f6c84d131be5dbf02e34203efef8cb95b159cd07a26d78999c9f887a71b4bc",
     "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Pass packed big-endian 24-bit words and symbols to upstream MDS tools/mds_pack.py, then export with tools/mds_to_syx.py --slot 1."
   },
   "_controls": [
@@ -227,10 +238,11 @@
     }
   ],
   "_validation": {
-    "status": "Control reorder verified against previous release; version 2.0 hardware audition pending.",
+    "status": "Simulator-qualified full-rate revision; hardware audition pending.",
+    "hardware_tested": false,
     "timing": {
-      "measured_model_max_clocks": 3815,
-      "declared_max_clocks": 3832,
+      "measured_model_max_clocks": 3880,
+      "declared_max_clocks": 3896,
       "limit": 3951,
       "scope": "Actual X.20 dispatcher P:$6b through P:$e1, DMA handshakes ready, empty 8x128 instruction cache, additive interlocks, 3 waits per external instruction miss AND external data word, plus 64-clock output-transfer reserve. Busywait latency and interrupts are system scheduling, not bounded here; no hardware timing claim.",
       "dispatcher_flags_tested": 128,
@@ -238,62 +250,46 @@
       "physical_wait_states_verified": false
     },
     "tests": {
+      "machine": "bd",
       "controls": 891,
       "samples": 2765664,
-      "peak": 0.6309503316879272,
+      "peak": 0.7094318866729736,
       "clipped_samples": 0,
       "guards_and_parameters": true,
       "dirty_entry_registers": true,
       "init_silent": true,
       "retrigger": true,
-      "tracer_audio_cycles_equal": true
+      "tracer_audio_cycles_equal": true,
+      "asm_sha256": "62b749b301427a1f12be531e580deb51f373a494288076a647437be312f50e5a"
     },
-    "xl": {
-      "pole_combinations": 16384,
-      "monotonic": true,
-      "default_decay_distinct_steps": 128,
-      "long_tail_cases": 84,
-      "samples": 44042880,
-      "peak": 0.5905016660690308,
-      "clipped_samples": 0,
-      "endpoint_comparisons": 24,
-      "endpoints_bitexact": true,
-      "reference": "Installed BD version 1.1, XL off/on at original default, minimum and maximum controls; four RNG seeds."
-    },
-    "hardware_tested": false,
-    "control_order": {
-      "previous_version": "1.2",
-      "new_to_old_positions": [
-        3,
-        2,
+    "long_tail": {
+      "seeds": [
         1,
-        4,
-        5,
-        6
+        1193046,
+        6317574,
+        8388607
       ],
-      "changed_instruction_words": [
-        24,
-        60
-      ],
-      "cases": 23,
-      "samples": 753664,
-      "audio_sha256": "cf91a4dc369ad38524f2d7bb854775af4cf0e427874c74e146fbd96c7a938180",
-      "bitexact_audio": true,
-      "identical_emulator_cycles": true,
-      "unchanged_instruction_layout": true,
-      "unchanged_memory_requirements": true
-    }
+      "samples": 16778240,
+      "peak": 0.6976187229156494,
+      "clipped_samples": 0,
+      "ends_silent": true,
+      "cases": 8
+    },
+    "qualified_program_sha256": "61f6c84d131be5dbf02e34203efef8cb95b159cd07a26d78999c9f887a71b4bc",
+    "audio_sample_rate": 44100
   },
   "_design": {
-    "strategy": "Interpolate the existing normal and XL body envelope coefficients once per trigger. Preserve both endpoint sounds exactly; audio render unchanged.",
+    "strategy": "Full-rate inspired synthesis within the complete MDS admission budget. Envelope/control coefficients may be updated once per 32-sample block.",
     "source": "https://github.com/Fadedlimes/Simple606/tree/6aacda7a14a8c097d32836039fd356eb0976ba8e",
-    "license": "MIT; complete notice is embedded in the assembly source."
+    "license": "MIT; complete notice is embedded in the assembly source.",
+    "description": "44.1 kHz kick: swept fundamental and HEAT-controlled third harmonic, zero-crossing start, full-rate low-pass click. DEC and continuous XL retain their decay curves.",
+    "audio_sample_rate": 44100
   },
   "_send": {
     "file": "bd.syx",
     "destination_slot": 1,
     "bank_file": "../tx6-bank.syx",
     "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08. Version 2.0 has not been sent to hardware.",
-    "existing_kits": "Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 3 (TUNE/TRAN) in existing kits to preserve their sound. No automatic kit conversion. Earlier compatibility notes: XL is now 0-127. For kits with the former XL switch enabled (value 1), set XL to 127 to preserve that sound. XL 0 and all other parameter positions/defaults are unchanged."
+    "existing_kits": "Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 3 (TUNE/TRAN) in existing kits to preserve their sound. No automatic kit conversion. Earlier compatibility notes: XL is now 0-127. For kits with the former XL switch enabled (value 1), set XL to 127 to preserve that sound. XL 0 and all other parameter positions/defaults are unchanged. The full-rate version changes the sound design; remapping preserves control meanings, not bit-identical audio."
   }
 }
