@@ -162,7 +162,15 @@ function populatePorts() {
   }
 }
 async function closeTransport() { const old = transport; transport = undefined; client = undefined; snapshot = undefined; if (old) await old.close(); }
-async function readBank() {
+async function readBank(locked = false): Promise<void> {
+  // Discovery also sends SysEx; do not interrupt a firmware update in another tab.
+  if (!locked && navigator.locks) {
+    await navigator.locks.request('kitbasher-midi', { ifAvailable: true }, async lock => {
+      if (!lock) throw new Error('Another Kitbasher tab is using MIDI. Finish that transfer first.');
+      await readBank(true);
+    });
+    return;
+  }
   primaryWorking('Checking MIDI connection…');
   await closeTransport();
   const input = access?.inputs.get($<HTMLSelectElement>('midi-input').value), output = access?.outputs.get($<HTMLSelectElement>('midi-output').value);
@@ -226,7 +234,7 @@ $('flash-machines').onclick = async () => { await act(async () => {
     if (!snapshot) { await readBank(); return; }
   const run = async () => {
     const preview = snapshot;
-    await readBank();
+    await readBank(true);
     if (!client || !snapshot) throw new Error('MIDI connection could not be verified.');
     if (preview && !sameLibrary(preview, snapshot)) throw new Error('The bank on your Machinedrum changed. Check the updated selection before sending again.');
     const selected = assignments(), plan = planBank(selected, snapshot), connection = client, baseline = snapshot;
@@ -243,10 +251,10 @@ $('flash-machines').onclick = async () => { await act(async () => {
       }, () => stop);
       snapshot = result.snapshot; const message = result.stopped ? 'Stopped. Machines already sent are installed.' : 'Done. Your machines are installed.';
       $('transfer-status').textContent = message; status(message);
-    } catch (e) { snapshot = undefined; $('transfer-status').textContent = 'Sending stopped. Some machines may already be installed. Reconnect to check before trying again.'; throw e; }
+    } catch (e) { snapshot = undefined; $('transfer-status').textContent = `Sending stopped. ${errorMessage(e)} Some machines may already be installed. Reconnect to check before trying again.`; throw e; }
     finally { $<HTMLButtonElement>('stop-transfer').disabled = true; }
   };
-  if (navigator.locks) await navigator.locks.request('kitbasher-mds-midi', { ifAvailable: true }, async lock => { if (!lock) throw new Error('Another Kitbasher tab is using MIDI. Finish that transfer first.'); await run(); }); else await run();
+  if (navigator.locks) await navigator.locks.request('kitbasher-midi', { ifAvailable: true }, async lock => { if (!lock) throw new Error('Another Kitbasher tab is using MIDI. Finish that transfer first.'); await run(); }); else await run();
   } catch (e) { $('midi-status').dataset.error = 'true'; $('midi-status').textContent = errorMessage(e); throw e; }
 });
   if (!selection.length) { $('machine-search').scrollIntoView({ block: 'center' }); $('machine-search').focus(); }

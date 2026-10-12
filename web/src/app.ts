@@ -22,6 +22,7 @@ import { baseSet, identify, NotPatchable, unsupported, type Base, type BaseProfi
 import { prepare163 } from '../../engine/src/prepare.js';
 import { build, CompressedCapacityError, OsAreaCapacityError, type BuildReport, type BuildResult } from '../../engine/src/build.js';
 import { firmwareFilename } from '../../engine/src/firmware_version.js';
+import { FirmwareMidi } from './firmware-midi.js';
 import { readFirmware, type Firmware } from '../../engine/src/container.js';
 import type { TrimOptions } from '../../engine/src/e12.js';
 import { checkPack, modelWords, needLines, needsUwSamples, type CorePack, type Pack, type PackModel } from '../../engine/src/packs.js';
@@ -88,6 +89,8 @@ let layoutEd: LayoutEditor;                      // the menu categories and IDs 
 let step = 1;
 let revision = 0;
 let building = false;
+let sendingFirmware = false;
+let firmwareMidi: FirmwareMidi | undefined;
 let downloadUrl: string | null = null;
 let fileRequest = 0;
 let packedCapacityProblem = false;
@@ -117,9 +120,22 @@ let autoTrimOptions: TrimOptions = keepSamples;
 const trimMode = (): string => document.querySelector<HTMLInputElement>('input[name=e12]:checked')!.value;
 
 function clearDownload(): void {
+  firmwareMidi?.dispose();
+  firmwareMidi = undefined;
   if (downloadUrl) URL.revokeObjectURL(downloadUrl);
   downloadUrl = null;
   $('result').replaceChildren();
+}
+
+function attachFirmwareSender(bytes: Uint8Array): void {
+  firmwareMidi = new FirmwareMidi(bytes, sending => {
+    sendingFirmware = sending;
+    // Prevent navigation or rebuilding while these exact bytes are being sent.
+    for (const selector of ['.site-nav', '.wizard-steps', '#build-options', '.project-save', '#step-5 > .wizard-actions']) {
+      document.querySelector<HTMLElement>(selector)!.inert = sending;
+    }
+  });
+  $('result').prepend(firmwareMidi.element);
 }
 
 function syncWizard(): void {
@@ -156,7 +172,7 @@ function syncWizard(): void {
 }
 
 function showStep(n: number): void {
-  if (building || (n > 1 && !loaded()) || (n > 3 && (!planReady() || packedCapacityProblem))) return;
+  if (sendingFirmware || building || (n > 1 && !loaded()) || (n > 3 && (!planReady() || packedCapacityProblem))) return;
   // the UW question is answered before anything else
   if (n > 1 && needsUwAnswer()) return;
   if ((n === 5 && !downloadUrl) || (step <= 3 && n === 4 && !cachedBuild)) { void onBuild(n === 4 ? 'categories' : 'download'); return; }
@@ -609,6 +625,7 @@ function syncTrim(): void {
 }
 
 async function onFile(f: File): Promise<void> {
+  if (sendingFirmware) return;
   const request = ++fileRequest;
   revision++;
   input = null; base = null; fw = null; current = null; cachedBuild = null;
@@ -898,7 +915,7 @@ function needsUwAnswer(): boolean {
 }
 
 async function onBuild(destination: 'categories' | 'download' = 'download'): Promise<void> {
-  if (!input || !buildable() || building) return;
+  if (sendingFirmware || !input || !buildable() || building) return;
   if (needsUwAnswer()) return;
   building = true;
   let succeeded = false;
@@ -934,6 +951,7 @@ async function onBuild(destination: 'categories' | 'download' = 'download'): Pro
     a.addEventListener('click', (e) => { if (needsUwAnswer()) e.preventDefault(); });
     $('result').replaceChildren(a, el('p', { class: 'note' }, `Kitbasher ${report.firmware.display} · Based on ${base!.name}`),
       el('details', {}, el('summary', {}, 'Build details and checks'), reportView(report)));
+    attachFirmwareSender(syx);
     status(`Built in ${((performance.now() - t) / 1000).toFixed(1)} s.`, 'ok');
   } catch (e) {
     if (version !== revision) return;
@@ -961,6 +979,7 @@ function downloadX20(result: X20Built, t: number): void {
   $('result').replaceChildren(a,
     el('p', { class: 'note' }, `Kitbasher ${result.report.firmware.display} · Based on MDX X.20 B`),
     el('details', {}, el('summary', {}, 'Build details and checks'), x20ReportView(result.report)));
+  attachFirmwareSender(result.output);
   status(`Built in ${((performance.now() - t) / 1000).toFixed(1)} s.`, 'ok');
 }
 
@@ -1033,6 +1052,7 @@ async function saveProject(): Promise<void> {
 }
 
 async function onProjectFile(f: File): Promise<void> {
+  if (sendingFirmware) return;
   const note = $('project-status');
   try {
     if (/\.(syx|bin)$/i.test(f.name)) {

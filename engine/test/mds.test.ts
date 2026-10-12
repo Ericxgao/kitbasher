@@ -55,6 +55,55 @@ test('connection deadline is shared across replies, retries and unrelated traffi
   assert.equal(io.time, 5000);
   assert.deepEqual(io.sent.map(b => decodeMessage(b).command), [CMD.slots, CMD.caps, CMD.caps]);
 });
+
+test('query WAIT retries the same read-only request within the five-second connection budget', async () => {
+  let queries = 0;
+  const io = new FakeMidi(m => {
+    if (queries++ === 0) return [encodeMessage(CMD.wait, m.transaction, 127, 127, Uint8Array.of(m.command, 11))];
+    return [encodeMessage(m.command === CMD.slots ? CMD.slotsReply : CMD.capsReply, m.transaction, 127, 127, m.command === CMD.slots ? slotsBody(empty()) : capsBody(empty()))];
+  });
+  assert.deepEqual(await new MdsClient(io, () => io.time).snapshot(), empty());
+  assert.deepEqual(io.sent[0], io.sent[1]);
+  assert.ok(io.time >= 2000 && io.time < 5000);
+  assert.deepEqual(io.sent.map(b => decodeMessage(b).command), [CMD.slots, CMD.slots, CMD.caps, CMD.slots]);
+});
+
+test('persistent query WAIT still times out after five seconds without machine data', async () => {
+  const io = new FakeMidi(m => [encodeMessage(CMD.wait, m.transaction, 127, 127, Uint8Array.of(m.command, 11))]);
+  await assert.rejects(new MdsClient(io, () => io.time).snapshot(), { message: MIDI_CONNECTION_ERROR });
+  assert.equal(io.time, 5000);
+  assert.equal(io.sent.length, 3);
+  assert.ok(io.sent.every(b => decodeMessage(b).command === CMD.slots));
+});
+
+test('query WAIT accepts a deferred reply without resending and ignores unrelated WAIT', async () => {
+  const io = new FakeMidi(m => [
+    encodeMessage(CMD.wait, m.transaction, 127, 127, Uint8Array.of(m.command, 11)),
+    encodeMessage(m.command === CMD.slots ? CMD.slotsReply : CMD.capsReply, m.transaction, 127, 127, m.command === CMD.slots ? slotsBody(empty()) : capsBody(empty())),
+  ]);
+  assert.deepEqual(await new MdsClient(io, () => io.time).snapshot(), empty());
+  assert.equal(io.sent.length, 3);
+  const unrelated = new FakeMidi(m => [encodeMessage(CMD.wait, m.transaction, 127, 127, Uint8Array.of(CMD.end, 11))]);
+  await assert.rejects(new MdsClient(unrelated, () => unrelated.time).snapshot(), { message: MIDI_CONNECTION_ERROR });
+  assert.equal(unrelated.sent.length, 1);
+});
+
+test('post-commit query WAIT does not interrupt an eight-machine K55 installation', async () => {
+  const machines = (await Promise.all(['01-K55-BD', '02-K55-SD', '03-K55-TM', '04-K55-CG', '05-K55-RS', '06-K55-CB', '07-K55-HH', '08-K55-CY'].map(name => parseSysex(file(`community/wftlrd/${name}.syx`))))).flat();
+  const s = empty(), reviewed = structuredClone(s); let busyUntil = 0;
+  const io = new FakeMidi((m, io) => {
+    if (m.command === CMD.slots || m.command === CMD.caps) {
+      if (io.time < busyUntil) return [encodeMessage(CMD.wait, m.transaction, 127, 127, Uint8Array.of(m.command, 11))];
+      return [encodeMessage(m.command === CMD.slots ? CMD.slotsReply : CMD.capsReply, m.transaction, 127, 127, m.command === CMD.slots ? slotsBody(s) : capsBody(s))];
+    }
+    if (m.command === CMD.end) { installed(s, m.slot, machines[m.slot]); busyUntil = io.time + 1500; }
+    return [ack(m, m.command === CMD.end, machines[m.slot].contentId)];
+  });
+  const result = await new MdsClient(io, () => io.time).install(machines.map((machine, slot) => ({ machine, slot })), reviewed, () => {});
+  assert.equal(result.stopped, false);
+  assert.deepEqual(result.snapshot.slots.slice(0, 8).map(s => s.contentId), machines.map(m => m.contentId.slice(0, 16)));
+  assert.equal(io.sent.filter(b => decodeMessage(b).command === CMD.header).length, 8);
+});
 test('real released bank decodes; destinations change without changing package identity', async () => {
   assert.equal(bank.length, 8); assert.equal(kick.version, '1.2'); assert.equal(kick.parameters.find(p => p.name === 'XL')?.max, 127);
   const frames = machineMessages(kick, 15, 14200); const [again] = await parseSysex(concat(frames));

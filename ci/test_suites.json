@@ -9,6 +9,7 @@
     "boot_safety",
     "firmware_version",
     "boot_label",
+    "firmware_transfer",
     "model_contract",
     "aliases",
     "model_runtime",
