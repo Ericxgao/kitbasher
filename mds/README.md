@@ -8,6 +8,13 @@ The collection contains the X.20 USR releases in `core/` (TX8, TX9, TXZ, SYN, P-
 
 ## Curating releases
 
+TX6 version 2.0 puts TUNE first and DEC second on all eight machines. BD moves
+TRAN to position 3; the other controls keep their positions. Audio, memory use
+and DSP cost are unchanged when values follow their controls. Existing kits,
+parameter locks and modulation targets need positions 1 and 3 swapped for BD,
+or positions 1 and 2 for the other seven. Installing the new machines does not
+convert saved kits.
+
 1. Add a reviewed `.syx` or `.mds` containing **one machine** under `mds/`. Keep author attribution and any required license text alongside it. Do not add full firmware dumps.
 2. Add an entry to `catalog.json` with `file`, its file `sha256`, `channel` (`core` or `community`), `author`, `summary`, `source` (HTTPS URL or null), `project`, `license`, and optional `notes`. Pin source links to the release commit when possible. Use notes for control changes that affect saved kits.
 3. For an update, replace the entry for that stable machine ID with the reviewed release and update the SHA-256 pin. The build rejects unreviewed duplicate IDs, duplicate aliases/content, changed hashes, malformed packages, and declarations outside the X.20 admission budget. Hash validation does not establish that DSP code is safe; review and qualify the machine separately.

@@ -476,91 +476,91 @@
     },
     {
       "file": "mds/tx6/bd/bd.syx",
-      "sha256": "32cacaff8a2ae620db27cfd51154e62df05ff4a6347b977b4e355a4a145c2117",
+      "sha256": "534c3061a63d1f6caefeb7da78122eda9b553e495d8427367f426d38c1343028",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style bass drum",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/bd",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0e119d4e1848547f8ccec0ca3ab62acd7e1cd179/mds/tx6/bd",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "XL is continuous: 0 = normal, 127 = former XL on. Existing XL-on kits need 127. New CLIK defaults to 127."
+      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 3 (TUNE/TRAN) swapped to retain their sound. XL is continuous: 0 = normal, 127 = former XL on. Existing XL-on kits need 127. New CLIK defaults to 127."
     },
     {
       "file": "mds/tx6/sd/sd.syx",
-      "sha256": "df5594e62ae3ca1ba4e595e44176a895ff7f7594faa034d27c4cede11152b414",
+      "sha256": "ab00643337ddd0eba7f6b92e8b4da402004d39ac460d2e3800bb94c15e0d21f2",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style snare drum",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/sd",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0e119d4e1848547f8ccec0ca3ab62acd7e1cd179/mds/tx6/sd",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set the added layer-level controls to 127 to retain their original balance."
+      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped to retain their sound. For existing kits, set the added layer-level controls to 127 to retain their original balance."
     },
     {
       "file": "mds/tx6/lt/lt.syx",
-      "sha256": "9ac2441f57bebd29061c0ecf4396f38a84e9eb28bf1d5902b4cbfe19849ea0e3",
+      "sha256": "b386e0baa0e4e4bcab64abd07e3d95e4231f42a579cb4488b435c886b9f4aa61",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style low tom",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/lt",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0e119d4e1848547f8ccec0ca3ab62acd7e1cd179/mds/tx6/lt",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set the added layer-level controls to 127 to retain their original balance."
+      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped to retain their sound. For existing kits, set the added layer-level controls to 127 to retain their original balance."
     },
     {
       "file": "mds/tx6/ht/ht.syx",
-      "sha256": "b0df5e0ee6a2e178add94638e8a133d88681be0daa61f76845ac6a4cdd8209e8",
+      "sha256": "b88409a7f24a40f6045c24941505a98ed3d1050fefe9121e3466d322b61e0e70",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style high tom",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/ht",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0e119d4e1848547f8ccec0ca3ab62acd7e1cd179/mds/tx6/ht",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set the added layer-level controls to 127 to retain their original balance."
+      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped to retain their sound. For existing kits, set the added layer-level controls to 127 to retain their original balance."
     },
     {
       "file": "mds/tx6/ch/ch.syx",
-      "sha256": "c9b295f3e584445ec9a367152da2e5e10cd3c5ec82d3647657e91e09e0bcecb9",
+      "sha256": "7dbfc557effda40009f9cd19445870bcf464356baea1b348eb5d9aafb5325526",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style closed hi-hat",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/ch",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0e119d4e1848547f8ccec0ca3ab62acd7e1cd179/mds/tx6/ch",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set METL to 64 to retain the default character."
+      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped to retain their sound. For existing kits, set METL to 64 to retain the default character."
     },
     {
       "file": "mds/tx6/oh/oh.syx",
-      "sha256": "0473f26d7304931af3946870031784dda4646ed2e4924b06c64f27041d0d13c1",
+      "sha256": "c68827c201e4d4eae02e8cd692810ecee07a5a9dfb36351ee9e3c0df7832fc80",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style open hi-hat",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/oh",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0e119d4e1848547f8ccec0ca3ab62acd7e1cd179/mds/tx6/oh",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set METL to 64 to retain the default character."
+      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped to retain their sound. For existing kits, set METL to 64 to retain the default character."
     },
     {
       "file": "mds/tx6/cy/cy.syx",
-      "sha256": "5d201b65200db8f799a59498220f7f7c71073a5613a74ae4994cc0d711bd8e0d",
+      "sha256": "39e77d7564c6dc79b010001db9a60f6f5f07813a5c4eee54dec37c98c83124be",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style cymbal",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/cy",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0e119d4e1848547f8ccec0ca3ab62acd7e1cd179/mds/tx6/cy",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set the added layer-level controls to 127 to retain their original balance."
+      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped to retain their sound. For existing kits, set the added layer-level controls to 127 to retain their original balance."
     },
     {
       "file": "mds/tx6/cp/cp.syx",
-      "sha256": "5425dd31bfbf98211bf7f974f598cbf6113cc28fe104b28eaa2f51e55aeb40c8",
+      "sha256": "02851fa9259cee16c430db09bb9d58f4209e8aac14d3f1b27f5ab4b47973aea3",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-inspired hand clap",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/cp",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0e119d4e1848547f8ccec0ca3ab62acd7e1cd179/mds/tx6/cp",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set the added layer-level controls to 127 to retain their original balance."
+      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped to retain their sound. For existing kits, set the added layer-level controls to 127 to retain their original balance."
     },
     {
       "file": "mds/community/murdenihcam/SMP-ST.syx",
@@ -572,7 +572,7 @@
       "project": "https://www.elektronauts.com/t/custom-usr-machines-for-x-20/257233",
       "license": "Not specified by author",
       "hardware": "uw",
-      "notes": "UW required. SMPL 1–48 selects ROM; 49–69 selects E12. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
+      "notes": "UW required. SMPL 1\u201348 selects ROM; 49\u201369 selects E12. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
     },
     {
       "file": "mds/community/murdenihcam/SMP-SR.syx",
@@ -584,7 +584,7 @@
       "project": "https://www.elektronauts.com/t/custom-usr-machines-for-x-20/257233",
       "license": "Not specified by author",
       "hardware": "uw",
-      "notes": "UW required. SMPL selects ROM slots 1–48. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
+      "notes": "UW required. SMPL selects ROM slots 1\u201348. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
     },
     {
       "file": "mds/community/murdenihcam/SMP-S2.syx",
@@ -596,7 +596,7 @@
       "project": "https://www.elektronauts.com/t/custom-usr-machines-for-x-20/257233",
       "license": "Not specified by author",
       "hardware": "all",
-      "notes": "Works on UW and non-UW models. SMPL selects internal E12 samples 1–21. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
+      "notes": "Works on UW and non-UW models. SMPL selects internal E12 samples 1\u201321. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
     },
     {
       "file": "mds/community/wftlrd/01-K55-BD.syx",
