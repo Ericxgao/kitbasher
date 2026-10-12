@@ -22,7 +22,19 @@ body.simple-builder .upload #drop{margin:18px 0;padding:24px}
 .simple-builder #step-5 .project-save{display:block}
 .simple-builder #step-5>p{margin:14px 0}
 .simple-builder #step-5 #ids-warning{font-size:13px}
-.simple-builder #step-5 #result .download{display:inline-block;font-size:16px;padding:14px 24px;margin:20px 0;background:var(--ink);color:var(--panel);text-decoration:none;border-radius:3px}
+.simple-builder #step-5 #result .download{display:inline-block;font-size:14px;padding:8px 0;margin:4px 0;color:var(--ink);text-underline-offset:3px}
+.firmware-midi{margin:24px 0 4px;padding:20px;border:1px solid var(--line);border-radius:3px;background:var(--panel)}
+.firmware-midi label{display:grid;gap:8px;font-size:14px}
+.firmware-midi select{max-width:100%;min-width:0;padding:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);font:inherit}
+.firmware-midi ol{padding-left:22px;line-height:1.6}
+.firmware-midi p{font-size:14px;line-height:1.6}
+.firmware-midi-actions{display:flex;flex-wrap:wrap;gap:12px}
+.firmware-midi-actions button{margin:0}
+.firmware-midi progress{width:100%;height:14px;margin-top:18px;accent-color:var(--ink)}
+.firmware-midi-status{margin-bottom:0;color:var(--muted)}
+.firmware-midi-status:empty{display:none}
+.firmware-midi-status[data-error=true]{color:#975300}
+:root[data-theme=dark] .firmware-midi-status[data-error=true]{color:#ffbf69}
 .simple-builder #step-5 #result details{margin:14px 0}
 .simple-builder .footer-note{margin-top:20px}
 .simple-builder :is(summary,button,input,select):focus-visible{outline:2px solid #5484a3;outline-offset:3px}

@@ -40,11 +40,16 @@ recorded separately. See [firmware versioning](docs/VERSIONING.md).
    The memory meters and sample trimming controls are below the browser.
    Under **Options**, you can edit [E12 samples](docs/SAMPLES.md) or arrange the
    machine menu; both are optional.
-4. **Build and download.** Click **Build firmware**, then **Download firmware**
+4. **Build.** Click **Build firmware**. **Download firmware** lets you save
    to save the new `.syx`. **Save for next time → Save project** keeps your samples,
    machines and layout in a [project file](docs/PROJECT-FILE.md).
-5. **Send it.** Hold FUNCTION while powering on, choose [5 LT] MIDI UPGRADE, and
-   send the file from a SysEx tool with a 20 ms gap between messages.
+5. **Send it.** In Chrome, click **Send firmware**, allow MIDI access, and choose
+   your MIDI output. Connect the interface's OUT to the Machinedrum's MIDI IN.
+   Hold FUNCTION while powering on and choose [5 LT] MIDI UPGRADE, then click
+   **I'm ready — send firmware**. Keep the tab open and computer awake until it
+   finishes; wait for the Machinedrum to finish before restarting it.
+   Alternatively, send the downloaded file from a SysEx tool with a 20 ms gap
+   between messages. See [browser firmware sending](docs/FIRMWARE-MIDI.md).
 
 On OS X.14 and OS 1.63, **Firmware options** on the Download step offers **MIDI chromatic note
 input** (off by default): notes on MIDI channel 5 (base channel + 4) play the
