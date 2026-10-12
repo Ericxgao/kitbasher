@@ -45,6 +45,7 @@ export interface X20RecipeFile {
   qualification: { level: 'hardware-proven' | 'emulator-gated'; by: string; unproven?: string };
   loader: {
     stage2: Hex; header: Hex; stage2_bytes: Hex; copy_longs_at: Hex; copy_longs: Hex; s2md: Hex;
+    entry_jump_offset: Hex;
     slot0_flash: Hex; payload_flash: Hex; handoff: { at: Hex; old: string; enter: Hex };
     dsp2_first_command: { at: Hex; old: string; what?: string };
   };
@@ -95,7 +96,7 @@ export interface X20Recipe {
   file: X20RecipeFile;
   id: string;
   name: string;
-  loader: { stage2: number; header: number; stage2Bytes: number; copyLongsAt: number; copyLongs: number; s2md: number;
+  loader: { stage2: number; header: number; stage2Bytes: number; copyLongsAt: number; copyLongs: number; s2md: number; entryJumpOffset: number;
             slot0Flash: number; payloadFlash: number; handoff: { at: number; old: string; enter: number };
             dsp2First: { at: number; old: string } };
   ram: { osImage: [number, number]; bootCode: [number, number]; window: [number, number]; menu: number; records: number;
@@ -130,6 +131,7 @@ export function parseRecipe(f: X20RecipeFile): X20Recipe {
     file: f, id: f.id, name: f.name,
     loader: { stage2: num(L.stage2), header: num(L.header), stage2Bytes: num(L.stage2_bytes), copyLongsAt: num(L.copy_longs_at),
       copyLongs: num(L.copy_longs), s2md: num(L.s2md), slot0Flash: num(L.slot0_flash), payloadFlash: num(L.payload_flash),
+      entryJumpOffset: num(L.entry_jump_offset),
       handoff: { at: num(L.handoff.at), old: L.handoff.old, enter: num(L.handoff.enter) },
       dsp2First: { at: num(L.dsp2_first_command.at), old: L.dsp2_first_command.old } },
     ram: { osImage: [num(R.os_image[0]), num(R.os_image[1])], bootCode: [num(R.boot_code[0]), num(R.boot_code[1])],
@@ -167,6 +169,8 @@ export function parseRecipe(f: X20RecipeFile): X20Recipe {
 /** What must hold for any recipe the build can use; a recipe that breaks one is a recipe error. */
 export function checkRecipe(r: X20Recipe): void {
   const bad = (m: string): never => { throw new Error(`recipe ${r.id}: ${m}`); };
+  if (!Number.isSafeInteger(r.loader.entryJumpOffset) || r.loader.entryJumpOffset < 0 || r.loader.entryJumpOffset % 2 ||
+      r.loader.entryJumpOffset + 6 > r.loader.header) bad('entry jump must be inside the stage-1 header');
   const [lo, hi] = r.ram.osImage;
   const seen = new Map<number, number>();
   for (const s of r.sites) {

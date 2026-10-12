@@ -8,6 +8,7 @@
 // (a `btst #n,abs.l` and a `move.l #imm,d16(An)` each froze real hardware at boot).
 
 import { Asm, type Assembled } from './cf_asm.js';
+import { appendBootLabel, type BootLabel } from './boot_label.js';
 import { be16, be32, concat, h, hex } from './bytes.js';
 import type { SiteValue, X20Recipe } from './x20_recipe.js';
 
@@ -373,7 +374,7 @@ export interface StageCode { asm: Assembled; sites: { at: number; old: string; b
  *    words while it waits (DSP2 never blocks on us).
  * Chunks are NRV2B-packed {u32 addr, u32 count, count x 3-byte words} in flash.
  */
-export function stageCode(R: X20Recipe, list: Uint8Array, preChunks: number[], postChunks: number[], wa: WindowA, rx: number[]): StageCode {
+export function stageCode(R: X20Recipe, list: Uint8Array, preChunks: number[], postChunks: number[], wa: WindowA, rx: number[], label?: BootLabel): StageCode {
   const s = new Asm(R.ram.bootCode[0]);
   const S = (...x: string[]): void => s.i(x[0], ...x.slice(1));
   const HP = R.host.dsp2, BUF = R.ram.uploadBuffer[0];
@@ -504,6 +505,7 @@ export function stageCode(R: X20Recipe, list: Uint8Array, preChunks: number[], p
   s.label('pchunks'); for (const c of preChunks) S('dc.l', String(c)); S('dc.l', '0');
   s.label('chunks'); for (const c of postChunks) S('dc.l', String(c)); S('dc.l', '0');
   s.label('list'); s.bytes('list_data', list);
+  if (label) appendBootLabel(s, label, R.loader.stage2);
   const asm = s.assemble();
   if (R.ram.bootCode[0] + asm.bytes.length > R.ram.bootCode[1])
     throw new Error(`the boot code (${asm.bytes.length} bytes) does not fit ${h(R.ram.bootCode[0])}..${h(R.ram.bootCode[1])}`);

@@ -16,7 +16,8 @@
 // at its own addresses or at an OS site, decodes as ISA_A (isa.ts); the DSP boot code holds no cache
 // instruction (they trap on hardware with the cache off); every site's new bytes are as long as its anchor.
 
-import { be32, concat, h, sha256, sum32, u32 } from './bytes.js';
+import { be32, concat, equal, hex, h, sha256, sum32, u32 } from './bytes.js';
+import { bootLabel, type BootLabel } from './boot_label.js';
 import { FIRMWARE_VERSION, FIRMWARE_TAG, VERSION_WORDS, stampContainerVersion, type FirmwareVersion } from './firmware_version.js';
 import { readBank, buildBank, freeFlash, E12B_FLASH, E12B_END, PAD_WORDS, type Bank } from './e12b.js';
 import { placeDsp2, type Dsp2Placed, type Dsp2Target } from './dsp2_place.js';
@@ -81,6 +82,7 @@ export const x20MaskedId = (id: number): boolean => (id >= 88 && id <= 95) || (i
 export const x20RomTitleId = (id: number): boolean => (id >= 128 && id <= 159) || (id >= 176 && id <= 191);
 
 export interface X20Report {
+  boot_label: BootLabel;
   firmware: FirmwareVersion;
   base: string;
   machines: { name: string; key: string; id: number; family: string; org: string; words: number }[];
@@ -730,15 +732,22 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   gates.push({ name: upload ? 'boot-time chunk reads: through the flash alias (emulator-only upload variant)' : 'boot-time chunk reads: flash at its own address (no alias, inside E12B)',
     ok: !wrong.length, detail: wrong.length ? wrong.map(h).join(', ') : `${bootReads.length} chunks` });
   if (wrong.length) throw new Error(`boot-time chunks outside E12B flash: ${wrong.map(h).join(', ')}`);
-  const st = stageCode(R, writeList(writes), bootReads.slice(0, preC.length), bootReads.slice(preC.length), wa, boot.receiver);
+  const makeStage = (label: BootLabel) => stageCode(R, writeList(writes), bootReads.slice(0, preC.length), bootReads.slice(preC.length), wa, boot.receiver, label);
+  // Hash source container with final payload/bank/layout and generated code, with
+  // the label zeroed. This is deliberately distinct from the final SysEx hash.
+  const neutral = makeStage(bootLabel(opt.uw, '0'.repeat(64)));
+  const label = bootLabel(opt.uw, await sha256(concat([new TextEncoder().encode('kb-build/1\0'), cont, neutral.asm.bytes, wa.asm.bytes])));
+  const st = makeStage(label);
 
   // ---- gate: ISA_A over everything the ColdFire runs that the build adds
   const featureEntries = ['PMUTE', 'TITLEROM', 'USRTEST', 'CMP3', 'TITLE', 'DLREC',
     ...ID_MASK_THUNKS.map(([r, m]) => `IM_${r}_${m.toString(16)}`), ...ID_SUB_THUNKS.map((r) => `IS_${r}`)].filter((n) => wa.asm.labels[n] !== undefined);
-  const entries = [st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'HTAB', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM', ...featureEntries].map((n) => wa.asm.labels[n]), wa.knobcb];
+  const entries = [st.asm.labels.BOOT_LABEL, st.asm.labels.APPLIER, st.asm.labels.DSP2PRE, ...['VALID', 'FAM', 'CLS', 'HTAB', 'GUARD', 'ERGUARD', 'COPYLIST', 'USRCHKREC', 'USRINSMENU', 'USRREM', ...featureEntries].map((n) => wa.asm.labels[n]), wa.knobcb];
   const codeMem: CodeMem[] = [{ what: 'boot code', ram: R.ram.bootCode[0], bytes: st.asm.bytes }, { what: 'window A', ram: R.ram.window[0], bytes: wa.asm.bytes }];
   const inOurs = (a: number): boolean => codeMem.some((m) => a >= m.ram && a < m.ram + m.bytes.length);
-  const isa = x20IsaGate(codeMem, entries, inOurs, [...siteCode, ...st.sites.map((s) => ({ at: s.at, bytes: s.bytes }))]);
+  const entryJump = concat([hex('4ef9'), be32(st.asm.labels.BOOT_LABEL)]);
+  const isa = x20IsaGate(codeMem, entries, inOurs, [...siteCode, ...st.sites.map((s) => ({ at: s.at, bytes: s.bytes })),
+    { at: 0x200000 + R.loader.entryJumpOffset, bytes: entryJump }]);
   gates.push({ name: 'ISA_A (MCF5206e): routines, OS sites and loader sites', ok: !isa.rejects.length,
     detail: `${isa.insns} instructions${isa.rejects.length ? '; ' + isa.rejects.map((i) => `${h(i.at)} ${i.name}: ${i.why}`).join('; ') : ''}` });
   if (isa.rejects.length) throw new Error(`ISA_A gate: ${isa.rejects.map((i) => `${h(i.at)} ${i.name}: ${i.why}`).join('; ')}`);
@@ -751,9 +760,13 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   if (await sha256(s0) !== R.file.identify.stage_sha256) throw new Error(`${R.name}: the loader's stage image is not the one the recipe knows`);
   if (s0.length !== L.header + L.stage2Bytes) throw new Error('stage image length');
   if (u32(s0, L.copyLongsAt) !== L.copyLongs) throw new Error('stage 1 copy count');
+  const jump = L.entryJumpOffset;
+  if (!Number.isSafeInteger(jump) || jump < 0 || jump + 6 > L.header ||
+      !equal(s0.subarray(jump, jump + 6), concat([hex('4ef9'), be32(L.stage2)]))) throw new Error('stage 1 entry jump anchor');
   const off = (ram: number): number => L.header + ram - L.stage2;
   const img = new Uint8Array(off(R.ram.window[0]) + wa.asm.bytes.length + 16);
   img.set(s0);
+  img.set(entryJump, jump);
   for (const s of st.sites) {
     const o = off(s.at), old = Array.from(img.subarray(o, o + s.bytes.length), (b) => b.toString(16).padStart(2, '0')).join('');
     if (old !== s.old) throw new Error(`loader site ${h(s.at)} (${s.what}): ${old}, expected ${s.old}`);
@@ -783,10 +796,16 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   gates.push({ name: 'firmware-version', ok: versionOk,
     detail: `Kitbasher ${FIRMWARE_VERSION.display}; startup tag at ${h(OS_START + versionAt)}; source ${R.name}` });
   if (!versionOk) throw new Error('Firmware version tag readback failed');
+  const marker = new TextEncoder().encode(`KBID1:${label.uw ? 'UW' : 'NU'}:${label.sha256}\0`);
+  const identityOffset = off(st.asm.labels.boot_label_identity);
+  const labelOk = equal(back.subarray(jump, jump + 6), entryJump) && equal(back.subarray(identityOffset, identityOffset + marker.length), marker);
+  gates.push({ name: 'boot-label', ok: labelOk, detail: `${label.text}; ${label.scheme} ${label.sha256}` });
+  if (!labelOk) throw new Error('Boot label readback failed');
 
   const used = [...preC, ...postC].reduce((n, c) => n + c.packed.length, 0) + list.length;
   const report: X20Report = {
     firmware: FIRMWARE_VERSION,
+    boot_label: label,
     base: R.id,
     machines: placed.machines.map((m) => ({ name: m.name.trim(), key: m.key, id: m.id, family: m.family, org: h(m.org), words: m.total })),
     e12: { bank_end: h(bankEnd), words: bank.words, stock_words: stockWords, freed_words: R.e12.bankEnd - bankEnd,

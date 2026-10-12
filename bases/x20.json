@@ -18,6 +18,7 @@
   "header": "0x40",
   "stage2_bytes": "0x3060",
   "copy_longs_at": "0x18",
+  "entry_jump_offset": "0x28",
   "copy_longs": "0xc18",
   "s2md": "0x2fb000",
   "slot0_flash": "0x4008",
