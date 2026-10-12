@@ -1,7 +1,8 @@
-; TX6 BD - Simple606-inspired MDS voice for X.20, version 1.2.
+; TX6 BD - Simple606-inspired MDS voice for X.20, version 2.0.
 ; XL: 0 = normal body decay; 127 = former XL-on decay. Captured on trigger.
 ; Intermediate XL values blend the envelope poles; render is unchanged.
 ; CLIK: 0 = remove this layer; 127 = original layer level. Captured on trigger.
+; Controls: TUNE first, DEC second. Version 1.x kits need parameter remapping.
 ;
 ; MIT License
 ; 
@@ -73,7 +74,7 @@ trigger:
     move a1,x:(r6+$13)
     move a1,x:(r6+$14)
     move a1,x:(r6+$15)
-    move y:(r6+$1),a
+    move y:(r6+$3),a
     asr #8,a,a
     and #>$3f,a
     clr a a1,x0
@@ -104,7 +105,7 @@ control_1_end:
     move p:(r0)+,x0
     move x0,x:(r1)+
 control_2_end:
-    move y:(r6+$3),a
+    move y:(r6+$1),a
     asr #8,a,a
     and #>$3f,a
     clr a a1,x0

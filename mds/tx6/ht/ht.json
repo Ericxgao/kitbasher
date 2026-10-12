@@ -11,8 +11,8 @@
   "retrigger": "restart",
   "params": [
     {
-      "name": "DEC",
-      "default": 102,
+      "name": "TUNE",
+      "default": 64,
       "min": 0,
       "max": 127,
       "transform": "raw14",
@@ -20,8 +20,8 @@
       "linked": false
     },
     {
-      "name": "TUNE",
-      "default": 64,
+      "name": "DEC",
+      "default": 102,
       "min": 0,
       "max": 127,
       "transform": "raw14",
@@ -47,7 +47,7 @@
       "linked": false
     }
   ],
-  "machine_version": "1.1",
+  "machine_version": "2.0",
   "max_track_cycles": 3936,
   "program": {
     "abi_version": 1,
@@ -203,7 +203,7 @@
       "layer_table": 1413
     },
     "program_words": 1541,
-    "program_sha256": "7020320400228b9e45ffe00e20d519aea9b778d88dd5e5ad452a01202decca91",
+    "program_sha256": "8a86aa043d2023823e0c6ddeffd08e67486da51625b5dae5fe1e538f22af2842",
     "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Pass packed big-endian 24-bit words and symbols to upstream MDS tools/mds_pack.py, then export with tools/mds_to_syx.py --slot 4."
   },
   "_controls": [
@@ -223,7 +223,7 @@
     }
   ],
   "_validation": {
-    "status": "simulator-qualified control expansion; version 1.1 hardware audition pending",
+    "status": "Control reorder verified against previous release; version 2.0 hardware audition pending.",
     "timing": {
       "measured_model_max_clocks": 3917,
       "declared_max_clocks": 3936,
@@ -311,7 +311,27 @@
         }
       ]
     },
-    "hardware_tested": false
+    "hardware_tested": false,
+    "control_order": {
+      "previous_version": "1.1",
+      "new_to_old_positions": [
+        2,
+        1,
+        3,
+        4
+      ],
+      "changed_instruction_words": [
+        23,
+        42
+      ],
+      "cases": 19,
+      "samples": 622592,
+      "audio_sha256": "50188b4c72a0a3ef380002211c7202724fa7c810aa7efa3eea8b644a4466f20a",
+      "bitexact_audio": true,
+      "identical_emulator_cycles": true,
+      "unchanged_instruction_layout": true,
+      "unchanged_memory_requirements": true
+    }
   },
   "_design": {
     "strategy": "Expose existing layers without additional sample-loop synthesis. Preserve version 1.0 audio at new-control defaults.",
@@ -322,7 +342,7 @@
     "file": "ht.syx",
     "destination_slot": 4,
     "bank_file": "../tx6-bank.syx",
-    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08. Version 1.1 has not been sent to hardware.",
-    "existing_kits": "Existing kits may retain zero in formerly unused parameter positions. Set the new controls to their documented defaults to restore the version 1.0 sound; existing parameter indices are unchanged."
+    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08. Version 2.0 has not been sent to hardware.",
+    "existing_kits": "Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) in existing kits to preserve their sound. No automatic kit conversion. Earlier compatibility notes: Existing kits may retain zero in formerly unused parameter positions. Set the new controls to their documented defaults to restore the version 1.0 sound; existing parameter indices are unchanged."
   }
 }

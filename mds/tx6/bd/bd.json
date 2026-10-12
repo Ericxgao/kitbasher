@@ -11,8 +11,8 @@
   "retrigger": "restart",
   "params": [
     {
-      "name": "TRAN",
-      "default": 51,
+      "name": "TUNE",
+      "default": 75,
       "min": 0,
       "max": 127,
       "transform": "raw14",
@@ -29,8 +29,8 @@
       "linked": false
     },
     {
-      "name": "TUNE",
-      "default": 75,
+      "name": "TRAN",
+      "default": 51,
       "min": 0,
       "max": 127,
       "transform": "raw14",
@@ -65,7 +65,7 @@
       "linked": false
     }
   ],
-  "machine_version": "1.2",
+  "machine_version": "2.0",
   "max_track_cycles": 3832,
   "program": {
     "abi_version": 1,
@@ -207,7 +207,7 @@
       "xl_weights": 1005
     },
     "program_words": 1133,
-    "program_sha256": "ce42a960eb800805ceb217f46423b1c25271b6848f11bfb64dc6f84e837b7434",
+    "program_sha256": "170ed020d4b9ee896015d597e24d6aaa75e3b4cb5f1df518472376788676e34e",
     "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Pass packed big-endian 24-bit words and symbols to upstream MDS tools/mds_pack.py, then export with tools/mds_to_syx.py --slot 1."
   },
   "_controls": [
@@ -227,7 +227,7 @@
     }
   ],
   "_validation": {
-    "status": "Simulator-qualified continuous XL; version 1.2 hardware audition pending",
+    "status": "Control reorder verified against previous release; version 2.0 hardware audition pending.",
     "timing": {
       "measured_model_max_clocks": 3815,
       "declared_max_clocks": 3832,
@@ -260,7 +260,29 @@
       "endpoints_bitexact": true,
       "reference": "Installed BD version 1.1, XL off/on at original default, minimum and maximum controls; four RNG seeds."
     },
-    "hardware_tested": false
+    "hardware_tested": false,
+    "control_order": {
+      "previous_version": "1.2",
+      "new_to_old_positions": [
+        3,
+        2,
+        1,
+        4,
+        5,
+        6
+      ],
+      "changed_instruction_words": [
+        24,
+        60
+      ],
+      "cases": 23,
+      "samples": 753664,
+      "audio_sha256": "cf91a4dc369ad38524f2d7bb854775af4cf0e427874c74e146fbd96c7a938180",
+      "bitexact_audio": true,
+      "identical_emulator_cycles": true,
+      "unchanged_instruction_layout": true,
+      "unchanged_memory_requirements": true
+    }
   },
   "_design": {
     "strategy": "Interpolate the existing normal and XL body envelope coefficients once per trigger. Preserve both endpoint sounds exactly; audio render unchanged.",
@@ -271,7 +293,7 @@
     "file": "bd.syx",
     "destination_slot": 1,
     "bank_file": "../tx6-bank.syx",
-    "instruction": "Choose the destination Machine Bank before sending. BD version 1.2 has not been sent to hardware; the other seven voices remain version 1.1.",
-    "existing_kits": "XL is now 0-127. For kits with the former XL switch enabled (value 1), set XL to 127 to preserve that sound. XL 0 and all other parameter positions/defaults are unchanged."
+    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08. Version 2.0 has not been sent to hardware.",
+    "existing_kits": "Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 3 (TUNE/TRAN) in existing kits to preserve their sound. No automatic kit conversion. Earlier compatibility notes: XL is now 0-127. For kits with the former XL switch enabled (value 1), set XL to 127 to preserve that sound. XL 0 and all other parameter positions/defaults are unchanged."
   }
 }

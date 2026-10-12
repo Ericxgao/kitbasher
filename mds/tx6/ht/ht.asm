@@ -1,7 +1,8 @@
-; TX6 HT - Simple606-inspired MDS voice for X.20, version 1.1.
+; TX6 HT - Simple606-inspired MDS voice for X.20, version 2.0.
 ; New layer controls preserve version 1.0 audio at their defaults.
 ; NOIS: 0 = remove this layer; 127 = original layer level. Captured on trigger.
 ; OVER: 0 = remove this layer; 127 = original layer level. Captured on trigger.
+; Controls: TUNE first, DEC second. Version 1.x kits need parameter remapping.
 ;
 ; MIT License
 ; 
@@ -83,7 +84,7 @@ trigger:
     move a1,x:(r6+$14)
     move a1,x:(r6+$17)
     move a1,x:(r6+$22)
-    move y:(r6+$1),a
+    move y:(r6+$2),a
     asr #8,a,a
     and #>$3f,a
     clr a a1,x0
@@ -100,7 +101,7 @@ trigger:
     move p:(r0)+,x0
     move x0,x:(r1)+
 control_1_end:
-    move y:(r6+$2),a
+    move y:(r6+$1),a
     asr #8,a,a
     and #>$3f,a
     clr a a1,x0
