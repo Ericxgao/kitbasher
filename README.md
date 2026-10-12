@@ -9,6 +9,8 @@ your browser at **[kitbasher.xyz](https://kitbasher.xyz)**. Your firmware never 
 computer: nothing is uploaded, and there is no server-side build.
 
 Kitbasher is a community project. It is not affiliated with or endorsed by Elektron.
+Kitbasher is not affiliated with MDX. Its modified X.14 and X.20 builds are not
+official MDX releases and are not supported by the MDX creator.
 
 ## Using it
 

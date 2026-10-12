@@ -12,7 +12,7 @@ body.simple-builder .upload #drop{margin:18px 0;padding:24px}
 .simple-builder .uw-question{margin:20px 0}
 .simple-builder .uw-help{margin-top:12px}
 .simple-builder #firmware-next{width:100%;margin-top:18px}
-.simple-builder #qualification-note{color:var(--err)}
+.simple-builder #qualification-note{color:var(--muted)}
 .simple-builder .builder-tools{position:relative;margin:0 0 16px;width:max-content}
 .simple-builder .builder-tools>div{position:absolute;left:0;top:26px;z-index:4;width:220px;display:grid;gap:6px;padding:12px;border:1px solid var(--line);background:var(--panel);box-shadow:0 4px 12px #0002}
 .simple-builder .builder-tools button{font:inherit;padding:9px;text-align:left;background:var(--panel);color:var(--ink);border:1px solid var(--line)}

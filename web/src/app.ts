@@ -12,7 +12,7 @@
 // plan (planX20) drives the meters (DSP2 words at the chosen trim, machine IDs, the new-machine list,
 // the machine records), the layout editor (X.20's own menu families as fixed categories) and the
 // build; what the recipe does not patch (sample swapping, the unmute fix, MIDI chromatic input, pitch
-// note names) is shown turned off with the reason. Untested on hardware, and labelled so.
+// note names) is shown turned off with the reason. Modified MDX builds carry an affiliation notice.
 //
 // Packs: the page bundles the packs that web/build.mjs includes. Users can load more pack files;
 // they are read with the File API, never uploaded, and planned and checked exactly like the
@@ -71,6 +71,7 @@ async function loadData(): Promise<Data> {
 }
 
 let data: Data;
+const MDX_DISCLAIMER = 'Kitbasher is not affiliated with MDX. These modified builds are not official MDX releases and are not supported by its creator.';
 let uiReady = false;
 let input: Uint8Array | null = null;
 let inputName = '';
@@ -133,8 +134,11 @@ function syncWizard(): void {
   $('firmware-next').textContent = !loaded() ? 'Choose firmware' : !asked.ok ? 'Answer the UW question' : 'Choose machines';
   $('firmware-loaded').hidden = !loaded();
   $('firmware-loaded').textContent = loaded() ? `Loaded: ${inputName}` : '';
-  $('qualification-note').hidden = !x20;
-  $('qualification-note').textContent = x20 ? 'X.20 B builds are not yet tested on hardware. Keep your original firmware and a backup.' : '';
+  const modifiedMdx = !!x20 || base?.id === 'x14';
+  for (const id of ['qualification-note', 'mdx-disclaimer']) {
+    $(id).hidden = !modifiedMdx;
+    $(id).textContent = modifiedMdx ? MDX_DISCLAIMER : '';
+  }
   $('samples-next').toggleAttribute('disabled', !loaded() || building);
   $('project-save').toggleAttribute('disabled', !loaded() || building);
   $('models-next').toggleAttribute('disabled', building);
@@ -380,7 +384,7 @@ function syncChromaOption(): void {
 function syncMeters(): void {
   $('m-ram').hidden = !!x20;
   for (const id of ['m-ids', 'm-list', 'm-records']) $(id).hidden = !x20;
-  $('capacity-all').textContent = x20 ? 'All must fit. Untested on hardware.' : 'All three must fit.';
+  $('capacity-all').textContent = x20 ? 'All must fit.' : 'All three must fit.';
 }
 
 function planFor(exclude: string[], opt = trimOptions()): Plan {
@@ -575,7 +579,7 @@ function refreshX20(minAutoDb: number | null): void {
     ? trimMode() === 'auto' ? 'Still too large. Remove models or lower At most.' : 'Remove models or choose Auto trim.'
     : 'Remove models.';
   const swapped = samples.state.swaps.size;
-  $('download-summary').textContent = `${p.sel.length} models for ${x20R!.name}.${swapped ? ` ${swapped} sample${swapped === 1 ? '' : 's'} replaced.` : ''} Untested on hardware: back up first and keep the stock ${x20R!.name} file to reflash.`;
+  $('download-summary').textContent = `${p.sel.length} models for ${x20R!.name}.${swapped ? ` ${swapped} sample${swapped === 1 ? '' : 's'} replaced.` : ''}`;
   const needs = p.sel.flatMap(s => needLines(s.m));
   $('download-needs').hidden = !needs.length;
   $('ids-warning').hidden = layoutEd.restoredFrom !== null;
@@ -634,13 +638,13 @@ async function onFile(f: File): Promise<void> {
       try { samples.setBank(x20E12Bank(R, bank0)); }
       catch (e) { samples.setBank(null, `Sample swapping is not available for this file: ${(e as Error).message}`); }
       $('firmware-info').textContent = `${R.name}: a public beta OS. Kitbasher patches this exact file with a fixed recipe. ` +
-        `${recipe.qualification.level === 'hardware-proven' ? '' : 'Untested on hardware: back up first and keep the stock X.20 B file to reflash. '}` +
+        MDX_DISCLAIMER + ' ' +
         'User machines (USR) keep working. ' + X20_OFF;
       $('firmware-details').hidden = false;
       $('firmware-options').hidden = false;              // shown turned off, with the reason
       syncChromaOption();
       syncMeters();
-      status(`Loaded ${f.name} (${R.name}, public beta; untested on hardware).`, 'ok');
+      status(`Loaded ${f.name} (${R.name}, public beta).`, 'ok');
       if (pendingProject) applyProject(pendingProject.project, pendingProject.name);
       refresh();
       if (gate(uwAnswer, true).ok) showStep(3);
@@ -690,7 +694,7 @@ async function onFile(f: File): Promise<void> {
     try { samples.setBank(readBank(parsed, b)); }
     catch (e) { samples.setBank(null, `Sample swapping is not available for this OS: ${(e as Error).message}`); }
     $('firmware-info').textContent = `${b.qualification.profile ? b.name : 'Unrecognized firmware version'}.` +
-      (b.qualification.level === 'hardware-proven' ? '' : " We haven't tested this version on a Machinedrum yet.");
+      (b.id === 'x14' ? ` ${MDX_DISCLAIMER}` : b.qualification.level === 'hardware-proven' ? '' : " We haven't tested this version on a Machinedrum yet.");
     $('firmware-details').hidden = false;
     // the unmute-latency fix is offered only where this OS has the sequencer it is written against
     $('firmware-options').hidden = !b.support.unmuteFix?.ok;
@@ -946,7 +950,7 @@ async function onBuild(destination: 'categories' | 'download' = 'download'): Pro
   }
 }
 
-/** The X.20 build's download, with its report and the "untested on hardware" label. */
+/** The X.20 build's download and report; syncWizard supplies the shared MDX notice. */
 function downloadX20(result: X20Built, t: number): void {
   const blob = new Blob([result.output as Uint8Array<ArrayBuffer>], { type: 'application/octet-stream' });
   const name = `${inputName.replace(/\.(syx|bin)$/i, '')}-models.syx`;
@@ -954,9 +958,8 @@ function downloadX20(result: X20Built, t: number): void {
   const a = el('a', { class: 'download', href: downloadUrl, download: name, title: name }, 'Download firmware');
   a.addEventListener('click', (e) => { if (needsUwAnswer()) e.preventDefault(); });
   $('result').replaceChildren(a,
-    el('p', { class: 'note', id: 'x20-untested' }, `Untested on hardware: ${x20R!.name} builds are checked by the gates below and in an emulator only. Back up first and keep the stock ${x20R!.name} file to reflash.`),
     el('details', {}, el('summary', {}, 'Build details and checks'), x20ReportView(result.report)));
-  status(`Built in ${((performance.now() - t) / 1000).toFixed(1)} s. Untested on hardware.`, 'ok');
+  status(`Built in ${((performance.now() - t) / 1000).toFixed(1)} s.`, 'ok');
 }
 
 const X20_FEATURE_NAMES: Record<string, string> = { unmute: 'the unmute fix (MUTE-mode TRIG keys act on press)', categories: 'menu categories',
