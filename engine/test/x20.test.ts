@@ -310,10 +310,14 @@ test('firmware: X.20 B builds the bundled catalog, deterministically, with every
   const a = await buildX20(syx, file(), packs, core, opt);
   const b = await buildX20(syx, file(), packs, core, opt);
   assert.equal(await sha256(a.output), await sha256(b.output));
+  assert.deepEqual(a.report.boot_label, b.report.boot_label);
+  assert.match(a.report.boot_label.text, /^UW [0-9A-F]{6}$/);
   assert.ok(a.report.gates.every((g) => g.ok));
   assert.ok(a.report.machines.every((m) => idAllowedOnX20(m.id) && !(m.id >= 96 && m.id <= 123) && m.id <= 191), a.report.machines.map((m) => m.id).join(','));
   assert.equal(new Set(a.report.machines.map((m) => m.id)).size, a.report.machines.length);
   const noUw = await buildX20(syx, file(), packs, core, { ...opt, uw: false });
+  assert.match(noUw.report.boot_label.text, /^NON-UW [0-9A-F]{6}$/);
+  assert.notEqual(a.report.boot_label.sha256, noUw.report.boot_label.sha256);
   assert.ok(noUw.report.machines.every((m) => m.id < 128));
   // no machine: refused before anything is laid out
   await assert.rejects(buildX20(syx, file(), packs, core, { ...opt, families: [] }), /No machines selected/);
@@ -321,6 +325,9 @@ test('firmware: X.20 B builds the bundled catalog, deterministically, with every
   const modules = [...new Set(packs.flatMap((p) => p.models.map((m) => m.module)))];
   const one = await buildX20(syx, file(), packs, core, { ...opt, exclude: modules.slice(1) });
   assert.equal(one.report.machines.length, 1);
+  assert.notEqual(a.report.boot_label.sha256, one.report.boot_label.sha256);
+  const noUnmute = await buildX20(syx, file(), packs, core, { ...opt, features: { unmute: false } });
+  assert.notEqual(a.report.boot_label.sha256, noUnmute.report.boot_label.sha256);
   assert.ok(one.report.gates.every((g) => g.ok));
   // the stock E12 bank, read and encoded again, is the same bytes: the encoder is the stock one
   const { decodeSyx, OS_START } = await import('../src/syx.js');
@@ -353,6 +360,7 @@ test('firmware: X.20 B sample swap -- the bank map, and a swapped entry built in
   const sweep = Array.from({ length: 11025 }, (_, k) => Math.round(1800 * Math.sin(2 * Math.PI * 300 * (10 ** (k / 11025) - 1) * 11025 / 44100 / Math.LN10)));
   const plain = await buildX20(syx, file(), packs, core, opt);
   const swapped = await buildX20(syx, file(), packs, core, { ...opt, samples: { swaps: new Map([[17, sweep]]), noTrim: new Set([17]) } });
+  assert.notEqual(plain.report.boot_label.sha256, swapped.report.boot_label.sha256);
   assert.ok(swapped.report.gates.every((g) => g.ok));
   assert.deepEqual(swapped.report.e12.edits, { swapped: [17], capped: [], no_trim: [17] });
   assert.equal(plain.report.e12.edits, undefined);

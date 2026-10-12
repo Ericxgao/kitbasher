@@ -970,11 +970,14 @@ function x20ReportView(r: X20Report): HTMLElement {
   const stat = (k: string, v: string): HTMLElement => el('div', { class: 'stat' }, el('span', { class: 'k' }, k), el('span', { class: 'v' }, v));
   return el('div', { class: 'report' },
     el('div', { class: 'stats' },
+      stat('Build ID', r.boot_label.id),
+      stat('Build target', r.boot_label.uw ? 'UW' : 'Non-UW'),
       stat('Machines', String(r.machines.length)),
       stat('DSP2 words free', fmt(r.dsp2.free)),
       stat('E12B flash free', `${fmt(r.flash.free_left)} B`),
       stat('E12 words freed', fmt(r.e12.freed_words)),
       stat('E12 samples trimmed', String(r.e12.trimmed))),
+    el('p', { class: 'note', style: 'overflow-wrap:anywhere' }, `Build fingerprint (${r.boot_label.scheme}): ${r.boot_label.sha256}`),
     el('p', { class: 'note', id: 'report-uw' }, noUw()
       ? 'Built for a Machinedrum without UW: every machine is on an ID below 128 and no model needs UW samples.'
       : 'Built for a Machinedrum with UW.'),

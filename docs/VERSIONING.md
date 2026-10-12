@@ -12,6 +12,26 @@ the original base. Custom machine selections share a revision; the output hash
 and embedded layout identify a particular build. A revision is not a claim of
 hardware qualification.
 
+X.20 builds also show a compact startup line, for example **UW A7C29F** or
+**NON-UW A7C29F**, above the existing **K.01**. UW describes the target selected
+in Kitbasher; it is not hardware detection. The six hexadecimal characters are
+the beginning of a deterministic build fingerprint. The full fingerprint and
+target appear in **Build details and checks** and the JSON build report.
+
+The `kb-build/1` fingerprint covers the source container with its final machine
+payload, sample bank and layout, plus the generated loader and runtime patches.
+The label is zeroed when hashing to avoid a circular dependency. Different
+machines, samples, targets or enabled firmware patches change it; repeated builds
+of the same content keep it. It is a debugging reference, not a signature or
+guaranteed unique six-character identifier, and differs from the final SysEx SHA-256.
+
+The label is drawn once by the X.20 loader through the already initialized panel
+UART, with a bounded wait. It adds no audio processing work and does not modify or
+call recovery-bootloader code. The original loader entry follows with its registers
+and stack restored. The label code and data are cleared with the existing temporary
+boot-code region after startup. This extra line is currently X.20 only; 1.63-lineage
+builds retain the existing K.01 version label.
+
 Kitbasher is not affiliated with Elektron or MDX. Modified builds are not
 official MDX releases and are not supported by its creator.
 
