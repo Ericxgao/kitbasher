@@ -251,7 +251,7 @@ $('flash-machines').onclick = async () => { await act(async () => {
       }, () => stop);
       snapshot = result.snapshot; const message = result.stopped ? 'Stopped. Machines already sent are installed.' : 'Done. Your machines are installed.';
       $('transfer-status').textContent = message; status(message);
-    } catch (e) { snapshot = undefined; $('transfer-status').textContent = 'Sending stopped. Some machines may already be installed. Reconnect to check before trying again.'; throw e; }
+    } catch (e) { snapshot = undefined; $('transfer-status').textContent = `Sending stopped. ${errorMessage(e)} Some machines may already be installed. Reconnect to check before trying again.`; throw e; }
     finally { $<HTMLButtonElement>('stop-transfer').disabled = true; }
   };
   if (navigator.locks) await navigator.locks.request('kitbasher-midi', { ifAvailable: true }, async lock => { if (!lock) throw new Error('Another Kitbasher tab is using MIDI. Finish that transfer first.'); await run(); }); else await run();
