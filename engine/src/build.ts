@@ -1,4 +1,5 @@
 import { isaGate, rewrittenCode } from './isa_gate.js';
+import { FIRMWARE_VERSION, FIRMWARE_TAG, firmwareTagBytes, type FirmwareVersion } from './firmware_version.js';
 import { assertBootRamWrites, readBootRamWrites } from './boot_safety.js';
 import { decodeLinear } from './isa.js';
 import { menuRefreshPatches } from './menu_refresh.js';
@@ -81,6 +82,7 @@ export interface BuildOptions extends Selection {
 export interface Gate { name: string; ok: boolean; detail: string }
 
 export interface BuildReport {
+  firmware: FirmwareVersion;
   model_runtime?: Base['modelRuntime'];
   base: string;
   /** hardware-proven base / emulator-gated / discovered only: a label on the output, never a gate */
@@ -389,12 +391,16 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
   const delta = img.length - afterD1;
   if (delta % 4) throw new Error('slot shift is not a multiple of 4');
   img.push(rom.subarray(afterD1, fw.osEnd));
+  // Label the standard boot screen and MIDI identity without touching the boot block.
+  img.set(fw.tagAt + delta, firmwareTagBytes());
   const addonAt = hasAddon ? B.addonFlash! + delta : null;
   if (addonAt !== null) gate('addon-moved', equal(img.slice(addonAt, addonAt + 8), new Uint8Array(8)), `add-on header at ${h(addonAt)}`);
   if (keep) {
-    gate('tail-in-place', delta === 0 && equal(img.slice(afterD1, fw.osEnd), rom.subarray(afterD1, fw.osEnd)),
-         `tag, data slots${hasAddon ? ', add-on' : ''}${B.scatter ? ', scatter table and entries' : ''}${B.inCfTail ? '' : ', the boot routine'} ` +
-         `byte for byte at their flash offsets (${h(afterD1)}..${h(fw.osEnd)})`);
+    gate('tail-in-place', delta === 0 && equal(img.slice(afterD1, fw.tagAt), rom.subarray(afterD1, fw.tagAt)) &&
+         equal(img.slice(fw.tagAt, fw.tagAt + 4), firmwareTagBytes()) &&
+         equal(img.slice(fw.tagAt + 4, fw.osEnd), rom.subarray(fw.tagAt + 4, fw.osEnd)),
+         `data slots${hasAddon ? ', add-on' : ''}${B.scatter ? ', scatter table and entries' : ''}${B.inCfTail ? '' : ', the boot routine'} ` +
+         `byte for byte at their flash offsets (${h(afterD1)}..${h(fw.osEnd)}); only the four-byte version tag changes`);
   }
 
   // ---- the flash block (descriptors and label blocks that live in flash), then the RAM image.
@@ -656,6 +662,8 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
 
   // ---- read the result back the way the unit will
   const back = parseFlash(image, fw.kind);
+  gate('firmware-version', back.tag === FIRMWARE_TAG && back.tagAt === fw.tagAt + delta,
+       `Kitbasher ${FIRMWARE_VERSION.display}; source ${base.name} (${fw.tag.trim()})`);
   if (reclaimTail) {
     const slot = back.slots[1];
     gate('dsp2-tail-payload', slot.sumOk && slot.at === sD2 && slot.length === comp.length &&
@@ -810,6 +818,7 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
   // the label segment's own bytes (with the CPU indicator stub, as before), without the unmute block after them
   const labelBytes = !ram.dyn ? 0 : ram.unmute?.home === 'dyn' ? ram.unmute.block.at - ram.dyn.base : ram.dyn.blob.length;
   const report: BuildReport = {
+    firmware: FIRMWARE_VERSION,
     model_runtime:base.modelRuntime,
     base: base.id,
     qualification: base.qualification,

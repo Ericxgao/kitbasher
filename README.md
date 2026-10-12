@@ -12,6 +12,9 @@ Kitbasher is a community project. It is not affiliated with or endorsed by Elekt
 Kitbasher is not affiliated with MDX. Its modified X.14 and X.20 builds are not
 official MDX releases and are not supported by the MDX creator.
 
+Generated builds use Kitbasher's own **K.01** version, with the original OS
+recorded separately. See [firmware versioning](docs/VERSIONING.md).
+
 ## Using it
 
 1. **Back up.** Keep the OS file you have installed now, and save your kits and

@@ -253,6 +253,7 @@ async function main(): Promise<void> {
         categories: a['family-menus'] ? false : undefined },
     });
     writeFileSync(a.out, r.output);
+    console.log(`firmware: Kitbasher ${r.report.firmware.display}, based on ${r.report.base}`);
     console.log(`features: ${r.report.features.map((f) => f.name).join(', ') || 'none'}`);
     for (const m of r.report.machines) console.log(`  ${m.name.padEnd(6)} ID ${String(m.id).padStart(3)}  ${m.family}  ${m.words} words at ${m.org}`);
     for (const g of r.report.gates) console.log(`  gate ${g.ok ? 'passed' : 'FAILED'}: ${g.name} (${g.detail})`);
@@ -348,6 +349,7 @@ async function main(): Promise<void> {
     },
   });
   writeFileSync(a.out, output);
+  console.log(`firmware: Kitbasher ${report.firmware.display}, based on ${report.base}`);
   if (a['write-map']) {
     writeFileSync(a['write-map'], JSON.stringify(report.layout, null, 1));
   }

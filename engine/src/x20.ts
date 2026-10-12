@@ -17,6 +17,7 @@
 // instruction (they trap on hardware with the cache off); every site's new bytes are as long as its anchor.
 
 import { be32, concat, h, sha256, sum32, u32 } from './bytes.js';
+import { FIRMWARE_VERSION, VERSION_WORDS, type FirmwareVersion } from './firmware_version.js';
 import { readBank, buildBank, freeFlash, E12B_FLASH, E12B_END, PAD_WORDS, type Bank } from './e12b.js';
 import { placeDsp2, type Dsp2Placed, type Dsp2Target } from './dsp2_place.js';
 import { decodeLinear, scanCode, type CodeMem, type Insn } from './isa.js';
@@ -80,6 +81,7 @@ export const x20MaskedId = (id: number): boolean => (id >= 88 && id <= 95) || (i
 export const x20RomTitleId = (id: number): boolean => (id >= 128 && id <= 159) || (id >= 176 && id <= 191);
 
 export interface X20Report {
+  firmware: FirmwareVersion;
   base: string;
   machines: { name: string; key: string; id: number; family: string; org: string; words: number }[];
   e12: { bank_end: string; words: number; stock_words: number; freed_words: number; flash_end: string; trimmed: number;
@@ -706,7 +708,7 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   if (dynFlash !== null) wf.dynLabels = { dataAt: R.flashAlias + dynFlash, models: dm.length };
   const wa = windowA(R, M, ours, fromBase64(core.knob_callback), listFlash, wf);
   if (wa.asm.bytes.length + R.ram.window[0] > R.ram.window[1]) throw new Error(`window A overflows: ${wa.asm.bytes.length} bytes, ${R.ram.window[1] - R.ram.window[0]} fit`);
-  const names: Record<string, number> = { STACK: M.stack, RECS: M.recs, CAP: M.cap, MENU: M.menu, M_U: M.mU, M_L: M.mL,
+  const names: Record<string, number> = { ...VERSION_WORDS, STACK: M.stack, RECS: M.recs, CAP: M.cap, MENU: M.menu, M_U: M.mU, M_L: M.mL,
     LIST: M.list, LIST_N: M.listN, BANK_END: bankEnd, HTAB: wa.htab, ...(wa.asm.labels.DLREC !== undefined ? { DLREC: wa.asm.labels.DLREC } : {}) };
   const writes: [number, Uint8Array][] = [];
   const siteCode: { at: number; bytes: Uint8Array }[] = [];
@@ -777,6 +779,7 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
 
   const used = [...preC, ...postC].reduce((n, c) => n + c.packed.length, 0) + list.length;
   const report: X20Report = {
+    firmware: FIRMWARE_VERSION,
     base: R.id,
     machines: placed.machines.map((m) => ({ name: m.name.trim(), key: m.key, id: m.id, family: m.family, org: h(m.org), words: m.total })),
     e12: { bank_end: h(bankEnd), words: bank.words, stock_words: stockWords, freed_words: R.e12.bankEnd - bankEnd,

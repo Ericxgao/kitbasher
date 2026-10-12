@@ -880,6 +880,34 @@
  },
  "sites": [
   {
+   "group": "version",
+   "at": "0x2ad7a8",
+   "old": "582e3230",
+   "new": { "u32": "VERSION_SHORT" },
+   "what": "Kitbasher short version (X.20)"
+  },
+  {
+   "group": "version",
+   "at": "0x2b223e",
+   "old": "4f532058",
+   "new": { "u32": "VERSION_FULL_0" },
+   "what": "Kitbasher OS version, first word"
+  },
+  {
+   "group": "version",
+   "at": "0x2b2242",
+   "old": "2e323020",
+   "new": { "u32": "VERSION_FULL_1" },
+   "what": "Kitbasher OS version, second word"
+  },
+  {
+   "group": "version",
+   "at": "0x2b2246",
+   "old": "4200",
+   "new": { "u16": "VERSION_FULL_2" },
+   "what": "Remove upstream beta suffix; keep NUL termination"
+  },
+  {
    "group": "stack",
    "at": "0x200266",
    "old": "002fd000",

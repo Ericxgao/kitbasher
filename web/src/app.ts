@@ -21,6 +21,7 @@
 import { baseSet, identify, NotPatchable, unsupported, type Base, type BaseProfileFile, type BaseSet, type LineageFile } from '../../engine/src/bases.js';
 import { prepare163 } from '../../engine/src/prepare.js';
 import { build, CompressedCapacityError, OsAreaCapacityError, type BuildReport, type BuildResult } from '../../engine/src/build.js';
+import { firmwareFilename } from '../../engine/src/firmware_version.js';
 import { readFirmware, type Firmware } from '../../engine/src/container.js';
 import type { TrimOptions } from '../../engine/src/e12.js';
 import { checkPack, modelWords, needLines, needsUwSamples, type CorePack, type Pack, type PackModel } from '../../engine/src/packs.js';
@@ -927,12 +928,12 @@ async function onBuild(destination: 'categories' | 'download' = 'download'): Pro
     const { output, kind, report } = result;
     const syx = kind === 'syx' ? output : encodeSyx(containerOf(output));
     const blob = new Blob([syx as Uint8Array<ArrayBuffer>], { type: 'application/octet-stream' });
-    const stem = inputName.replace(/\.(syx|bin)$/i, '');
-    const name = `${stem}-models.syx`;
+    const name = firmwareFilename(report.base);
     downloadUrl = URL.createObjectURL(blob);
     const a = el('a', { class: 'download', href: downloadUrl, download: name, title: name }, 'Download firmware');
     a.addEventListener('click', (e) => { if (needsUwAnswer()) e.preventDefault(); });
-    $('result').replaceChildren(a, el('details', {}, el('summary', {}, 'Build details and checks'), reportView(report)));
+    $('result').replaceChildren(a, el('p', { class: 'note' }, `Kitbasher ${report.firmware.display} · Based on ${base!.name}`),
+      el('details', {}, el('summary', {}, 'Build details and checks'), reportView(report)));
     status(`Built in ${((performance.now() - t) / 1000).toFixed(1)} s.`, 'ok');
   } catch (e) {
     if (version !== revision) return;
@@ -953,11 +954,12 @@ async function onBuild(destination: 'categories' | 'download' = 'download'): Pro
 /** The X.20 build's download and report; syncWizard supplies the shared MDX notice. */
 function downloadX20(result: X20Built, t: number): void {
   const blob = new Blob([result.output as Uint8Array<ArrayBuffer>], { type: 'application/octet-stream' });
-  const name = `${inputName.replace(/\.(syx|bin)$/i, '')}-models.syx`;
+  const name = firmwareFilename(result.report.base);
   downloadUrl = URL.createObjectURL(blob);
   const a = el('a', { class: 'download', href: downloadUrl, download: name, title: name }, 'Download firmware');
   a.addEventListener('click', (e) => { if (needsUwAnswer()) e.preventDefault(); });
   $('result').replaceChildren(a,
+    el('p', { class: 'note' }, `Kitbasher ${result.report.firmware.display} · Based on MDX X.20 B`),
     el('details', {}, el('summary', {}, 'Build details and checks'), x20ReportView(result.report)));
   status(`Built in ${((performance.now() - t) / 1000).toFixed(1)} s.`, 'ok');
 }
