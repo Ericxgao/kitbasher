@@ -476,91 +476,91 @@
     },
     {
       "file": "mds/tx6/bd/bd.syx",
-      "sha256": "e1814030fa3819ee1fbad9630f5617f0613fa6806faef9ba38992c7a46e1b641",
+      "sha256": "52d46f46505d108da7b295083a4b600922512ea227444b80aec8d12d4c158b1f",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style bass drum",
-      "source": "https://github.com/etcetc000/kitbasher/tree/8b5eab706bb94d7b087300bf665c8c727036a053/mds/tx6/bd",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/bd",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 3 (TUNE/TRAN) swapped. New full-rate sound design; remapping preserves control meanings, not identical audio."
+      "notes": "Version 2.1: smoother envelopes and a sharper adjustable kick click. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 3 (TUNE/TRAN) swapped. New full-rate sound design; remapping preserves control meanings, not identical audio."
     },
     {
       "file": "mds/tx6/sd/sd.syx",
-      "sha256": "ab00643337ddd0eba7f6b92e8b4da402004d39ac460d2e3800bb94c15e0d21f2",
+      "sha256": "2c8caa3b0b10f9db831cd93212a4f203c30c619b79310364d7d77b6653e30d65",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style snare drum",
-      "source": "https://github.com/etcetc000/kitbasher/tree/8b5eab706bb94d7b087300bf665c8c727036a053/mds/tx6/sd",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/sd",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
     },
     {
       "file": "mds/tx6/lt/lt.syx",
-      "sha256": "be2655b67902c6649b527d1cb654ae77184dba6395bf6bb94bceae65a07b0471",
+      "sha256": "d0fc8ac8e0450a385e62a7d0c76517cf4d9cabf7ba5acf42ae0253f22c534f18",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style low tom",
-      "source": "https://github.com/etcetc000/kitbasher/tree/8b5eab706bb94d7b087300bf665c8c727036a053/mds/tx6/lt",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/lt",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped. New full-rate sound design; remapping preserves control meanings, not identical audio."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped. New full-rate sound design; remapping preserves control meanings, not identical audio."
     },
     {
       "file": "mds/tx6/ht/ht.syx",
-      "sha256": "a089ca8f8461460eae39f7177ff4f57bcd92eb8804a754e6d859f9468aad8adc",
+      "sha256": "12724f34b964da6af7cce6dca0ca6aa93a0544234aefc3f2f0d5aecebc258de9",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style high tom",
-      "source": "https://github.com/etcetc000/kitbasher/tree/8b5eab706bb94d7b087300bf665c8c727036a053/mds/tx6/ht",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/ht",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped. New full-rate sound design; remapping preserves control meanings, not identical audio."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped. New full-rate sound design; remapping preserves control meanings, not identical audio."
     },
     {
       "file": "mds/tx6/ch/ch.syx",
-      "sha256": "7dbfc557effda40009f9cd19445870bcf464356baea1b348eb5d9aafb5325526",
+      "sha256": "1cc71b8df9d29e58de584574a6c06c202fa1af3b654a2a1141fbc41544bd724e",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style closed hi-hat",
-      "source": "https://github.com/etcetc000/kitbasher/tree/8b5eab706bb94d7b087300bf665c8c727036a053/mds/tx6/ch",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/ch",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
     },
     {
       "file": "mds/tx6/oh/oh.syx",
-      "sha256": "c68827c201e4d4eae02e8cd692810ecee07a5a9dfb36351ee9e3c0df7832fc80",
+      "sha256": "e933e01bbe08320fc6618e13d5a3298719c26f0916839fb020cae2623403aecf",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style open hi-hat",
-      "source": "https://github.com/etcetc000/kitbasher/tree/8b5eab706bb94d7b087300bf665c8c727036a053/mds/tx6/oh",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/oh",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
     },
     {
       "file": "mds/tx6/cy/cy.syx",
-      "sha256": "39e77d7564c6dc79b010001db9a60f6f5f07813a5c4eee54dec37c98c83124be",
+      "sha256": "92722d11cbfa18ef83161c2eced9888c8534b3714ef8270600912ae77b3b0583",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style cymbal",
-      "source": "https://github.com/etcetc000/kitbasher/tree/8b5eab706bb94d7b087300bf665c8c727036a053/mds/tx6/cy",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/cy",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
     },
     {
       "file": "mds/tx6/cp/cp.syx",
-      "sha256": "59c6e7928e7c5cc440438ce68d749eaed1cdf73852e739e81874dcc9d55c8843",
+      "sha256": "8a777698dd107a8dbbbbd4dc68574ca5d2e771fb458d24b41a1b70455bca376f",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-inspired hand clap",
-      "source": "https://github.com/etcetc000/kitbasher/tree/8b5eab706bb94d7b087300bf665c8c727036a053/mds/tx6/cp",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/cp",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "Version 2.0: TUNE first, DEC second. Existing kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped. TGHT tightens the opening bursts. Leave TGHT at 0 for the original clap."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped. TGHT tightens the opening bursts. Leave TGHT at 0 for the original clap."
     },
     {
       "file": "mds/community/murdenihcam/SMP-ST.syx",

@@ -16,7 +16,7 @@ test('every curated core/community release validates, with reviewed identities a
   assert.ok(index.machines.filter(m => m.channel === 'core').every(m => m.source === 'https://github.com/jmamma/MDX'));
   assert.equal(new Set(index.machines.map(m => m.summary)).size, index.machines.length);
   const kick = index.machines.find(m => m.alias === 'TX6-BD');
-  assert.equal(kick.version, '2.0'); assert.match(kick.source, /\/tree\/[a-f0-9]{40}\/mds\/tx6\/bd$/);
+  assert.equal(kick.version, '2.1'); assert.match(kick.source, /\/tree\/[a-f0-9]{40}\/mds\/tx6\/bd$/);
   for (const machine of index.machines.filter(m => m.category === 'TX6')) {
     assert.deepEqual(machine.parameters.slice(0, 2).map(p => p.name), ['TUNE', 'DEC']);
     assert.match(machine.notes, /parameter locks/);
