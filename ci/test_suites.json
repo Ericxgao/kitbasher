@@ -8,6 +8,7 @@
     "isa_unit",
     "boot_safety",
     "firmware_version",
+    "firmware_transfer",
     "model_contract",
     "aliases",
     "model_runtime",

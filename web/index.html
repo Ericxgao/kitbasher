@@ -23,7 +23,7 @@ b.addEventListener('click',function(){r.dataset.theme=r.dataset.theme==='dark'?'
 <nav class="wizard-steps" aria-label="Build progress">
   <button type="button" data-step="1" aria-current="step">1. Firmware</button>
   <button type="button" data-step="3" disabled>2. Machines</button>
-  <button type="button" data-step="5" disabled>3. Download</button>
+  <button type="button" data-step="5" disabled>3. Send or download</button>
 </nav>
 <div id="status" role="status" aria-live="polite">Loading machines…</div>
 <section id="step-1" class="wizard-page" aria-labelledby="firmware-title">
@@ -77,7 +77,7 @@ b.addEventListener('click',function(){r.dataset.theme=r.dataset.theme==='dark'?'
   <div class="wizard-actions"><button type="button" id="categories-next" class="wizard-primary">Done</button></div>
 </section>
 <section id="step-5" class="wizard-page" aria-labelledby="download-title" hidden>
-  <h2 id="download-title" tabindex="-1">Download firmware</h2>
+  <h2 id="download-title" tabindex="-1">Your firmware is ready</h2>
   <p id="download-summary"></p>
   <p id="mdx-disclaimer" class="note" hidden></p>
   <p id="ids-warning" class="fine" hidden></p>
@@ -90,7 +90,7 @@ b.addEventListener('click',function(){r.dataset.theme=r.dataset.theme==='dark'?'
   <div class="e12" id="pitch-labels-option" hidden><label title="On the parameter page the pitch knob of a model with a note law shows the note it plays under its dial (C-3, C#3, C+3 for a quarter tone) instead of a number, as Elektron's DEV firmware shows a TONAL track's pitch."><input type="checkbox" id="pitch-labels"> Show pitch as note names (C-3, C#3)</label></div>
   <p id="x20-unavailable" class="fine" hidden></p>
   </details>
-  <details class="help"><summary>Install on your Machinedrum</summary><ul class="fine"><li><strong>Use at your own risk.</strong> Installing modified firmware can make your Machinedrum unusable; Kitbasher comes with no warranty.</li><li>Back up first: GLOBAL › SYSEX SEND › ALL into a SysEx recorder. Send the new file from the boot menu (hold FUNCTION at power-on, then [5 LT] MIDI UPGRADE), slowly: a 20 ms gap between messages.</li><li>A failed or unwanted update is recovered the same way, by sending your original file again. The boot menu is never rewritten.</li><li>Kits store machine IDs. Keep your saved layout when rebuilding firmware for existing kits.</li></ul></details>
+  <details class="help"><summary>Install on your Machinedrum</summary><ul class="fine"><li><strong>Use at your own risk.</strong> Installing modified firmware can make your Machinedrum unusable; Kitbasher comes with no warranty.</li><li>Back up first: GLOBAL › SYSEX SEND › ALL into a SysEx recorder. Use Send firmware above, or send the downloaded file with a SysEx utility from the boot menu (hold FUNCTION at power-on, then [5 LT] MIDI UPGRADE). The browser handles MIDI timing; in another utility, allow a 20 ms gap between messages.</li><li>A failed or unwanted update is recovered the same way, by sending your original file again. The boot menu is never rewritten.</li><li>Kits store machine IDs. Keep your saved layout when rebuilding firmware for existing kits.</li></ul></details>
   <details class="project-save"><summary>Save for next time</summary><p>Save your choices to reuse them later.</p><button type="button" id="project-save" class="wizard-secondary">Save project</button></details>
   <div class="wizard-actions"><button type="button" data-back="3">Back to machines</button></div>
 </section>
