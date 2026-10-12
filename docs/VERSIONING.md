@@ -22,8 +22,10 @@ becomes `K01 `, which the standard startup screen formats as `K.01`. The same
 tag is returned by the existing MIDI identity path. Custom DEV screens may
 also show their own upstream development identifier.
 
-X.20 uses separate strings: both `X.20` and `OS X.20 B` are replaced at boot
-with `K.01` and `OS K.01`. The old beta suffix is removed and both strings stay
+X.20 also reads the four-byte container tag for its startup display, so that tag
+becomes `K01 ` too. Its separate strings `X.20` and `OS X.20 B` are replaced at boot
+with `K.01` and `OS K.01`. Changing only those strings leaves startup showing
+the upstream version. The old beta suffix is removed and both strings stay
 NUL terminated within their original storage. Its exact source-file hash and
 offline recipe-anchor checks still apply.
 

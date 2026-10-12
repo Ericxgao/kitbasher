@@ -17,7 +17,7 @@
 // instruction (they trap on hardware with the cache off); every site's new bytes are as long as its anchor.
 
 import { be32, concat, h, sha256, sum32, u32 } from './bytes.js';
-import { FIRMWARE_VERSION, VERSION_WORDS, type FirmwareVersion } from './firmware_version.js';
+import { FIRMWARE_VERSION, FIRMWARE_TAG, VERSION_WORDS, stampContainerVersion, type FirmwareVersion } from './firmware_version.js';
 import { readBank, buildBank, freeFlash, E12B_FLASH, E12B_END, PAD_WORDS, type Bank } from './e12b.js';
 import { placeDsp2, type Dsp2Placed, type Dsp2Target } from './dsp2_place.js';
 import { decodeLinear, scanCode, type CodeMem, type Insn } from './isa.js';
@@ -774,8 +774,15 @@ export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, pac
   cont.set(be32(n0), 0);
   cont.set(be32(sum32(newSlot)), 4);
   cont.set(newSlot, 8);
+  // Startup reads the container tag as well as the OS's separate version strings.
+  const versionAt = stampContainerVersion(cont, 'X20 ');
   const output = encodeSyx(cont);
-  if (decodeSyx(output).some((b, k) => b !== cont[k])) throw new Error('.syx round trip');
+  const readback = decodeSyx(output);
+  if (readback.some((b, k) => b !== cont[k])) throw new Error('.syx round trip');
+  const versionOk = String.fromCharCode(...readback.subarray(versionAt, versionAt + 4)) === FIRMWARE_TAG;
+  gates.push({ name: 'firmware-version', ok: versionOk,
+    detail: `Kitbasher ${FIRMWARE_VERSION.display}; startup tag at ${h(OS_START + versionAt)}; source ${R.name}` });
+  if (!versionOk) throw new Error('Firmware version tag readback failed');
 
   const used = [...preC, ...postC].reduce((n, c) => n + c.packed.length, 0) + list.length;
   const report: X20Report = {
