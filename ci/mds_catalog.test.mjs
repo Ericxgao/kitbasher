@@ -22,6 +22,7 @@ test('every curated core/community release validates, with reviewed identities a
     assert.match(machine.notes, /parameter locks/);
   }
   assert.equal(index.machines.filter(m => m.category === 'TX6').length, 8);
+  assert.deepEqual(index.machines.find(m => m.alias === 'TX6-CP').parameters.map(p => p.name), ['TUNE', 'DEC', 'NOIS', 'BODY', 'TGHT']);
   assert.ok(index.machines.every(m => m.category !== 'TR6'));
   const smp = index.machines.filter(m => m.category === 'SMP');
   assert.equal(smp.length, 3);

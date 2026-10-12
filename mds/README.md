@@ -9,8 +9,13 @@ The collection contains the X.20 USR releases in `core/` (TX8, TX9, TXZ, SYN, P-
 ## Curating releases
 
 TX6 version 2.0 puts TUNE first and DEC second on all eight machines. BD moves
-TRAN to position 3; the other controls keep their positions. Audio, memory use
-and DSP cost are unchanged when values follow their controls. Existing kits,
+TRAN to position 3; the other existing controls keep their positions. All
+audio synthesis now runs at 44.1 kHz. The kick uses a smoother zero-crossing
+start and a HEAT-controlled harmonic; both toms use two tonal modes. These
+three voices are inspired revisions and change the sound. The clap adds TGHT:
+0 keeps the original spacing, and 127 tightens the opening bursts, bringing
+the main tail onset from about 33 ms to 4 ms. Its tail decay speed is unchanged.
+TGHT = 0 preserves the previous clap audio exactly. Existing kits,
 parameter locks and modulation targets need positions 1 and 3 swapped for BD,
 or positions 1 and 2 for the other seven. Installing the new machines does not
 convert saved kits.

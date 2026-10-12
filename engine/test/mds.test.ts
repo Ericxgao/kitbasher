@@ -106,6 +106,8 @@ test('post-commit query WAIT does not interrupt an eight-machine K55 installatio
 });
 test('real released bank decodes; destinations change without changing package identity', async () => {
   assert.equal(bank.length, 8); assert.equal(kick.version, '2.0'); assert.equal(kick.parameters.find(p => p.name === 'XL')?.max, 127);
+  const tight = bank.find(m => m.alias === 'TX6-CP')?.parameters.find(p => p.name === 'TGHT');
+  assert.ok(tight); assert.equal(tight.default, 0); assert.equal(tight.max, 127);
   for (const machine of bank) {
     assert.equal(machine.version, '2.0');
     assert.deepEqual(machine.parameters.slice(0, 2).map(p => p.name), ['TUNE', 'DEC']);

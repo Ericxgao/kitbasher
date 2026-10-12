@@ -4,7 +4,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { root } from './local_config.mjs';
 
-const skip = new Set(['node_modules', 'build', 'dist', '.git']);
+// mds_lab is ignored local research, with archived links outside the published docs.
+const skip = new Set(['node_modules', 'build', 'dist', '.git', 'mds_lab']);
 function markdown(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap(e => {
     if (skip.has(e.name)) return [];
