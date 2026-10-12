@@ -1,6 +1,6 @@
 # E12 samples
 
-The page's Samples step lets you replace any of the E12 machines' samples with your own.
+**Options → Edit drum samples** on the Machines page lets you replace any of the E12 machines' samples with your own.
 This page describes how the E12 bank works, which machine plays which sample, and the rules a
 swap follows. The code is in [engine/src/samples.ts](../engine/src/samples.ts) and
 [engine/src/e12.ts](../engine/src/e12.ts); the browser side in
@@ -81,6 +81,9 @@ A swapped sample usually compresses differently from the stock one, so it can ch
 E12B flash the trim frees for the machines; the storage check counts it.
 
 ## The Samples step
+
+Open it from **Options → Edit drum samples** on the Machines page. **Done** returns
+to your machine selection; sample editing is optional.
 
 The 16 E12 machines are laid out as pads in Machinedrum order (BD SD HT LT CP RS CB CH /
 OH RC CC BR TA TR SH BC); the two-sample machines have a main and a layer half. Click a

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { CMD, X20_CAPS, concat, crc32, decodeMessage, encodeMessage, hex, machineMessages, parseCaps, parsePackage, parseSlots, parseSysex, planBank, type MdsMachine, type MdsMessage, type MdsSnapshot } from '../src/mds.js';
-import { MdsClient, type MdsTransport } from '../src/mds_transfer.js';
+import { MdsClient, MIDI_CONNECTION_ERROR, type MdsTransport } from '../src/mds_transfer.js';
 const file = (name: string) => new Uint8Array(readFileSync(new URL(`../../../mds/${name}`, import.meta.url)));
 const bank = await parseSysex(file('tx6/tx6-bank.syx'));
 const kick = bank[0];
@@ -36,6 +36,24 @@ class FakeMidi implements MdsTransport {
 test('capability query matches the published protocol byte vector', () => {
   assert.equal(hex(encodeMessage(CMD.caps, 1)), 'f000203c020074010600017f7f00017f0009f7');
   assert.equal(crc32(new TextEncoder().encode('123456789')), 0xcbf43926);
+});
+
+test('connection check stops after five seconds without sending any machine data', async () => {
+  const io = new FakeMidi(() => []);
+  await assert.rejects(new MdsClient(io, () => io.time).snapshot(), { message: MIDI_CONNECTION_ERROR });
+  assert.equal(io.time, 5000);
+  assert.deepEqual(io.sent.map(b => decodeMessage(b).command), [CMD.slots]);
+});
+
+test('connection deadline is shared across replies, retries and unrelated traffic', async () => {
+  const io = new FakeMidi(m => m.command === CMD.slots
+    ? [encodeMessage(CMD.slotsReply, m.transaction, 127, 127, slotsBody(empty()))]
+    : [encodeMessage(CMD.capsReply, (m.transaction + 1) % 16384, 127, 127, capsBody(empty()))]);
+  const receive = io.receive.bind(io);
+  io.receive = async ms => { const b = await receive(ms); if (b) io.time += 1199; return b; };
+  await assert.rejects(new MdsClient(io, () => io.time, 2000).snapshot(), { message: MIDI_CONNECTION_ERROR });
+  assert.equal(io.time, 5000);
+  assert.deepEqual(io.sent.map(b => decodeMessage(b).command), [CMD.slots, CMD.caps, CMD.caps]);
 });
 test('real released bank decodes; destinations change without changing package identity', async () => {
   assert.equal(bank.length, 8); assert.equal(kick.version, '1.2'); assert.equal(kick.parameters.find(p => p.name === 'XL')?.max, 127);
@@ -121,7 +139,7 @@ test('installation refuses a changed reviewed bank before sending a header', asy
 
 test('missing MIDI return path prevents any machine data from being sent', async () => {
   const io = new FakeMidi(() => []);
-  await assert.rejects(io.client().install([{ slot: 0, machine: kick }], empty(), () => {}), /Connect Machinedrum OUT.*required to pace/);
+  await assert.rejects(io.client().install([{ slot: 0, machine: kick }], empty(), () => {}), { message: MIDI_CONNECTION_ERROR });
   assert.equal(io.sent.length, 3);
   assert.ok(io.sent.every(bytes => decodeMessage(bytes).command === CMD.slots));
 });

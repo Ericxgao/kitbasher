@@ -76,6 +76,7 @@ const appStyles = readFileSync(join(ROOT, 'web/styles.css'), 'utf8');
 writeFileSync(join(OUT, 'index.html'), html.replace('<!-- app-styles -->', `<style>${appStyles}</style>`));
 writeFileSync(join(OUT, 'mds.html'), readFileSync(join(ROOT, 'web/mds.html'), 'utf8').replace('<!-- app-styles -->', `<style>${appStyles}</style>`));
 cpSync(join(ROOT, 'web/mds.css'), join(OUT, 'mds.css'));
+cpSync(join(ROOT, 'web/builder.css'), join(OUT, 'builder.css'));
 mkdirSync(join(OUT, 'data/mds'), { recursive: true });
 writeFileSync(join(OUT, 'data/mds/index.json'), JSON.stringify(mdsCatalog.index));
 for (const asset of mdsCatalog.assets) writeFileSync(join(OUT, 'data/mds', asset.file), asset.bytes);

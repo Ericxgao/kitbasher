@@ -14,30 +14,30 @@
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2320252b'/%3E%3Crect x='6' y='6' width='9' height='9' rx='2' fill='%23f2b134'/%3E%3Crect x='17' y='6' width='9' height='9' rx='2' fill='%23e8e6df'/%3E%3Crect x='6' y='17' width='9' height='9' rx='2' fill='%23e8e6df'/%3E%3Crect x='17' y='17' width='9' height='9' rx='2' fill='%23e8e6df'/%3E%3C/svg%3E">
 <script>try{document.documentElement.dataset.theme=localStorage.getItem('kitbasher-theme')==='dark'?'dark':'light'}catch(e){document.documentElement.dataset.theme='light'}</script>
-<!-- app-styles --></head>
-<body class="bench wizard"><main>
-<header class="page-head"><div><h1>Kitbasher</h1><p class="tagline">New synthesis for the Machinedrum</p></div><button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode"></button></header>
+<!-- app-styles --><link rel="stylesheet" href="builder.css"></head>
+<body class="bench wizard simple-builder"><main>
+<header class="page-head"><div><h1>Kitbasher</h1></div><button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode"></button></header>
 <script>(function(){var b=document.getElementById('theme-toggle'),r=document.documentElement;var sun='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="currentColor"/><g stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></g></svg>';var moon='<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M13.6 10.4A6 6 0 0 1 5.6 2.4a6 6 0 1 0 8 8z"/></svg>';function sync(){var d=r.dataset.theme==='dark';b.innerHTML=(d?sun:moon)+'<span>'+(d?'Light':'Dark')+'</span>';b.setAttribute('aria-label','Switch to '+(d?'light':'dark')+' mode');}
 b.addEventListener('click',function(){r.dataset.theme=r.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem('kitbasher-theme',r.dataset.theme)}catch(e){}sync();});sync();})();</script>
 <nav class="site-nav" aria-label="Main navigation"><a href="index.html" aria-current="page">Firmware builder</a><a href="mds.html">MDS machines</a></nav>
 <nav class="wizard-steps" aria-label="Build progress">
   <button type="button" data-step="1" aria-current="step">1. Firmware</button>
-  <button type="button" data-step="2" disabled>2. Samples</button>
-  <button type="button" data-step="3" disabled>3. Models</button>
-  <button type="button" data-step="4" disabled>4. Categories</button>
-  <button type="button" data-step="5" disabled>5. Download</button>
+  <button type="button" data-step="3" disabled>2. Machines</button>
+  <button type="button" data-step="5" disabled>3. Download</button>
 </nav>
-<div id="status" role="status" aria-live="polite">Loading machine packs…</div>
+<div id="status" role="status" aria-live="polite">Loading machines…</div>
 <section id="step-1" class="wizard-page" aria-labelledby="firmware-title">
   <section class="panel upload">
     <h2 id="firmware-title" tabindex="-1">Start with your firmware</h2>
-    <p>Choose your original OS 1.63, X.14, Em's DEV firmware or MDX X.20 B (public beta; untested on hardware). Everything runs in this browser; your file stays on your computer.</p>
-    <label id="drop"><input id="file" type="file" accept=".syx,.bin" aria-label="Choose firmware file"><strong>Drop your OS file here</strong>, or browse<span class="fine">.syx or .bin · <span id="bases">OS 1.63, X.14, Em's DEV firmware and MDX X.20 B</span></span></label>
+    <p>Choose your original Machinedrum firmware file. It stays on your computer.</p>
+    <label id="drop"><input id="file" type="file" accept=".syx,.bin" aria-label="Choose firmware file"><strong>Choose firmware</strong><span class="fine">or drop the file here</span></label>
+    <p id="firmware-loaded" hidden></p><p id="qualification-note" hidden></p>
+    <details class="supported-files"><summary>Supported firmware</summary><p id="bases">OS 1.63, X.14, Em's DEV firmware and MDX X.20 B</p></details>
     <details id="firmware-details" hidden><summary>Firmware compatibility details</summary><p class="fine" id="firmware-info"></p></details>
     <fieldset id="uw-question" class="uw-question" aria-describedby="uw-help"><legend>Does your Machinedrum have the UW option?</legend>
       <label><input type="radio" name="uw" value="yes" required> Yes</label>
       <label><input type="radio" name="uw" value="no"> No</label>
-      <p class="fine" id="uw-help">To check: on your current firmware, open the machine menu of any track. If it has ROM and RAM categories, your Machinedrum has the UW option. If it does not, it has no UW.</p>
+      <details class="uw-help"><summary>How do I check?</summary><p class="fine" id="uw-help">To check: on your current firmware, open the machine menu of any track. If it has ROM and RAM categories, your Machinedrum has the UW option. If it does not, it has no UW.</p></details>
       <p class="fine" id="uw-file-hint" hidden></p>
     </fieldset>
     <details id="restore" class="restore"><summary>Restore an earlier layout</summary>
@@ -45,19 +45,19 @@ b.addEventListener('click',function(){r.dataset.theme=r.dataset.theme==='dark'?'
       <label id="restore-drop" class="restore-drop"><input id="project-file" type="file" accept=".syx,.bin,.json,application/json" aria-label="Restore an earlier layout: a Kitbasher .syx, a project or a layout file"><strong>Drop a Kitbasher .syx, project or layout file</strong>, or browse</label>
     </details>
     <p class="fine" id="project-status" role="status" aria-live="polite"></p>
-    <button type="button" id="firmware-next" class="wizard-primary" disabled>Samples →</button>
+    <button type="button" id="firmware-next" class="wizard-primary" disabled>Choose firmware</button>
   </section>
 </section>
 <section id="step-2" class="wizard-page" aria-labelledby="samples-title" hidden>
   <section class="panel selection-panel samples-panel" id="samples-panel">
-    <div class="section-head"><h2 id="samples-title" tabindex="-1">E12 samples</h2><span>Click a pad to hear it. Drop WAV or AIFF files on the pads to replace them.</span></div>
+    <div class="section-head"><h2 id="samples-title" tabindex="-1">Edit drum samples</h2><span>Click a pad to hear it. Drop WAV or AIFF files on the pads to replace them.</span></div>
     <div id="sample-ui"></div>
   </section>
-  <div class="wizard-actions"><button type="button" data-back="1">← Firmware</button><button type="button" id="samples-next" class="wizard-primary">Choose models →</button></div>
+  <div class="wizard-actions"><button type="button" id="samples-next" class="wizard-primary">Done</button></div>
 </section>
 <section id="step-3" class="wizard-page" aria-labelledby="models-title" hidden>
   <div class="workspace">
-    <section class="panel selection-panel"><div class="section-head"><h2 id="models-title" tabindex="-1">Choose models</h2><span>Select to include. Click a name for details.</span></div><div id="machines"></div>
+    <section class="panel selection-panel"><div class="section-head"><h2 id="models-title" tabindex="-1">Choose models</h2><span>Select to include. Click a name for details.</span></div><details class="builder-tools"><summary>Options</summary><div><button type="button" data-step="2">Edit drum samples</button><button type="button" data-step="4">Arrange machine menu</button></div></details><div id="machines" tabindex="0" role="region" aria-label="Available machines"></div>
       <details class="pack-loader"><summary>Load model packs</summary><label class="fine">Catalog <select id="pack-mode" aria-label="Pack loading mode"><option value="add">Add to current catalog</option><option value="replace">Replace catalog</option></select></label><p class="fine">Replacing a catalog? Load core.json and its family packs together.</p><label class="fine" id="packs-load">Pack file(s) <input id="pack-files" type="file" accept=".json,application/json" multiple aria-label="Load pack files"></label><p class="fine" id="packs-status"></p></details>
     </section>
     <aside class="sidebar" id="machine-sidebar" aria-label="Selected machine details"><section class="panel inspector" id="inspector" aria-label="Machine details"><div class="inspector-head"><h2>Preview</h2><span id="model-family"></span></div><h3 id="model-name">Choose a machine</h3><p id="model-description">Select a model.</p><p id="model-needs" class="fine" hidden></p><div class="screen-caption"><span>Hover or tap a control</span><button type="button" id="enlarge-screen">Enlarge</button></div><div class="screen"><div class="lcd-glass"><canvas id="model-lcd" width="128" height="64" role="img" aria-label="Machinedrum screen preview"></canvas></div></div></section></aside>
@@ -70,26 +70,29 @@ b.addEventListener('click',function(){r.dataset.theme=r.dataset.theme==='dark'?'
   <section id="make-room" class="panel trim-panel" hidden><p id="make-room-help">Remove models or trim E12 samples.</p>
     <div id="sample-options"><div class="e12"><label><input type="radio" name="e12" value="auto" checked> Auto trim</label><label><input type="radio" name="e12" value="keep"> Keep originals</label><label><input type="radio" name="e12" value="trim"> Manual trim</label></div><div id="trim-controls"><label for="db">Cut below</label><input id="db" type="range" min="-40" max="-10" step="0.1" value="-17"><span id="db-out"></span><label for="cap">At most</label><input id="cap" type="range" min="0" max="1.3" step="0.05" value="1"><span id="cap-out"></span></div></div>
   </section>
-  <div class="wizard-actions"><button type="button" data-back="2">← Samples</button><button type="button" id="models-next" class="wizard-primary" disabled>Arrange categories →</button></div>
+  <div class="wizard-actions"><button type="button" data-back="1">Back to firmware</button><button type="button" id="models-next" class="wizard-primary" >Build firmware</button></div>
 </section>
 <section id="step-4" class="wizard-page" aria-label="Arrange categories" hidden>
   <div id="layout-anchor"></div>
-  <div class="wizard-actions"><button type="button" data-back="3">← Models</button><button type="button" id="categories-next" class="wizard-primary">Download →</button></div>
+  <div class="wizard-actions"><button type="button" id="categories-next" class="wizard-primary">Done</button></div>
 </section>
 <section id="step-5" class="wizard-page" aria-labelledby="download-title" hidden>
   <h2 id="download-title" tabindex="-1">Download firmware</h2>
   <p id="download-summary"></p>
+  <p id="mdx-disclaimer" class="note" hidden></p>
   <p id="ids-warning" class="fine" hidden></p>
+  <button id="build" type="button" class="wizard-primary" disabled>Create download</button>
+  <div id="result" aria-live="polite"></div>
+  <div id="download-needs" class="uw-next" hidden></div>
+  <details id="build-options"><summary>Firmware options</summary>
   <div class="e12" id="firmware-options" hidden><label title="An unmuted track plays its next trig instead of about two steps later. Turn it off to keep this OS's sequencer exactly as it is."><input type="checkbox" id="unmute-fix" checked> Fix unmute latency</label></div>
   <div class="e12" id="midi-chroma-option" hidden><label title="Notes on MIDI channel base+4 (channel 5 when the base channel is 1) play the selected track at their pitch, on models with pitch metadata. With live record on they record the trig and a pitch lock; with trig keys held, every held step gets the lock."><input type="checkbox" id="midi-chroma"> MIDI chromatic note input (channel base+4)</label></div>
   <div class="e12" id="pitch-labels-option" hidden><label title="On the parameter page the pitch knob of a model with a note law shows the note it plays under its dial (C-3, C#3, C+3 for a quarter tone) instead of a number, as Elektron's DEV firmware shows a TONAL track's pitch."><input type="checkbox" id="pitch-labels"> Show pitch as note names (C-3, C#3)</label></div>
   <p id="x20-unavailable" class="fine" hidden></p>
-  <button id="build" type="button" class="wizard-primary" disabled>Create SysEx</button>
-  <div id="result" aria-live="polite"></div>
-  <div id="download-needs" class="uw-next" hidden></div>
-  <details class="help"><summary>Installation & compatibility</summary><ul class="fine"><li><strong>Use at your own risk.</strong> Installing modified firmware can make your Machinedrum unusable; Kitbasher comes with no warranty.</li><li>Back up first: GLOBAL › SYSEX SEND › ALL into a SysEx recorder. Send the new file from the boot menu (hold FUNCTION at power-on, then [5 LT] MIDI UPGRADE), slowly: a 20 ms gap between messages.</li><li>A failed or unwanted update is recovered the same way, by sending your original file again. The boot menu is never rewritten.</li><li>Kits store machine IDs. Keep your saved layout when rebuilding firmware for existing kits.</li></ul></details>
-  <div class="project-save"><button type="button" id="project-save" class="wizard-secondary">Save project</button> </div>
-  <div class="wizard-actions"><button type="button" data-back="4">← Categories</button></div>
+  </details>
+  <details class="help"><summary>Install on your Machinedrum</summary><ul class="fine"><li><strong>Use at your own risk.</strong> Installing modified firmware can make your Machinedrum unusable; Kitbasher comes with no warranty.</li><li>Back up first: GLOBAL › SYSEX SEND › ALL into a SysEx recorder. Send the new file from the boot menu (hold FUNCTION at power-on, then [5 LT] MIDI UPGRADE), slowly: a 20 ms gap between messages.</li><li>A failed or unwanted update is recovered the same way, by sending your original file again. The boot menu is never rewritten.</li><li>Kits store machine IDs. Keep your saved layout when rebuilding firmware for existing kits.</li></ul></details>
+  <details class="project-save"><summary>Save for next time</summary><p>Save your choices to reuse them later.</p><button type="button" id="project-save" class="wizard-secondary">Save project</button></details>
+  <div class="wizard-actions"><button type="button" data-back="3">Back to machines</button></div>
 </section>
-<p class="footer-note">Unofficial and unsupported. Use at your own risk; provided as is, without warranty. Stock machines are retained. Not affiliated with Elektron. <a href="https://github.com/etcetc000/kitbasher">Source code</a> · <a href="COPYING.txt">GPL v3</a>.</p>
+<footer class="footer-note"><p>Kitbasher is not affiliated with Elektron or MDX. Use at your own risk; no warranty. <a href="https://github.com/etcetc000/kitbasher">Source code</a> · <a href="COPYING.txt">GPL v3</a>.</p></footer>
 </main><dialog id="screen-dialog" aria-label="Enlarged screen preview"><form method="dialog"><button>Close preview</button></form><div class="screen"><div class="lcd-glass"><canvas id="large-lcd" width="128" height="64" role="img" aria-label="Enlarged machine screen"></canvas></div></div><p>Screen reconstruction, not a live emulator.</p></dialog><script type="module" src="app.js"></script></body></html>

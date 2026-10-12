@@ -17,8 +17,8 @@ test('X.20: no separate build panel; a recognised file continues into the normal
   const branch = onFile.slice(onFile.indexOf('if (recipe) {'), onFile.indexOf('let parsed = readFirmware(bytes);'));
   assert.match(branch, /layoutEd\.setX20\(/);
   assert.match(branch, /try \{ samples\.setBank\(x20E12Bank\(R, bank0\)\); \}/);          // the Samples step works on X.20 too
-  assert.match(branch, /refresh\(\);\n\s+if \(gate\(uwAnswer, true\)\.ok\) showStep\(2\);/);
-  assert.match(branch, /untested on hardware/);
+  assert.match(branch, /refresh\(\);\n\s+if \(gate\(uwAnswer, true\)\.ok\) showStep\(3\);/);
+  assert.match(branch, /MDX_DISCLAIMER/);
   // the steps and Next buttons accept an X.20 file as loaded, and still need the plan to fit
   assert.match(app, /const loaded = \(\): boolean => !!fw \|\| !!x20;/);
   assert.match(slice('function showStep(', 'function status('), /n > 1 && !loaded\(\)\) \|\| \(n > 3 && \(!planReady\(\)/);
@@ -41,12 +41,17 @@ test('X.20: the meters come from planX20 at the chosen trim and update with ever
   assert.match(app, /e instanceof X20FlashError/);
 });
 
-test('X.20: the build takes the user\'s choices (UW answer, unticked machines, layout, trim) and is labelled untested on hardware', () => {
+test('X.20: the build takes the user\'s choices (UW answer, unticked machines, layout, trim) and shares the MDX notice with X.14', () => {
   const bw = slice('function buildWith(', 'function showStorage(');
   assert.match(bw, /buildX20\(input!, x20, data\.packs, data\.core!, \{ uw, exclude: excludes\(\), layout: layoutEd\.mapForPlan\(\),/);
   assert.match(bw, /trim: \{ db: trim\.db, minSeconds: trim\.minSeconds, cap: trim\.cap \}/);
   const dl = slice('function downloadX20(', 'function x20ReportView(');
-  assert.match(dl, /Untested on hardware/);
+  assert.doesNotMatch(dl, /Untested on hardware/);
+  assert.match(app, /const modifiedMdx = !!x20 \|\| base\?\.id === 'x14'/);
+  assert.match(app, /Kitbasher is not affiliated with MDX\./);
+  assert.match(app, /not official MDX releases and are not supported by its creator/);
+  assert.match(app, /\['qualification-note', 'mdx-disclaimer'\]/);
+  assert.match(html, /id="mdx-disclaimer" class="note" hidden/);
   assert.match(dl, /needsUwAnswer\(\)/);
 });
 

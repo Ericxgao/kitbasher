@@ -1,5 +1,5 @@
 import { concat, hex, machineMessages, parsePackage, parseSysex, planBank, type MdsMachine, type MdsAssignment, type MdsSnapshot } from '../../engine/src/mds.js';
-import { MdsClient, sameLibrary } from '../../engine/src/mds_transfer.js';
+import { MdsClient, MIDI_CONNECTION_ERROR, sameLibrary } from '../../engine/src/mds_transfer.js';
 import { BrowserMdsTransport } from './mds-midi.js';
 
 interface CatalogEntry extends Omit<MdsMachine, 'bytes'> {
@@ -168,8 +168,7 @@ async function readBank() {
   const input = access?.inputs.get($<HTMLSelectElement>('midi-input').value), output = access?.outputs.get($<HTMLSelectElement>('midi-output').value);
   $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Checking your Machinedrum…';
   try {
-    if (!output || output.state !== 'connected') throw new Error('No MIDI output connected. Choose your interface under Send to Machinedrum IN.');
-    if (!input || input.state !== 'connected') throw new Error('No MIDI input connected. Connect Machinedrum OUT to your interface IN, then choose it under Receive.');
+    if (!output || output.state !== 'connected' || !input || input.state !== 'connected') throw new Error(MIDI_CONNECTION_ERROR);
     transport = new BrowserMdsTransport(input, output);
     await Promise.all([input.open(), output.open()]); client = new MdsClient(transport); snapshot = await client.snapshot();
     $('midi-status').textContent = 'Machinedrum connected.'; $<HTMLDetailsElement>('connection').open = false;
@@ -186,10 +185,10 @@ async function connectMidi() {
     if (!busy) { populatePorts(); render(); }
   };
   if (portsReady()) await readBank();
-  else { $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Choose your MIDI interface in both menus.'; }
+  else { $('midi-status').dataset.error = 'true'; $('midi-status').textContent = MIDI_CONNECTION_ERROR; }
 }
 $('disconnect-midi').onclick = () => void act(async () => { if (access) access.onstatechange = null; await closeTransport(); access = undefined; $('connection').hidden = true; $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Connect your MIDI interface to both IN and OUT on your Machinedrum.'; status('MIDI disconnected.'); });
-for (const id of ['midi-input', 'midi-output']) $(id).onchange = () => void act(async () => { if (portsReady()) await readBank(); else { await closeTransport(); $('midi-status').dataset.error = 'false'; $('midi-status').textContent = 'Choose your MIDI interface in both menus.'; } });
+for (const id of ['midi-input', 'midi-output']) $(id).onchange = () => void act(async () => { if (portsReady()) await readBank(); else { await closeTransport(); $('midi-status').dataset.error = 'true'; $('midi-status').textContent = MIDI_CONNECTION_ERROR; } });
 $('family-filter').onchange = () => { family = $<HTMLSelectElement>('family-filter').value; render(); };
 for (const id of ['machine-search', 'collection-filter', 'machine-sort']) $(id).addEventListener(id === 'machine-search' ? 'input' : 'change', render);
 $('start-slot').onchange = () => { start = Number($<HTMLSelectElement>('start-slot').value); save(); render(); };
