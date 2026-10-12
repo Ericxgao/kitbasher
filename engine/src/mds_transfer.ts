@@ -21,12 +21,19 @@ export class MdsClient {
     const transaction = this.next(), wire = encodeMessage(command, transaction);
     for (let attempt = 0; attempt < 3; attempt++) {
       if (this.now() >= connectionDeadline) break;
-      this.io.send(wire); const deadline = Math.min(connectionDeadline, this.now() + this.timeout);
+      this.io.send(wire); let deadline = Math.min(connectionDeadline, this.now() + this.timeout);
       while (this.now() < deadline) {
         const bytes = await this.io.receive(Math.max(1, deadline - this.now())); if (!bytes) break;
         const reply = decodeMessage(bytes);
         if (reply.transaction !== transaction || reply.slot !== 127 || reply.sequence !== 127) continue;
         if (reply.command === expected) return reply.body;
+        if (reply.command === CMD.wait && reply.body[0] === command) {
+          requireMds(reply.body.length === 2, 'Malformed WAIT');
+          // X.20 can answer a post-commit query with WAIT and no deferred
+          // reply. Retry this read-only request after the two-second window,
+          // without extending the shared five-second connection deadline.
+          deadline = Math.min(deadline, this.now() + 2000);
+        }
         if ((reply.command === CMD.nak || reply.command === CMD.cancel) && reply.body[0] === command) throw rejection(reply);
       }
     }
