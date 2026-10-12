@@ -8,9 +8,9 @@ import { buildMdsCatalog } from '../web/build-mds.mjs';
 test('every curated core/community release validates, with reviewed identities and exact pinned bytes', async () => {
   const root = fileURLToPath(new URL('../', import.meta.url));
   const { index, assets } = await buildMdsCatalog(root);
-  assert.ok(index.machines.length >= 62);
+  assert.ok(index.machines.length >= 54);
   assert.equal(assets.length, index.machines.length);
-  for (const family of ['NFX', 'P-I', 'SYN', 'TX6', 'TX8', 'TX9', 'TXZ', 'SMP', 'K55']) assert.ok(index.machines.some(m => m.category === family));
+  for (const family of ['NFX', 'P-I', 'SYN', 'TX6', 'TX8', 'TX9', 'TXZ', 'SMP']) assert.ok(index.machines.some(m => m.category === family));
   assert.ok(index.machines.filter(m => m.channel === 'core').length >= 43);
   assert.ok(index.machines.filter(m => m.channel === 'community').length >= 8);
   assert.ok(index.machines.filter(m => m.channel === 'core').every(m => m.source === 'https://github.com/jmamma/MDX'));
@@ -27,12 +27,7 @@ test('every curated core/community release validates, with reviewed identities a
     assert.match(machine.source, /b3c74740f0e8fa7309dd02e85c3b0ec1631ad7d2/);
     assert.equal(machine.author, 'hcar / murdenihcam');
   }
-  const k55 = index.machines.filter(m => m.category === 'K55');
-  assert.deepEqual(k55.map(m => m.code), ['BD', 'SD', 'TM', 'CG', 'RS', 'CB', 'HH', 'CY']);
-  assert.equal(new Set(k55.map(m => m.contentId)).size, 8);
-  assert.equal(k55.reduce((n, m) => n + m.words, 0), 12158);
-  assert.equal(k55.find(m => m.code === 'CG').version, '0.8');
-  assert.equal(k55.find(m => m.code === 'BD').id, k55.find(m => m.code === 'TM').id);
+  assert.ok(index.machines.every(m => m.category !== 'K55'));
   assert.ok(index.machines.every(m => m.cycles > 0 && m.cycles <= 3951 && m.words > 0 && m.contentId.length === 64));
 });
 
@@ -46,6 +41,10 @@ test('community contributions need complete metadata and a valid single-machine 
   for (const file of ['engine/src/mds.ts', entry.file]) { mkdirSync(dirname(join(temp, file)), { recursive: true }); copyFileSync(join(root, file), join(temp, file)); }
   const write = machines => writeFileSync(join(temp, 'mds/catalog.json'), JSON.stringify({ schema: catalog.schema, machines }));
   write([entry]); assert.equal((await buildMdsCatalog(temp)).index.machines.length, 1);
+  write([{ ...entry, hidden: true }]);
+  const hidden = await buildMdsCatalog(temp);
+  assert.deepEqual(hidden.index.machines, []); assert.deepEqual(hidden.assets, []);
+  write([{ ...entry, hidden: 'true' }]); await assert.rejects(buildMdsCatalog(temp), /hidden must be boolean/);
   for (const patch of [{ author: '' }, { summary: 42 }, { license: null }, { sha256: 'invalid' }, { source: 'http://example.com' }, { project: undefined }, { notes: [] }, { hardware: 'unknown' }, { sharedId: true }, { sharedId: 'wrong-id' }]) {
     write([{ ...entry, ...patch }]); await assert.rejects(buildMdsCatalog(temp));
   }

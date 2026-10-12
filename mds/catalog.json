@@ -608,7 +608,8 @@
       "project": null,
       "license": "Not supplied in archive",
       "sharedId": "org.spsx.usr.tx9-bd",
-      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved."
+      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved.",
+      "hidden": true
     },
     {
       "file": "mds/community/wftlrd/02-K55-SD.syx",
@@ -620,7 +621,8 @@
       "project": null,
       "license": "Not supplied in archive",
       "sharedId": "org.spsx.usr.tx9-sd",
-      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved."
+      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved.",
+      "hidden": true
     },
     {
       "file": "mds/community/wftlrd/03-K55-TM.syx",
@@ -632,7 +634,8 @@
       "project": null,
       "license": "Not supplied in archive",
       "sharedId": "org.spsx.usr.tx9-bd",
-      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved."
+      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved.",
+      "hidden": true
     },
     {
       "file": "mds/community/wftlrd/04-K55-CG.syx",
@@ -644,7 +647,8 @@
       "project": null,
       "license": "Not supplied in archive",
       "sharedId": "org.spsx.usr.tx9-sd",
-      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved."
+      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved.",
+      "hidden": true
     },
     {
       "file": "mds/community/wftlrd/05-K55-RS.syx",
@@ -656,7 +660,8 @@
       "project": null,
       "license": "Not supplied in archive",
       "sharedId": "org.spsx.usr.tx9-rs",
-      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved."
+      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved.",
+      "hidden": true
     },
     {
       "file": "mds/community/wftlrd/06-K55-CB.syx",
@@ -668,7 +673,8 @@
       "project": null,
       "license": "Not supplied in archive",
       "sharedId": "org.spsx.usr.tx8-cb",
-      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved."
+      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved.",
+      "hidden": true
     },
     {
       "file": "mds/community/wftlrd/07-K55-HH.syx",
@@ -680,7 +686,8 @@
       "project": null,
       "license": "Not supplied in archive",
       "sharedId": "org.spsx.usr.tx9-rs",
-      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved."
+      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved.",
+      "hidden": true
     },
     {
       "file": "mds/community/wftlrd/08-K55-CY.syx",
@@ -692,7 +699,8 @@
       "project": null,
       "license": "Not supplied in archive",
       "sharedId": "org.spsx.usr.tx9-rs",
-      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved."
+      "notes": "Original K55 package from the user-supplied K55_wftlrd archive. Source, license and hardware qualification were not included. Package bytes and controls are preserved.",
+      "hidden": true
     }
   ]
 }

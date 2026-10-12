@@ -17,6 +17,7 @@ export async function buildMdsCatalog(root) {
     if (!['core', 'community'].includes(entry.channel) || ['author', 'summary', 'license'].some(field => typeof entry[field] !== 'string' || !entry[field].trim())) throw new Error(`Missing curation metadata: ${entry.file}`);
     if (typeof entry.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(entry.sha256)) throw new Error(`Invalid SHA-256 pin: ${entry.file}`);
     if (entry.notes !== undefined && typeof entry.notes !== 'string') throw new Error(`Catalog notes must be text: ${entry.file}`);
+    if (entry.hidden !== undefined && typeof entry.hidden !== 'boolean') throw new Error(`Catalog hidden must be boolean: ${entry.file}`);
     if (entry.hardware !== undefined && !['uw', 'all'].includes(entry.hardware)) throw new Error(`Catalog hardware must be uw or all: ${entry.file}`);
     for (const field of ['source', 'project']) if (entry[field] !== null && (typeof entry[field] !== 'string' || new URL(entry[field]).protocol !== 'https:')) throw new Error('Catalog links must be HTTPS URLs or null');
     const bytes = readFileSync(path), hash = createHash('sha256').update(bytes).digest('hex');
@@ -32,6 +33,7 @@ export async function buildMdsCatalog(root) {
     if (contentIds.has(machine.contentId) || aliases.has(machine.alias)) throw new Error(`Duplicate MDS content or alias: ${machine.alias}`);
     contentIds.add(machine.contentId); aliases.add(machine.alias);
     if (machine.cycles > 3951) throw new Error(`Uninstallable cycle declaration: ${machine.alias}`);
+    if (entry.hidden) continue;
     const file = `${hash}.${path.endsWith('.mds') ? 'mds' : 'syx'}`;
     machines.push({ ...machine, packageBytes: packageBytes.length, channel: entry.channel, author: entry.author, summary: entry.summary, source: entry.source, project: entry.project, license: entry.license, notes: entry.notes, hardware: entry.hardware, sha256: hash, url: `data/mds/${file}` });
     assets.push({ file, bytes });
