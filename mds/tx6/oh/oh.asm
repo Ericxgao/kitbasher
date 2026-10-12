@@ -1,6 +1,7 @@
-; TX6 OH - Simple606-inspired MDS voice for X.20, version 1.1.
-; New layer controls preserve version 1.0 audio at their defaults.
+; TX6 OH - Simple606-inspired MDS voice for X.20, version 2.1.
+; Gain envelopes interpolate per sample between 32-sample endpoints.
 ; METL: 0 = noise only; 64 = original blend; 127 = metal only. Captured on trigger.
+; Controls: TUNE first, DEC second. Same parameter layout as version 2.0.
 ;
 ; MIT License
 ; 
@@ -54,6 +55,7 @@
 ; 19: metal_noise
 
 ; Local instruction compaction; verify against retained native audio.
+; Local instruction compaction; verify against retained native audio.
 init:
     move #>$ffffff,m6
     move #>$ffffff,m0
@@ -69,13 +71,14 @@ trigger:
     move #>$ffffff,m0
     move #>$ffffff,m1
     clr a
+    move a1,x:(r6+$16)
+    move a1,x:(r6+$17)
     move a1,x:(r6+$e)
     move a1,x:(r6+$f)
-    move y:(r6+$1),a
+    move y:(r6+$2),a
     asr #8,a,a
-    and #>$3f,a
-    clr a a1,x0
-    add x0,a
+    and #$3f,a
+    move a1,a
     asl #2,a,a
     add #>control_1,a
     move a1,r0
@@ -85,9 +88,9 @@ trigger:
     move p:(r0)+,x0
     move x0,x:(r1)+
 control_1_end:
-    move y:(r6+$2),a
+    move y:(r6+$1),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl #3,a,a
@@ -95,7 +98,7 @@ control_1_end:
     add #>control_2,a
     move a1,r0
     move r6,a
-    add #>4,a
+    add #4,a
     move a1,r1
     do #9,control_2_end
     move p:(r0)+,x0
@@ -124,11 +127,12 @@ control_2_end:
     move x0,x:(r6+$14)
     rts
 render:
+    ; M0..M5 are linear on entry (X.20 dispatcher P:$ac..$b2).
     move #>$ffffff,m6
     move x:(r6+$0),a
     tst a
     jeq silent
-    sub #>1,a
+    sub #1,a
     move a1,x:(r6+$0)
     move a1,x0
     move x:(r6+$3),y0
@@ -138,6 +142,8 @@ render:
     cmp x0,a
     tgt x0,a
     move a1,n4
+    move x:(r6+$16),r0
+    move x:(r6+$17),r1
     move x:(r6+$10),x0
     move x:(r6+$1),y0
     mpyr y0,x0,a
@@ -170,36 +176,50 @@ render:
     move a1,x0
     move n4,y0
     mpyr y0,x0,a
-    move a1,x:(r6+$15)
+    move a1,n5
     move x:(r6+$13),a
     add #>$400000,a
     move a1,x0
     move x:(r6+$18),y0
     mpy y0,x0,a
     move a1,x0
-    move x:(r6+$15),y0
+    move n5,y0
     mpyr y0,x0,a
     move a1,x:(r6+$16)
-    move x:(r6+$15),x0
+    move r0,x0
+    sub x0,a
+    asr #5,a,a
+    move a1,n0
+    move n5,x0
     move x:(r6+$19),y0
     mpy y0,x0,a
     move x:(r6+$14),x0
     add x0,a
     asr a
     move a1,x:(r6+$17)
+    move r1,x0
+    sub x0,a
+    asr #5,a,a
+    move a1,n1
     move x:(r6+$d),x0
     move #>$400000,y1
     move #>$fd43fd,y0
     move #>mds_scratch_y,r5
-    do #32,noise_end
     mpy y0,x0,a
     asr #1,a,a
     move a0,a
     add #>$c39ec3,a
     move a1,x0
     mpy x0,y1,a
-    move a1,y:(r5)+
+    do #31,noise_end
+    mpy y0,x0,a  a,y:(r5)+
+    asr #1,a,a
+    move a0,a
+    add #>$c39ec3,a
+    move a1,x0
+    mpy x0,y1,a
 noise_end:
+    move a1,y:(r5)+
     move x0,x:(r6+$d)
     move #>mds_scratch_x,r3
     move x:(r6+$4),x0
@@ -213,8 +233,9 @@ noise_end:
     move #>$fffffd,n3
     move #>mds_scratch_x,r3
     move #>mds_scratch_y,r5
-    do #32,filter_end
+    move #31,m5
     move x:(r3)+,x0 y:(r5),y0
+    do #32,filter_end
     mpy y0,x0,a x:(r3)+,x0
     asl a
     add b,a a1,y0
@@ -225,47 +246,47 @@ noise_end:
     add b,a (r3)+n3
     mpy x0,y1,a a1,b
     asl a
-    sub y0,a
+    sub y0,a  x:(r3)+,x0  y:(r5),y0
     move a1,x1
 filter_end:
+    move #>$ffffff,m5
     move b1,x:(r6+$e)
     move x1,x:(r6+$f)
     move #>mds_scratch_x,r4
-    move x:(r6+$7),x0
-    move x:(r6+$8),x1
-    move x:(r6+$9),y0
+    move x:(r6+$7),y0
+    move x:(r6+$8),y1
+    move x:(r6+$9),x0
     do #32,tone0_end
     mpy y0,x0,a
     asl a
-    sub x1,a x0,x1
-    move a1,x0
-    move a1,x:(r4)+
+    sub y1,a  y0,y1
+    move a,x:(r4)+  a,y0
 tone0_end:
-    move x0,x:(r6+$7)
-    move x1,x:(r6+$8)
+    move y0,x:(r6+$7)
+    move y1,x:(r6+$8)
     move #>mds_scratch_x,r4
-    move x:(r6+$a),x0
-    move x:(r6+$b),x1
-    move x:(r6+$c),y0
+    move x:(r6+$a),y0
+    move x:(r6+$b),y1
+    move x:(r6+$c),x0
     do #32,tone1_end
-    mpy y0,x0,a
+    mpy y0,x0,a  x:(r4),b
     asl a
-    sub x1,a x0,x1
-    move x:(r4),b
-    add b,a a1,x0
+    sub y1,a  y0,y1
+    add b,a  a1,y0
     move a1,x:(r4)+
 tone1_end:
-    move x0,x:(r6+$a)
-    move x1,x:(r6+$b)
-    move x:(r6+$16),y1
-    move x:(r6+$17),x0
+    move y0,x:(r6+$a)
+    move y1,x:(r6+$b)
+    move r0,y1
+    move r1,x0
     move #>mds_scratch_x,r3
     move #>mds_scratch_y,r5
     do #32,mix_end
     move x:(r3)+,x1 y:(r5)+,y0
-    mpy y0,x0,a
-    mac y1,x1,a
-    asl #2,a,a
+    mpy y0,x0,a  (r1)+n1
+    mac y1,x1,a  (r0)+n0
+    asl a  r0,y1
+    asl a  r1,x0
     move a,y:(r7)+
 mix_end:
     rts

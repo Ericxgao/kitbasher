@@ -476,91 +476,91 @@
     },
     {
       "file": "mds/tx6/bd/bd.syx",
-      "sha256": "32cacaff8a2ae620db27cfd51154e62df05ff4a6347b977b4e355a4a145c2117",
+      "sha256": "52d46f46505d108da7b295083a4b600922512ea227444b80aec8d12d4c158b1f",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style bass drum",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/bd",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/bd",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "XL is continuous: 0 = normal, 127 = former XL on. Existing XL-on kits need 127. New CLIK defaults to 127."
+      "notes": "Version 2.1: smoother envelopes and a sharper adjustable kick click. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 3 (TUNE/TRAN) swapped. New full-rate sound design; remapping preserves control meanings, not identical audio."
     },
     {
       "file": "mds/tx6/sd/sd.syx",
-      "sha256": "df5594e62ae3ca1ba4e595e44176a895ff7f7594faa034d27c4cede11152b414",
+      "sha256": "2c8caa3b0b10f9db831cd93212a4f203c30c619b79310364d7d77b6653e30d65",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style snare drum",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/sd",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/sd",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set the added layer-level controls to 127 to retain their original balance."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
     },
     {
       "file": "mds/tx6/lt/lt.syx",
-      "sha256": "9ac2441f57bebd29061c0ecf4396f38a84e9eb28bf1d5902b4cbfe19849ea0e3",
+      "sha256": "d0fc8ac8e0450a385e62a7d0c76517cf4d9cabf7ba5acf42ae0253f22c534f18",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style low tom",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/lt",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/lt",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set the added layer-level controls to 127 to retain their original balance."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped. New full-rate sound design; remapping preserves control meanings, not identical audio."
     },
     {
       "file": "mds/tx6/ht/ht.syx",
-      "sha256": "b0df5e0ee6a2e178add94638e8a133d88681be0daa61f76845ac6a4cdd8209e8",
+      "sha256": "12724f34b964da6af7cce6dca0ca6aa93a0544234aefc3f2f0d5aecebc258de9",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style high tom",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/ht",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/ht",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set the added layer-level controls to 127 to retain their original balance."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped. New full-rate sound design; remapping preserves control meanings, not identical audio."
     },
     {
       "file": "mds/tx6/ch/ch.syx",
-      "sha256": "c9b295f3e584445ec9a367152da2e5e10cd3c5ec82d3647657e91e09e0bcecb9",
+      "sha256": "1cc71b8df9d29e58de584574a6c06c202fa1af3b654a2a1141fbc41544bd724e",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style closed hi-hat",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/ch",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/ch",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set METL to 64 to retain the default character."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
     },
     {
       "file": "mds/tx6/oh/oh.syx",
-      "sha256": "0473f26d7304931af3946870031784dda4646ed2e4924b06c64f27041d0d13c1",
+      "sha256": "e933e01bbe08320fc6618e13d5a3298719c26f0916839fb020cae2623403aecf",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style open hi-hat",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/oh",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/oh",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set METL to 64 to retain the default character."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
     },
     {
       "file": "mds/tx6/cy/cy.syx",
-      "sha256": "5d201b65200db8f799a59498220f7f7c71073a5613a74ae4994cc0d711bd8e0d",
+      "sha256": "92722d11cbfa18ef83161c2eced9888c8534b3714ef8270600912ae77b3b0583",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-style cymbal",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/cy",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/cy",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set the added layer-level controls to 127 to retain their original balance."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped."
     },
     {
       "file": "mds/tx6/cp/cp.syx",
-      "sha256": "5425dd31bfbf98211bf7f974f598cbf6113cc28fe104b28eaa2f51e55aeb40c8",
+      "sha256": "8a777698dd107a8dbbbbd4dc68574ca5d2e771fb458d24b41a1b70455bca376f",
       "channel": "community",
       "author": "Kitbasher / Simple606 contributors",
       "summary": "606-inspired hand clap",
-      "source": "https://github.com/etcetc000/kitbasher/tree/945e29c37e811f96c37cf82d84fe626dbacc402b/mds/tx6/cp",
+      "source": "https://github.com/etcetc000/kitbasher/tree/0cccb67089d82a2c287c2747cad757231d70e87f/mds/tx6/cp",
       "project": "https://github.com/Fadedlimes/Simple606",
       "license": "MIT",
-      "notes": "For existing kits, set the added layer-level controls to 127 to retain their original balance."
+      "notes": "Version 2.1: smoother envelopes. Same control order and defaults as 2.0. Version 2.0: TUNE first, DEC second. Version 1.x kits need parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) swapped. TGHT tightens the opening bursts. Leave TGHT at 0 for the original clap."
     },
     {
       "file": "mds/community/murdenihcam/SMP-ST.syx",
@@ -572,7 +572,7 @@
       "project": "https://www.elektronauts.com/t/custom-usr-machines-for-x-20/257233",
       "license": "Not specified by author",
       "hardware": "uw",
-      "notes": "UW required. SMPL 1–48 selects ROM; 49–69 selects E12. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
+      "notes": "UW required. SMPL 1\u201348 selects ROM; 49\u201369 selects E12. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
     },
     {
       "file": "mds/community/murdenihcam/SMP-SR.syx",
@@ -584,7 +584,7 @@
       "project": "https://www.elektronauts.com/t/custom-usr-machines-for-x-20/257233",
       "license": "Not specified by author",
       "hardware": "uw",
-      "notes": "UW required. SMPL selects ROM slots 1–48. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
+      "notes": "UW required. SMPL selects ROM slots 1\u201348. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
     },
     {
       "file": "mds/community/murdenihcam/SMP-S2.syx",
@@ -596,7 +596,7 @@
       "project": "https://www.elektronauts.com/t/custom-usr-machines-for-x-20/257233",
       "license": "Not specified by author",
       "hardware": "all",
-      "notes": "Works on UW and non-UW models. SMPL selects internal E12 samples 1–21. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
+      "notes": "Works on UW and non-UW models. SMPL selects internal E12 samples 1\u201321. TIME reaches a freeze at its maximum; GRAN and FLUX change grain size and variation."
     },
     {
       "file": "mds/community/wftlrd/01-K55-BD.syx",

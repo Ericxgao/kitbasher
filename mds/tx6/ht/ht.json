@@ -11,8 +11,8 @@
   "retrigger": "restart",
   "params": [
     {
-      "name": "DEC",
-      "default": 102,
+      "name": "TUNE",
+      "default": 64,
       "min": 0,
       "max": 127,
       "transform": "raw14",
@@ -20,8 +20,8 @@
       "linked": false
     },
     {
-      "name": "TUNE",
-      "default": 64,
+      "name": "DEC",
+      "default": 102,
       "min": 0,
       "max": 127,
       "transform": "raw14",
@@ -47,14 +47,14 @@
       "linked": false
     }
   ],
-  "machine_version": "1.1",
-  "max_track_cycles": 3936,
+  "machine_version": "2.1",
+  "max_track_cycles": 3808,
   "program": {
     "abi_version": 1,
     "init_symbol": "init",
     "trig_symbol": "trigger",
     "render_symbol": "render",
-    "x_workset_words": 35,
+    "x_workset_words": 29,
     "y_workset_words": 5,
     "relocations": [
       {
@@ -63,95 +63,91 @@
       },
       {
         "symbol": "init",
-        "word_delta": 34
+        "word_delta": 33
       },
       {
         "symbol": "init",
-        "word_delta": 39
+        "word_delta": 38
       },
       {
         "symbol": "init",
-        "word_delta": 53
+        "word_delta": 51
       },
       {
         "symbol": "init",
-        "word_delta": 60
+        "word_delta": 57
       },
       {
         "symbol": "init",
-        "word_delta": 89
+        "word_delta": 79
       },
       {
         "symbol": "init",
-        "word_delta": 100
+        "word_delta": 90
       },
       {
         "symbol": "init",
-        "word_delta": 121
+        "word_delta": 105
       },
       {
         "symbol": "init",
-        "word_delta": 133
+        "word_delta": 116
       },
       {
         "symbol": "init",
-        "word_delta": 160
+        "word_delta": 143
       },
       {
         "symbol": "init",
-        "word_delta": 183
+        "word_delta": 166
       },
       {
         "symbol": "init",
-        "word_delta": 199
+        "word_delta": 181
       },
       {
         "symbol": "init",
-        "word_delta": 215
+        "word_delta": 213
       },
       {
         "symbol": "init",
-        "word_delta": 246
-      },
-      {
-        "symbol": "init",
-        "word_delta": 258
+        "word_delta": 221
       }
     ],
     "imports": [
       {
         "symbol": "init",
-        "word_delta": 131,
+        "word_delta": 114,
         "abi_symbol": 8,
         "kind": 4
       },
       {
         "symbol": "init",
-        "word_delta": 144,
+        "word_delta": 127,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 156,
+        "word_delta": 139,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 158,
+        "word_delta": 141,
         "abi_symbol": 8,
         "kind": 4
       },
       {
         "symbol": "init",
-        "word_delta": 177,
+        "word_delta": 160,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 193,
+        "word_delta": 175,
         "abi_symbol": 7,
         "kind": 3
       },
@@ -163,13 +159,7 @@
       },
       {
         "symbol": "init",
-        "word_delta": 242,
-        "abi_symbol": 7,
-        "kind": 3
-      },
-      {
-        "symbol": "init",
-        "word_delta": 244,
+        "word_delta": 211,
         "abi_symbol": 8,
         "kind": 4
       }
@@ -186,24 +176,23 @@
       "init": 0,
       "init_end": 8,
       "trigger": 12,
-      "control_1_end": 42,
-      "control_2_end": 63,
-      "over_done": 115,
-      "render": 116,
-      "noise_end": 142,
-      "filter_end": 174,
-      "tone0_end": 190,
-      "tone1_end": 206,
-      "tone2_end": 222,
-      "mix_end": 255,
-      "silent": 256,
-      "zero_end": 260,
-      "control_1": 261,
-      "control_2": 837,
-      "layer_table": 1413
+      "control_1_end": 41,
+      "control_2_end": 60,
+      "over_done": 99,
+      "render": 100,
+      "noise_end": 125,
+      "filter_end": 157,
+      "tone0_end": 172,
+      "tone1_end": 188,
+      "mix_end": 218,
+      "silent": 219,
+      "zero_end": 223,
+      "control_1": 224,
+      "control_2": 672,
+      "layer_table": 1120
     },
-    "program_words": 1541,
-    "program_sha256": "7020320400228b9e45ffe00e20d519aea9b778d88dd5e5ad452a01202decca91",
+    "program_words": 1248,
+    "program_sha256": "26a57533eab91ba3cf0676d21dbe45b570967471069b92b5204890e233949680",
     "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Pass packed big-endian 24-bit words and symbols to upstream MDS tools/mds_pack.py, then export with tools/mds_to_syx.py --slot 4."
   },
   "_controls": [
@@ -223,106 +212,92 @@
     }
   ],
   "_validation": {
-    "status": "simulator-qualified control expansion; version 1.1 hardware audition pending",
+    "status": "Simulator-qualified smooth-envelope revision; hardware audition pending.",
+    "hardware_tested": false,
     "timing": {
-      "measured_model_max_clocks": 3917,
-      "declared_max_clocks": 3936,
+      "measured_model_max_clocks": 3798,
+      "declared_max_clocks": 3808,
       "limit": 3951,
       "scope": "Actual X.20 dispatcher P:$6b through P:$e1, DMA handshakes ready, empty 8x128 instruction cache, additive interlocks, 3 waits per external instruction miss AND external data word, plus 64-clock output-transfer reserve. Busywait latency and interrupts are system scheduling, not bounded here; no hardware timing claim.",
       "dispatcher_flags_tested": 128,
-      "cache_placements": "All 128 word alignments fit the eight cache sectors for every traced path.",
+      "cache_placements": "All 128 word alignments fit the eight cache sectors on every traced path.",
       "physical_wait_states_verified": false
     },
     "tests": {
+      "machine": "ht",
       "controls": 589,
       "samples": 1828256,
-      "peak": 0.5091603994369507,
+      "peak": 0.5238955020904541,
       "clipped_samples": 0,
       "guards_and_parameters": true,
       "dirty_entry_registers": true,
       "init_silent": true,
       "retrigger": true,
-      "tracer_audio_cycles_equal": true
+      "tracer_audio_cycles_equal": true,
+      "asm_sha256": "81d076738bf6b4362ac314afa40e898ce4d04049e68177ab026eefd593e521da"
     },
+    "exported_source_sha256": "b080d5672bf5281c14e77b1fa903e07ed3766a6b6a370a4e2045062a2d227f10",
+    "comments_only_export_verified": true,
     "long_tail": {
-      "cases": 8,
+      "machine": "ht",
+      "controls": [
+        [
+          64,
+          102,
+          127,
+          127
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          127,
+          127,
+          127,
+          127
+        ],
+        [
+          0,
+          127,
+          127,
+          127
+        ],
+        [
+          64,
+          102,
+          0,
+          0
+        ]
+      ],
       "seeds": [
         1,
-        1193046,
         6317574,
         8388607
       ],
-      "samples": 2097152,
-      "peak": 0.5414812564849854,
+      "samples": 1967040,
+      "peak": 0.4309195280075073,
       "clipped_samples": 0,
-      "layer_contracts": true
+      "ends_silent": true,
+      "asm_sha256": "81d076738bf6b4362ac314afa40e898ce4d04049e68177ab026eefd593e521da"
     },
-    "default_preservation": {
-      "reference": "Original version 1.0 installed bank; PR #21",
-      "method": "Bit-exact full-duration PCM at original default and maximum controls, with added controls at defaults; four RNG seeds.",
-      "results": [
-        {
-          "case": "default",
-          "seed": 1,
-          "sha256": "ebe993a8be654ea77dd8de2b214e43e7d1850f93e6b2146e05211a7dc2b5e597",
-          "bytes": 262144
-        },
-        {
-          "case": "default",
-          "seed": 1193046,
-          "sha256": "0abf54a9a446051b3dfd15507fbe0608d7a52f4a0c8f391195592555b5cc5bd3",
-          "bytes": 262144
-        },
-        {
-          "case": "default",
-          "seed": 6317574,
-          "sha256": "3fccfec7ece963bca2be9246d915b05ac3e56797e4ac7186bca18ce7b34ca19c",
-          "bytes": 262144
-        },
-        {
-          "case": "default",
-          "seed": 8388607,
-          "sha256": "eb455635a602d5066e8f278c27acd935c9c792d90ca76a8ed13be60b65d64b62",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 1,
-          "sha256": "aab77a9ecd68909b216499a37fd60fbfae3fa26eb457db8324d1950ae73213b3",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 1193046,
-          "sha256": "7d6b0adbd7b240647d235bfc7ff2e75fdabe24648966de49a917238b0cd9772d",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 6317574,
-          "sha256": "ab0d702008426a285c3a0f744e948d83368a627f9b83afaf96af6f00732d7f19",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 8388607,
-          "sha256": "fcc3f39570bf98cfc074ef47fee2d168a094550315c08cdc85d3841cfcdf4bec",
-          "bytes": 262144
-        }
-      ]
-    },
-    "hardware_tested": false
+    "qualified_program_sha256": "26a57533eab91ba3cf0676d21dbe45b570967471069b92b5204890e233949680",
+    "audio_sample_rate": 44100
   },
   "_design": {
-    "strategy": "Expose existing layers without additional sample-loop synthesis. Preserve version 1.0 audio at new-control defaults.",
+    "strategy": "44.1 kHz audio with per-sample interpolation between gain-envelope endpoints. Pitch/control coefficients remain block-rate.",
     "source": "https://github.com/Fadedlimes/Simple606/tree/6aacda7a14a8c097d32836039fd356eb0976ba8e",
-    "license": "MIT; complete notice is embedded in the assembly source."
+    "license": "MIT; complete notice is embedded in the assembly source.",
+    "description": "44.1 kHz high tom: two damped tonal modes and full-rate filtered noise. The quietest third mode is omitted to preserve the CPU budget.",
+    "audio_sample_rate": 44100
   },
   "_send": {
     "file": "ht.syx",
     "destination_slot": 4,
     "bank_file": "../tx6-bank.syx",
-    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08. Version 1.1 has not been sent to hardware.",
-    "existing_kits": "Existing kits may retain zero in formerly unused parameter positions. Set the new controls to their documented defaults to restore the version 1.0 sound; existing parameter indices are unchanged."
+    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08.",
+    "existing_kits": "Version 2.1 keeps the version 2.0 parameter order and defaults. Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) in version 1.x kits to preserve their control meanings. No automatic kit conversion. Earlier compatibility notes: Existing kits may retain zero in formerly unused parameter positions. Set the new controls to their documented defaults to restore the version 1.0 sound; existing parameter indices are unchanged. The full-rate version changes the sound design; remapping preserves control meanings, not bit-identical audio."
   }
 }

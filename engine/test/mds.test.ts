@@ -105,7 +105,13 @@ test('post-commit query WAIT does not interrupt an eight-machine K55 installatio
   assert.equal(io.sent.filter(b => decodeMessage(b).command === CMD.header).length, 8);
 });
 test('real released bank decodes; destinations change without changing package identity', async () => {
-  assert.equal(bank.length, 8); assert.equal(kick.version, '1.2'); assert.equal(kick.parameters.find(p => p.name === 'XL')?.max, 127);
+  assert.equal(bank.length, 8); assert.equal(kick.version, '2.1'); assert.equal(kick.parameters.find(p => p.name === 'XL')?.max, 127);
+  const tight = bank.find(m => m.alias === 'TX6-CP')?.parameters.find(p => p.name === 'TGHT');
+  assert.ok(tight); assert.equal(tight.default, 0); assert.equal(tight.max, 127);
+  for (const machine of bank) {
+    assert.equal(machine.version, '2.1');
+    assert.deepEqual(machine.parameters.slice(0, 2).map(p => p.name), ['TUNE', 'DEC']);
+  }
   const frames = machineMessages(kick, 15, 14200); const [again] = await parseSysex(concat(frames));
   assert.deepEqual(again.bytes, kick.bytes); assert.ok(frames.every(f => decodeMessage(f).slot === 15));
   assert.equal(hex(concat(machineMessages(kick, 0, 1))), hex(file('tx6/bd/bd.syx')));
