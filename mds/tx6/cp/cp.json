@@ -56,8 +56,8 @@
       "linked": false
     }
   ],
-  "machine_version": "2.0",
-  "max_track_cycles": 3944,
+  "machine_version": "2.1",
+  "max_track_cycles": 3924,
   "program": {
     "abi_version": 1,
     "init_symbol": "init",
@@ -80,47 +80,51 @@
       },
       {
         "symbol": "init",
-        "word_delta": 54
+        "word_delta": 53
       },
       {
         "symbol": "init",
-        "word_delta": 61
+        "word_delta": 59
       },
       {
         "symbol": "init",
-        "word_delta": 74
+        "word_delta": 71
       },
       {
         "symbol": "init",
-        "word_delta": 81
+        "word_delta": 77
       },
       {
         "symbol": "init",
-        "word_delta": 168
+        "word_delta": 163
       },
       {
         "symbol": "init",
-        "word_delta": 211
+        "word_delta": 206
       },
       {
         "symbol": "init",
-        "word_delta": 216
+        "word_delta": 210
       },
       {
         "symbol": "init",
-        "word_delta": 225
+        "word_delta": 219
       },
       {
         "symbol": "init",
-        "word_delta": 234
+        "word_delta": 227
       },
       {
         "symbol": "init",
-        "word_delta": 243
+        "word_delta": 236
       },
       {
         "symbol": "init",
-        "word_delta": 260
+        "word_delta": 253
+      },
+      {
+        "symbol": "init",
+        "word_delta": 257
       },
       {
         "symbol": "init",
@@ -128,67 +132,63 @@
       },
       {
         "symbol": "init",
-        "word_delta": 271
+        "word_delta": 293
       },
       {
         "symbol": "init",
-        "word_delta": 300
+        "word_delta": 297
       },
       {
         "symbol": "init",
-        "word_delta": 304
+        "word_delta": 313
       },
       {
         "symbol": "init",
-        "word_delta": 320
+        "word_delta": 324
       },
       {
         "symbol": "init",
-        "word_delta": 331
+        "word_delta": 337
       },
       {
         "symbol": "init",
-        "word_delta": 344
+        "word_delta": 340
       },
       {
         "symbol": "init",
-        "word_delta": 347
+        "word_delta": 359
       },
       {
         "symbol": "init",
-        "word_delta": 363
+        "word_delta": 386
       },
       {
         "symbol": "init",
-        "word_delta": 390
-      },
-      {
-        "symbol": "init",
-        "word_delta": 411
+        "word_delta": 407
       }
     ],
     "imports": [
       {
         "symbol": "init",
-        "word_delta": 361,
+        "word_delta": 357,
         "abi_symbol": 8,
         "kind": 4
       },
       {
         "symbol": "init",
-        "word_delta": 374,
+        "word_delta": 370,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 386,
+        "word_delta": 382,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 388,
+        "word_delta": 384,
         "abi_symbol": 8,
         "kind": 4
       }
@@ -206,33 +206,33 @@
       "init_end": 8,
       "trigger": 15,
       "control_1_end": 45,
-      "control_2_end": 64,
-      "control_3_end": 84,
-      "render": 202,
-      "tight_tail": 226,
-      "tight_advance": 229,
-      "no_tail_start": 239,
-      "no_tail_decay": 248,
-      "foundation_onset": 272,
-      "foundation_inject": 273,
-      "foundation_advance": 279,
-      "air_ready": 302,
-      "burst_ready": 322,
-      "burst_level_done": 336,
-      "fade_done": 353,
-      "noise_end": 372,
-      "filter_end": 406,
-      "silent": 409,
-      "zero_end": 413,
-      "control_1": 414,
-      "control_2": 542,
-      "control_3": 734,
-      "burst_table": 1054,
-      "air_table": 2590,
-      "fade_table": 2826
+      "control_2_end": 62,
+      "control_3_end": 80,
+      "render": 197,
+      "tight_tail": 220,
+      "tight_advance": 223,
+      "no_tail_start": 232,
+      "no_tail_decay": 241,
+      "foundation_onset": 265,
+      "foundation_inject": 266,
+      "foundation_advance": 272,
+      "air_ready": 295,
+      "burst_ready": 315,
+      "burst_level_done": 329,
+      "fade_done": 346,
+      "noise_end": 368,
+      "filter_end": 402,
+      "silent": 405,
+      "zero_end": 409,
+      "control_1": 410,
+      "control_2": 538,
+      "control_3": 730,
+      "burst_table": 1050,
+      "air_table": 2586,
+      "fade_table": 2822
     },
-    "program_words": 2842,
-    "program_sha256": "fdb3947646fd5df87a8ce0d40547a9a7d986ffb8eee7762831ef57073e676526",
+    "program_words": 2838,
+    "program_sha256": "8451193fd11125aff70db318142b6564bbfddf2051f41ac8e5b207439731de12",
     "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Pass packed big-endian 24-bit words and symbols to upstream MDS tools/mds_pack.py, then export with tools/mds_to_syx.py --slot 8."
   },
   "_controls": [
@@ -252,60 +252,87 @@
     }
   ],
   "_validation": {
-    "status": "Simulator-qualified full-rate revision; hardware audition pending.",
+    "status": "Simulator-qualified smooth-envelope revision; hardware audition pending.",
     "hardware_tested": false,
     "timing": {
-      "measured_model_max_clocks": 3926,
-      "declared_max_clocks": 3944,
+      "measured_model_max_clocks": 3915,
+      "declared_max_clocks": 3924,
       "limit": 3951,
       "scope": "Actual X.20 dispatcher P:$6b through P:$e1, DMA handshakes ready, empty 8x128 instruction cache, additive interlocks, 3 waits per external instruction miss AND external data word, plus 64-clock output-transfer reserve. Busywait latency and interrupts are system scheduling, not bounded here; no hardware timing claim.",
       "dispatcher_flags_tested": 128,
-      "cache_placements": "All 128 word alignments fit the eight cache sectors for every traced path.",
+      "cache_placements": "All 128 word alignments fit the eight cache sectors on every traced path.",
       "physical_wait_states_verified": false
     },
     "tests": {
       "machine": "cp",
       "controls": 732,
       "samples": 2272128,
-      "peak": 0.6150722503662109,
+      "peak": 0.5799046754837036,
       "clipped_samples": 0,
       "guards_and_parameters": true,
       "dirty_entry_registers": true,
       "init_silent": true,
       "retrigger": true,
       "tracer_audio_cycles_equal": true,
-      "asm_sha256": "73201a0925af36c7f3917f2794b4561553e0a4fb100a63fed69dadb9575c6807"
+      "asm_sha256": "9e56ad1fd9d3e4700ff7d846c73a55657b5cf02fb41934e6097d46ba47429f46"
     },
+    "exported_source_sha256": "aeec23b8c3a543c8a9e4ba701af365b4aed4eb37e951d345a39ff8eb029c1156",
+    "comments_only_export_verified": true,
     "long_tail": {
+      "machine": "cp",
+      "controls": [
+        [
+          64,
+          102,
+          64,
+          127,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          127,
+          127,
+          127,
+          127,
+          127
+        ],
+        [
+          0,
+          127,
+          64,
+          127,
+          0
+        ],
+        [
+          64,
+          102,
+          0,
+          0,
+          0
+        ]
+      ],
       "seeds": [
         1,
-        1193046,
         6317574,
         8388607
       ],
-      "samples": 524288,
-      "peak": 0.5148570537567139,
+      "samples": 1967040,
+      "peak": 0.5152943134307861,
       "clipped_samples": 0,
       "ends_silent": true,
-      "cases": 8,
-      "all_128_tight_values_monotonic": true,
-      "tail_onset_ms_endpoints": [
-        32.6530612244898,
-        4.353741496598639
-      ],
-      "muted_layers_silent": true
+      "asm_sha256": "9e56ad1fd9d3e4700ff7d846c73a55657b5cf02fb41934e6097d46ba47429f46"
     },
-    "qualified_program_sha256": "fdb3947646fd5df87a8ce0d40547a9a7d986ffb8eee7762831ef57073e676526",
-    "audio_sample_rate": 44100,
-    "tight_zero_parity": {
-      "cases": 13,
-      "samples": 425984,
-      "bitexact": true,
-      "sha256": "0843f983c3f069995728d56f15825b3a68cb0dc5b9acf481dc3339099d9a056e"
-    }
+    "qualified_program_sha256": "8451193fd11125aff70db318142b6564bbfddf2051f41ac8e5b207439731de12",
+    "audio_sample_rate": 44100
   },
   "_design": {
-    "strategy": "Full-rate inspired synthesis within the complete MDS admission budget. Envelope/control coefficients may be updated once per 32-sample block.",
+    "strategy": "44.1 kHz audio with per-sample interpolation between gain-envelope endpoints. Pitch/control coefficients remain block-rate.",
     "source": "https://github.com/Fadedlimes/Simple606/tree/6aacda7a14a8c097d32836039fd356eb0976ba8e",
     "license": "MIT; complete notice is embedded in the assembly source.",
     "description": "44.1 kHz filtered-noise clap. TGHT compresses the opening burst sequence, then the tail runs at its original decay speed.",
@@ -315,7 +342,7 @@
     "file": "cp.syx",
     "destination_slot": 8,
     "bank_file": "../tx6-bank.syx",
-    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08. Version 2.0 has not been sent to hardware.",
-    "existing_kits": "Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) in existing kits to preserve their sound. No automatic kit conversion. Earlier compatibility notes: Existing kits may retain zero in formerly unused parameter positions. Set the new controls to their documented defaults to restore the version 1.0 sound; existing parameter indices are unchanged."
+    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08.",
+    "existing_kits": "Version 2.1 keeps the version 2.0 parameter order and defaults. Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) in version 1.x kits to preserve their control meanings. No automatic kit conversion. Earlier compatibility notes: Existing kits may retain zero in formerly unused parameter positions. Set the new controls to their documented defaults to restore the version 1.0 sound; existing parameter indices are unchanged."
   }
 }

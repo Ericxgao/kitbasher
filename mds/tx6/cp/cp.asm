@@ -1,6 +1,6 @@
-; TX6 CP - Simple606-inspired MDS voice for X.20, version 2.0.
+; TX6 CP - Simple606-inspired MDS voice for X.20, version 2.1.
 ; 44.1 kHz filtered-noise clap. TGHT compresses the opening burst sequence, then the tail runs at its original decay speed.
-; Controls start with TUNE, DEC.
+; Controls start with TUNE, DEC. Gain envelopes interpolate per sample.
 ;
 ; MIT License
 ; 
@@ -71,6 +71,7 @@ trigger:
     move #>$ffffff,m0
     move #>$ffffff,m1
     clr a
+    move a1,x:(r6+$18)
     move a1,x:(r6+$b)
     move a1,x:(r6+$c)
     move a1,x:(r6+$d)
@@ -80,7 +81,7 @@ trigger:
     move a1,x:(r6+$14)
     move y:(r6+$2),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
@@ -94,7 +95,7 @@ trigger:
 control_1_end:
     move y:(r6+$1),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
@@ -102,7 +103,7 @@ control_1_end:
     add #>control_2,a
     move a1,r0
     move r6,a
-    add #>2,a
+    add #2,a
     move a1,r1
     do #3,control_2_end
     move p:(r0)+,x0
@@ -110,7 +111,7 @@ control_1_end:
 control_2_end:
     move y:(r6+$3),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
@@ -119,7 +120,7 @@ control_2_end:
     add #>control_3,a
     move a1,r0
     move r6,a
-    add #>5,a
+    add #5,a
     move a1,r1
     do #5,control_3_end
     move p:(r0)+,x0
@@ -193,7 +194,7 @@ control_3_end:
     move x0,x:(r6+$1)
     move y:(r6+$2),a
     asr #10,a,a
-    and #>$f,a
+    and #$f,a
     move a1,a
     move a1,b
     asl #1,a,a
@@ -229,14 +230,15 @@ control_3_end:
     move a1,x:(r6+$1a)
     rts
 render:
+    ; M0..M5 are linear on entry (X.20 dispatcher P:$ac..$b2).
     move #>$ffffff,m6
-    move #>$ffffff,m0
+    move x:(r6+$18),r1
     move x:(r6+$d),a
     asr #8,a,a
     cmp #>415,a
     jge silent
     move a1,n4
-    cmp #>45,a
+    cmp #45,a
     jge tight_tail
     move x:(r6+$d),a
     move x:(r6+$1a),x0
@@ -251,7 +253,7 @@ tight_tail:
 tight_advance:
     move a1,x:(r6+$d)
     move n4,a
-    cmp #>45,a
+    cmp #45,a
     jne no_tail_start
     move x:(r6+$5),x0
     move x0,x:(r6+$f)
@@ -361,7 +363,11 @@ burst_level_done:
     mpyr y0,x0,a
     move a1,x:(r6+$18)
 fade_done:
-    move x:(r6+$18),n0
+    move r1,x0
+    move x:(r6+$18),a
+    sub x0,a
+    asr #5,a,a
+    move a1,n1
     move x:(r6+$a),x0
     move #>$200000,y1
     move #>$fd43fd,y0
@@ -389,18 +395,18 @@ noise_end:
     move #>mds_scratch_x,r3
     move #>mds_scratch_y,r5
     do #32,filter_end
-    move x:(r3)+,x0 y:(r5),y0
+    move x:(r3)+,x0 y:(r5)+,y0
     mpy y0,x0,a x:(r3)+,x0
     asl a
     add b,a a1,y0
     move a1,y1
-    mpy x0,y1,a (r5)+
+    mpy x0,y1,a  (r1)+n1
     move x:(r3)+,x0
     asl a x1,b
     add b,a (r3)+n3
     mpy x0,y1,a a1,b
     asl a
-    sub y0,a n0,x0
+    sub y0,a  r1,x0
     mpy x0,y1,a a1,x1
     asl #4,a,a
     move a,y:(r7)+

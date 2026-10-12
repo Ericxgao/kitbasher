@@ -1,6 +1,6 @@
-; TX6 HT - Simple606-inspired MDS voice for X.20, version 2.0.
+; TX6 HT - Simple606-inspired MDS voice for X.20, version 2.1.
 ; 44.1 kHz high tom: two damped tonal modes and full-rate filtered noise. The quietest third mode is omitted to preserve the CPU budget.
-; Controls start with TUNE, DEC.
+; Controls start with TUNE, DEC. Gain envelopes interpolate per sample.
 ;
 ; MIT License
 ; 
@@ -77,7 +77,7 @@ trigger:
     move a1,x:(r6+$1c)
     move y:(r6+$2),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
@@ -94,7 +94,7 @@ trigger:
 control_1_end:
     move y:(r6+$1),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
@@ -104,7 +104,7 @@ control_1_end:
     add #>control_2,a
     move a1,r0
     move r6,a
-    add #>7,a
+    add #7,a
     move a1,r1
     do #7,control_2_end
     move p:(r0)+,x0
@@ -146,11 +146,12 @@ control_2_end:
 over_done:
     rts
 render:
+    ; M0..M5 are linear on entry (X.20 dispatcher P:$ac..$b2).
     move #>$ffffff,m6
     move x:(r6+$0),a
     tst a
     jeq silent
-    sub #>1,a
+    sub #1,a
     move a1,x:(r6+$0)
     move x:(r6+$e),x0
     move #>$400000,y1
@@ -238,15 +239,16 @@ tone1_end:
     move x:(r6+$13),x0
     move a1,b
     move b1,x:(r6+$13)
-    add x0,b
-    asr b
-    move b1,x0
+    sub x0,b
+    asr #5,b,b
+    move b1,n1
+    move x0,r1
     move #>mds_scratch_x,r3
     move #>mds_scratch_y,r5
     do #32,mix_end
     move x:(r3)+,x1 y:(r5)+,y0
-    mpy y0,x0,a
-    add x1,a
+    mpy y0,x0,a  (r1)+n1
+    add x1,a  r1,x0
     move a,y:(r7)+
 mix_end:
     rts

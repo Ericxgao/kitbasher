@@ -65,8 +65,8 @@
       "linked": false
     }
   ],
-  "machine_version": "2.0",
-  "max_track_cycles": 3896,
+  "machine_version": "2.1",
+  "max_track_cycles": 3920,
   "program": {
     "abi_version": 1,
     "init_symbol": "init",
@@ -89,99 +89,99 @@
       },
       {
         "symbol": "init",
-        "word_delta": 46
+        "word_delta": 45
       },
       {
         "symbol": "init",
-        "word_delta": 53
+        "word_delta": 51
       },
       {
         "symbol": "init",
-        "word_delta": 63
+        "word_delta": 60
       },
       {
         "symbol": "init",
-        "word_delta": 70
+        "word_delta": 66
       },
       {
         "symbol": "init",
-        "word_delta": 81
+        "word_delta": 76
       },
       {
         "symbol": "init",
-        "word_delta": 88
+        "word_delta": 82
       },
       {
         "symbol": "init",
-        "word_delta": 104
+        "word_delta": 98
       },
       {
         "symbol": "init",
-        "word_delta": 135
+        "word_delta": 129
       },
       {
         "symbol": "init",
-        "word_delta": 149
+        "word_delta": 141
       },
       {
         "symbol": "init",
-        "word_delta": 200
+        "word_delta": 192
       },
       {
         "symbol": "init",
-        "word_delta": 223
+        "word_delta": 215
       },
       {
         "symbol": "init",
-        "word_delta": 240
+        "word_delta": 232
       },
       {
         "symbol": "init",
-        "word_delta": 257
+        "word_delta": 250
       },
       {
         "symbol": "init",
-        "word_delta": 276
+        "word_delta": 275
       },
       {
         "symbol": "init",
-        "word_delta": 285
+        "word_delta": 284
       }
     ],
     "imports": [
       {
         "symbol": "init",
-        "word_delta": 196,
+        "word_delta": 188,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 219,
+        "word_delta": 211,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 238,
+        "word_delta": 230,
         "abi_symbol": 8,
         "kind": 4
       },
       {
         "symbol": "init",
-        "word_delta": 251,
+        "word_delta": 243,
         "abi_symbol": 8,
         "kind": 4
       },
       {
         "symbol": "init",
-        "word_delta": 272,
+        "word_delta": 271,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 274,
+        "word_delta": 273,
         "abi_symbol": 8,
         "kind": 4
       }
@@ -199,26 +199,26 @@
       "init_end": 8,
       "trigger": 12,
       "control_1_end": 38,
-      "control_2_end": 56,
-      "control_3_end": 73,
-      "control_4_end": 91,
-      "layer_done": 141,
-      "render": 142,
-      "tone0_end": 206,
-      "tone1_end": 230,
-      "white_end": 249,
-      "click_end": 266,
-      "mix_end": 282,
-      "silent": 283,
-      "zero_end": 287,
-      "control_1": 288,
-      "control_2": 672,
-      "control_3": 800,
-      "control_4": 864,
-      "xl_weights": 992
+      "control_2_end": 54,
+      "control_3_end": 69,
+      "control_4_end": 85,
+      "layer_done": 135,
+      "render": 136,
+      "tone0_end": 198,
+      "tone1_end": 222,
+      "white_end": 241,
+      "click_end": 259,
+      "mix_end": 281,
+      "silent": 282,
+      "zero_end": 286,
+      "control_1": 287,
+      "control_2": 671,
+      "control_3": 799,
+      "control_4": 863,
+      "xl_weights": 991
     },
-    "program_words": 1120,
-    "program_sha256": "61f6c84d131be5dbf02e34203efef8cb95b159cd07a26d78999c9f887a71b4bc",
+    "program_words": 1119,
+    "program_sha256": "f57fc6426cb0d1eb45ab87403be188d535be59dd24c02e5899e7731aecbc3eae",
     "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Pass packed big-endian 24-bit words and symbols to upstream MDS tools/mds_pack.py, then export with tools/mds_to_syx.py --slot 1."
   },
   "_controls": [
@@ -226,7 +226,7 @@
       "name": "CLIK",
       "default": 127,
       "resolution": 128,
-      "behavior": "0 = remove this layer; 127 = original layer level.",
+      "behavior": "0 = no click; 127 = full noise click and sharp opening impulse. TRAN also shapes click strength.",
       "update": "Captured on trigger."
     },
     {
@@ -238,58 +238,102 @@
     }
   ],
   "_validation": {
-    "status": "Simulator-qualified full-rate revision; hardware audition pending.",
+    "status": "Simulator-qualified smooth-envelope revision; hardware audition pending.",
     "hardware_tested": false,
     "timing": {
-      "measured_model_max_clocks": 3880,
-      "declared_max_clocks": 3896,
+      "measured_model_max_clocks": 3909,
+      "declared_max_clocks": 3920,
       "limit": 3951,
       "scope": "Actual X.20 dispatcher P:$6b through P:$e1, DMA handshakes ready, empty 8x128 instruction cache, additive interlocks, 3 waits per external instruction miss AND external data word, plus 64-clock output-transfer reserve. Busywait latency and interrupts are system scheduling, not bounded here; no hardware timing claim.",
       "dispatcher_flags_tested": 128,
-      "cache_placements": "All 128 word alignments fit the eight cache sectors for every traced path.",
+      "cache_placements": "All 128 word alignments fit the eight cache sectors on every traced path.",
       "physical_wait_states_verified": false
     },
     "tests": {
       "machine": "bd",
       "controls": 891,
       "samples": 2765664,
-      "peak": 0.7094318866729736,
+      "peak": 0.7095044851303101,
       "clipped_samples": 0,
       "guards_and_parameters": true,
       "dirty_entry_registers": true,
       "init_silent": true,
       "retrigger": true,
       "tracer_audio_cycles_equal": true,
-      "asm_sha256": "62b749b301427a1f12be531e580deb51f373a494288076a647437be312f50e5a"
+      "asm_sha256": "c222778a052725d0aabe44b0754621108df64d120daecbea00e1b06c0d3f39e3"
     },
+    "exported_source_sha256": "b22db37be30dc6cb3b6788b2299f1a766af10fcdcfed6a34ec4faf55f57d265c",
+    "comments_only_export_verified": true,
     "long_tail": {
+      "machine": "bd",
+      "controls": [
+        [
+          75,
+          102,
+          51,
+          0,
+          0,
+          127
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          127,
+          127,
+          127,
+          127,
+          127,
+          127
+        ],
+        [
+          0,
+          127,
+          51,
+          0,
+          0,
+          127
+        ],
+        [
+          75,
+          102,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
       "seeds": [
         1,
-        1193046,
         6317574,
         8388607
       ],
-      "samples": 16778240,
-      "peak": 0.6976187229156494,
+      "samples": 7865280,
+      "peak": 0.6972610950469971,
       "clipped_samples": 0,
       "ends_silent": true,
-      "cases": 8
+      "asm_sha256": "c222778a052725d0aabe44b0754621108df64d120daecbea00e1b06c0d3f39e3"
     },
-    "qualified_program_sha256": "61f6c84d131be5dbf02e34203efef8cb95b159cd07a26d78999c9f887a71b4bc",
+    "qualified_program_sha256": "f57fc6426cb0d1eb45ab87403be188d535be59dd24c02e5899e7731aecbc3eae",
     "audio_sample_rate": 44100
   },
   "_design": {
-    "strategy": "Full-rate inspired synthesis within the complete MDS admission budget. Envelope/control coefficients may be updated once per 32-sample block.",
+    "strategy": "44.1 kHz audio with per-sample interpolation between gain-envelope endpoints. Pitch/control coefficients remain block-rate.",
     "source": "https://github.com/Fadedlimes/Simple606/tree/6aacda7a14a8c097d32836039fd356eb0976ba8e",
     "license": "MIT; complete notice is embedded in the assembly source.",
-    "description": "44.1 kHz kick: swept fundamental and HEAT-controlled third harmonic, zero-crossing start, full-rate low-pass click. DEC and continuous XL retain their decay curves.",
+    "description": "Swept fundamental and HEAT-controlled third harmonic with smooth decay. CLIK adds a filtered opening impulse and noise; TRAN also shapes their strength.",
     "audio_sample_rate": 44100
   },
   "_send": {
     "file": "bd.syx",
     "destination_slot": 1,
     "bank_file": "../tx6-bank.syx",
-    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08. Version 2.0 has not been sent to hardware.",
-    "existing_kits": "Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 3 (TUNE/TRAN) in existing kits to preserve their sound. No automatic kit conversion. Earlier compatibility notes: XL is now 0-127. For kits with the former XL switch enabled (value 1), set XL to 127 to preserve that sound. XL 0 and all other parameter positions/defaults are unchanged. The full-rate version changes the sound design; remapping preserves control meanings, not bit-identical audio."
+    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08.",
+    "existing_kits": "Version 2.1 keeps the version 2.0 parameter order and defaults. Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 3 (TUNE/TRAN) in version 1.x kits to preserve their control meanings. No automatic kit conversion. Earlier compatibility notes: XL is now 0-127. For kits with the former XL switch enabled (value 1), set XL to 127 to preserve that sound. XL 0 and all other parameter positions/defaults are unchanged. The full-rate version changes the sound design; remapping preserves control meanings, not bit-identical audio."
   }
 }

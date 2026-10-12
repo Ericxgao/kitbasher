@@ -1,6 +1,6 @@
-; TX6 BD - Simple606-inspired MDS voice for X.20, version 2.0.
-; 44.1 kHz kick: swept fundamental and HEAT-controlled third harmonic, zero-crossing start, full-rate low-pass click. DEC and continuous XL retain their decay curves.
-; Controls start with TUNE, DEC.
+; TX6 BD - Simple606-inspired MDS voice for X.20, version 2.1.
+; 44.1 kHz kick: swept fundamental and HEAT-controlled third harmonic, smooth gain, a sharp CLIK-controlled impulse and full-rate low-pass noise click. DEC and continuous XL retain their decay curves.
+; Controls start with TUNE, DEC. Gain envelopes interpolate per sample.
 ;
 ; MIT License
 ; 
@@ -67,11 +67,12 @@ trigger:
     move #>$ffffff,m6
     move #>$ffffff,m0
     move #>$ffffff,m1
-    clr a
+    ; A short click impulse; the existing filter drains it immediately.
+    move #>$880000,a
     move a1,x:(r6+$12)
     move y:(r6+$3),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
@@ -87,14 +88,14 @@ trigger:
 control_1_end:
     move y:(r6+$2),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
     add #>control_2,a
     move a1,r0
     move r6,a
-    add #>6,a
+    add #6,a
     move a1,r1
     do #2,control_2_end
     move p:(r0)+,x0
@@ -102,13 +103,13 @@ control_1_end:
 control_2_end:
     move y:(r6+$1),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     add #>control_3,a
     move a1,r0
     move r6,a
-    add #>8,a
+    add #8,a
     move a1,r1
     do #1,control_3_end
     move p:(r0)+,x0
@@ -116,14 +117,14 @@ control_2_end:
 control_3_end:
     move y:(r6+$4),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
     add #>control_4,a
     move a1,r0
     move r6,a
-    add #>9,a
+    add #9,a
     move a1,r1
     do #2,control_4_end
     move p:(r0)+,x0
@@ -177,12 +178,12 @@ control_4_end:
 layer_done:
     rts
 render:
+    ; M0..M5 are linear on entry (X.20 dispatcher P:$ac..$b2).
     move #>$ffffff,m6
-    move #>$ffffff,m0
     move x:(r6+$c),a
     tst a
     jeq silent
-    sub #>1,a
+    sub #1,a
     move a1,x:(r6+$c)
     move x:(r6+$1),x0
     move x:(r6+$e),b
@@ -201,20 +202,21 @@ render:
     move x:(r6+$d),y0
     mpyr y0,x0,a
     move a1,x:(r6+$0)
-    add x0,a
-    asr a
-    move a1,x:(r6+$16)
+    move x0,x:(r6+$16)
     move x:(r6+$3),x0
+    move x:(r6+$5),y0
+    mpyr y0,x0,a
+    move a1,r0
     move x:(r6+$4),y0
     mpyr y0,x0,a
     move a1,x:(r6+$3)
-    add x0,a
-    asr a
-    move a1,x:(r6+$17)
-    move x:(r6+$17),x0
+    move a1,x0
     move x:(r6+$5),y0
     mpyr y0,x0,a
-    move a1,x:(r6+$17)
+    move r0,x0
+    sub x0,a
+    asr #5,a,a
+    move a1,n2
     move n0,a
     move a1,x0
     mpy x0,x0,a
@@ -258,7 +260,7 @@ tone1_end:
     move x0,x:(r6+$18)
     move x1,x:(r6+$19)
     move x:(r6+$b),x0
-    move #>$200000,y1
+    move #>$080000,y1
     move #>$19660d,y0
     move #>mds_scratch_y,r5
     do #32,white_end
@@ -274,15 +276,16 @@ white_end:
     move #>mds_scratch_y,r5
     move x:(r6+$12),x0
     move #>$2c8537,y0
-    move x:(r6+$17),y1
+    move n2,n0
+    move r0,y1
     do #32,click_end
     move y:(r5),a
     sub x0,a
     move a1,x1
     mpy x1,y0,a
-    add x0,a
+    add x0,a  r0,y1
     move a1,x0
-    mpy x0,y1,a
+    mpy x0,y1,a  (r0)+n0
     move a1,y:(r5)+
 click_end:
     move x0,x:(r6+$12)
@@ -290,11 +293,17 @@ click_end:
     move x:(r6+$a),y0
     mpyr y0,x0,a
     move a1,y1
+    move a,b
+    move x:(r6+$0),x0
+    mpyr y0,x0,a
+    sub b,a
+    asr #5,a,a
+    move a1,x0
     move #>mds_scratch_x,r3
     move #>mds_scratch_y,r5
     do #32,mix_end
-    move x:(r3)+,x1 y:(r5)+,y0
-    mpy y1,x1,a
+    add x0,b  x:(r3)+,x1  y:(r5)+,y0
+    mpy y1,x1,a  b,y1
     add y0,a
     asl a
     move a,y:(r7)+
@@ -307,54 +316,54 @@ silent:
 zero_end:
     rts
 control_1:
-    .dc $40240b,$0442a7,$7bd226,$0978d5,$633a80,$0d9392,$4035d9,$044428
-    .dc $7bcecf,$0a7079,$64cfcc,$0f6317,$404408,$04455b,$7bcc23,$0b194f
-    .dc $65cb9a,$109f1d,$4051d3,$044686,$7bc986,$0bad54,$6699e5,$11b42a
-    .dc $405f9d,$0447b0,$7bc6e5,$0c3543,$674c85,$12b29a,$406d89,$0448dd
-    .dc $7bc43b,$0cb4dd,$67eb88,$13a170,$407ba6,$044a0e,$7bc184,$0d2e32
-    .dc $687b83,$14848b,$4089fc,$044b44,$7bbebf,$0da28d,$68ff6d,$155e55
-    .dc $409890,$044c7f,$7bbbea,$0e12cf,$69795a,$163073,$40a763,$044dc0
-    .dc $7bb905,$0e7f9a,$69eace,$16fc16,$40b678,$044f06,$7bb60f,$0ee968
-    .dc $6a54f5,$17c221,$40c5cd,$045052,$7bb308,$0f5099,$6ab8b9,$188346
-    .dc $40d562,$0451a3,$7bafef,$0fb576,$6b16d9,$194012,$40e538,$0452f9
-    .dc $7bacc6,$10183f,$6b6fef,$19f8f8,$40f54e,$045455,$7ba98b,$107926
-    .dc $6bc47f,$1aae58,$4105a2,$0455b7,$7ba63f,$10d855,$6c14f6,$1b6082
-    .dc $411635,$04571d,$7ba2e0,$1135f1,$6c61b4,$1c0fb8,$412705,$045889
-    .dc $7b9f70,$119219,$6cab09,$1cbc37,$413812,$0459f9,$7b9bee,$11ece9
-    .dc $6cf13c,$1d6631,$41495b,$045b6f,$7b985a,$124678,$6d348c,$1e0dd2
-    .dc $415adf,$045cea,$7b94b4,$129edb,$6d752f,$1eb342,$416c9d,$045e6a
-    .dc $7b90fb,$12f624,$6db358,$1f56a4,$417e94,$045fee,$7b8d30,$134c66
-    .dc $6def30,$1ff817,$4190c4,$046178,$7b8953,$13a1ad,$6e28e0,$2097b6
-    .dc $41a32d,$046306,$7b8562,$13f609,$6e608b,$21359b,$41bf31,$046564
-    .dc $7b7f56,$1472f2,$6eb088,$221f69,$41c8a3,$046630,$7b7d48,$149c2b
-    .dc $6eca4f,$226c92,$41dbaf,$0467cc,$7b791e,$14ee08,$6efca0,$2305cb
-    .dc $41eef0,$04696d,$7b74e1,$153f23,$6f2d5c,$239d9b,$420267,$046b12
-    .dc $7b7090,$158f85,$6f5c98,$243411,$421611,$046cbb,$7b6c2b,$15df37
-    .dc $6f8a6b,$24c93c,$4229ef,$046e69,$7b67b2,$162e40,$6fb6e5,$255d2b
-    .dc $423dff,$04701b,$7b6325,$167ca6,$6fe21a,$25efe9,$425242,$0471d1
-    .dc $7b5e83,$16ca70,$700c18,$268182,$4266b7,$04738b,$7b59cc,$1717a3
-    .dc $7034f0,$271203,$427b5d,$04754a,$7b5500,$176446,$705cae,$27a174
-    .dc $429034,$04770c,$7b501f,$17b05d,$708360,$282fe0,$42afd0,$0479b8
-    .dc $7b48a4,$182184,$70bb8f,$2903ac,$42ba72,$047a9e,$7b461b,$1846fb
-    .dc $70cdd0,$2949cb,$42cfd8,$047c6d,$7b40f7,$18918b,$70f1a4,$29d55b
-    .dc $42e56d,$047e40,$7b3bbd,$18dba1,$711497,$2a6007,$42fb31,$048016
-    .dc $7b366c,$192541,$7136b3,$2ae9d5,$431122,$0481f1,$7b3104,$196e6e
-    .dc $715802,$2b72cd,$432741,$0483d0,$7b2b84,$19b72c,$71788a,$2bfaf5
-    .dc $433d8d,$0485b2,$7b25ec,$19ff7e,$719855,$2c8252,$435406,$048798
-    .dc $7b203c,$1a4767,$71b768,$2d08ec,$436aab,$048982,$7b1a73,$1a8eea
-    .dc $71d5cc,$2d8ec6,$438cf6,$048c67,$7b1196,$1af975,$720227,$2e5633
-    .dc $43987a,$048d60,$7b0e95,$1b1cc9,$72109e,$2e9853,$43afa2,$048f55
-    .dc $7b087f,$1b632a,$722d19,$2f1c0e,$43c6f5,$04914e,$7b024f,$1ba930
-    .dc $7248fc,$2f9f1e,$43de72,$04934a,$7afc03,$1beedc,$72644d,$302187
-    .dc $43f61a,$049549,$7af59c,$1c3431,$727f10,$30a34d,$440dec,$04974d
-    .dc $7aef1a,$1c7930,$72994b,$312473,$4425e8,$049953,$7ae87b,$1cbddd
-    .dc $72b302,$31a4fd,$443e0c,$049b5d,$7ae1be,$1d0238,$72cc39,$3224f0
-    .dc $44565a,$049d6b,$7adae5,$1d4644,$72e4f5,$32a44e,$446ed0,$049f7c
-    .dc $7ad3ed,$1d8a03,$72fd3a,$33231a,$44876f,$04a191,$7accd7,$1dcd75
-    .dc $73150a,$33a159,$44a036,$04a3a9,$7ac5a1,$1e109e,$732c6b,$341f0d
-    .dc $44b924,$04a5c4,$7abe4b,$1e537d,$73435f,$349c38,$44d23a,$04a7e2
-    .dc $7ab6d5,$1e9615,$7359e9,$3518de,$44eb78,$04aa04,$7aaf3e,$1ed868
-    .dc $73700d,$359502,$45119d,$04ad3d,$7aa39c,$1f3b64,$73908a,$364e49
+    .dc $40240b,$0442a7,$7bd226,$0404c5,$633a80,$7fffff,$4035d9,$044428
+    .dc $7bcecf,$05050c,$64cfcc,$7fffff,$404408,$04455b,$7bcc23,$05c3d7
+    .dc $65cb9a,$7fffff,$4051d3,$044686,$7bc986,$0675d3,$6699e5,$7fffff
+    .dc $405f9d,$0447b0,$7bc6e5,$072219,$674c85,$7fffff,$406d89,$0448dd
+    .dc $7bc43b,$07cb7e,$67eb88,$7fffff,$407ba6,$044a0e,$7bc184,$087377
+    .dc $687b83,$7fffff,$4089fc,$044b44,$7bbebf,$091ade,$68ff6d,$7fffff
+    .dc $409890,$044c7f,$7bbbea,$09c23d,$69795a,$7fffff,$40a763,$044dc0
+    .dc $7bb905,$0a69f1,$69eace,$7fffff,$40b678,$044f06,$7bb60f,$0b1239
+    .dc $6a54f5,$7fffff,$40c5cd,$045052,$7bb308,$0bbb46,$6ab8b9,$7fffff
+    .dc $40d562,$0451a3,$7bafef,$0c6538,$6b16d9,$7fffff,$40e538,$0452f9
+    .dc $7bacc6,$0d102a,$6b6fef,$7fffff,$40f54e,$045455,$7ba98b,$0dbc2f
+    .dc $6bc47f,$7fffff,$4105a2,$0455b7,$7ba63f,$0e6955,$6c14f6,$7fffff
+    .dc $411635,$04571d,$7ba2e0,$0f17a7,$6c61b4,$7fffff,$412705,$045889
+    .dc $7b9f70,$0fc72e,$6cab09,$7fffff,$413812,$0459f9,$7b9bee,$1077f2
+    .dc $6cf13c,$7fffff,$41495b,$045b6f,$7b985a,$1129f5,$6d348c,$7fffff
+    .dc $415adf,$045cea,$7b94b4,$11dd3c,$6d752f,$7fffff,$416c9d,$045e6a
+    .dc $7b90fb,$1291ca,$6db358,$7fffff,$417e94,$045fee,$7b8d30,$1347a1
+    .dc $6def30,$7fffff,$4190c4,$046178,$7b8953,$13fec0,$6e28e0,$7fffff
+    .dc $41a32d,$046306,$7b8562,$14b729,$6e608b,$7fffff,$41bf31,$046564
+    .dc $7b7f56,$15ce34,$6eb088,$7fffff,$41c8a3,$046630,$7b7d48,$162bdb
+    .dc $6eca4f,$7fffff,$41dbaf,$0467cc,$7b791e,$16e823,$6efca0,$7fffff
+    .dc $41eef0,$04696d,$7b74e1,$17a5b3,$6f2d5c,$7fffff,$420267,$046b12
+    .dc $7b7090,$18648a,$6f5c98,$7fffff,$421611,$046cbb,$7b6c2b,$1924a9
+    .dc $6f8a6b,$7fffff,$4229ef,$046e69,$7b67b2,$19e60e,$6fb6e5,$7fffff
+    .dc $423dff,$04701b,$7b6325,$1aa8b7,$6fe21a,$7fffff,$425242,$0471d1
+    .dc $7b5e83,$1b6ca2,$700c18,$7fffff,$4266b7,$04738b,$7b59cc,$1c31ce
+    .dc $7034f0,$7fffff,$427b5d,$04754a,$7b5500,$1cf83b,$705cae,$7fffff
+    .dc $429034,$04770c,$7b501f,$1dbfe5,$708360,$7fffff,$42afd0,$0479b8
+    .dc $7b48a4,$1eedb6,$70bb8f,$7fffff,$42ba72,$047a9e,$7b461b,$1f52ee
+    .dc $70cdd0,$7fffff,$42cfd8,$047c6d,$7b40f7,$201e49,$70f1a4,$7fffff
+    .dc $42e56d,$047e40,$7b3bbd,$20eadc,$711497,$7fffff,$42fb31,$048016
+    .dc $7b366c,$21b8a4,$7136b3,$7fffff,$431122,$0481f1,$7b3104,$2287a0
+    .dc $715802,$7fffff,$432741,$0483d0,$7b2b84,$2357cf,$71788a,$7fffff
+    .dc $433d8d,$0485b2,$7b25ec,$24292e,$719855,$7fffff,$435406,$048798
+    .dc $7b203c,$24fbbd,$71b768,$7fffff,$436aab,$048982,$7b1a73,$25cf78
+    .dc $71d5cc,$7fffff,$438cf6,$048c67,$7b1196,$270f42,$720227,$7fffff
+    .dc $43987a,$048d60,$7b0e95,$277a70,$72109e,$7fffff,$43afa2,$048f55
+    .dc $7b087f,$2851a8,$722d19,$7fffff,$43c6f5,$04914e,$7b024f,$292a09
+    .dc $7248fc,$7fffff,$43de72,$04934a,$7afc03,$2a038e,$72644d,$7fffff
+    .dc $43f61a,$049549,$7af59c,$2ade37,$727f10,$7fffff,$440dec,$04974d
+    .dc $7aef1a,$2bba00,$72994b,$7fffff,$4425e8,$049953,$7ae87b,$2c96eb
+    .dc $72b302,$7fffff,$443e0c,$049b5d,$7ae1be,$2d74f4,$72cc39,$7fffff
+    .dc $44565a,$049d6b,$7adae5,$2e541a,$72e4f5,$7fffff,$446ed0,$049f7c
+    .dc $7ad3ed,$2f345c,$72fd3a,$7fffff,$44876f,$04a191,$7accd7,$3015b7
+    .dc $73150a,$7fffff,$44a036,$04a3a9,$7ac5a1,$30f82d,$732c6b,$7fffff
+    .dc $44b924,$04a5c4,$7abe4b,$31dbb7,$73435f,$7fffff,$44d23a,$04a7e2
+    .dc $7ab6d5,$32c058,$7359e9,$7fffff,$44eb78,$04aa04,$7aaf3e,$33a60e
+    .dc $73700d,$7fffff,$45119d,$04ad3d,$7aa39c,$3500a1,$73908a,$7fffff
 control_2:
     .dc $770a7e,$770a7e,$7710ce,$772955,$77238a,$778112,$774215,$780519
     .dc $776b7e,$78a520,$779e88,$79516a,$77d9c9,$79fd7d,$781bba,$7aa0f6

@@ -1,7 +1,7 @@
-; TX6 SD - Simple606-inspired MDS voice for X.20, version 2.0.
-; New layer controls preserve version 1.0 audio at their defaults.
+; TX6 SD - Simple606-inspired MDS voice for X.20, version 2.1.
+; Gain envelopes interpolate per sample between 32-sample endpoints.
 ; BODY: 0 = remove this layer; 127 = original layer level. Captured on trigger.
-; Controls: TUNE first, DEC second. Version 1.x kits need parameter remapping.
+; Controls: TUNE first, DEC second. Same parameter layout as version 2.0.
 ;
 ; MIT License
 ; 
@@ -75,7 +75,7 @@ trigger:
     move a1,x:(r6+$11)
     move y:(r6+$2),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
@@ -90,7 +90,7 @@ trigger:
 control_1_end:
     move y:(r6+$1),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
@@ -98,7 +98,7 @@ control_1_end:
     add #>control_2,a
     move a1,r0
     move r6,a
-    add #>3,a
+    add #3,a
     move a1,r1
     do #4,control_2_end
     move p:(r0)+,x0
@@ -106,7 +106,7 @@ control_1_end:
 control_2_end:
     move y:(r6+$4),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
@@ -114,7 +114,7 @@ control_2_end:
     add #>control_4,a
     move a1,r0
     move r6,a
-    add #>7,a
+    add #7,a
     move a1,r1
     do #3,control_4_end
     move p:(r0)+,x0
@@ -122,14 +122,14 @@ control_2_end:
 control_4_end:
     move y:(r6+$3),a
     asr #8,a,a
-    and #>$3f,a
+    and #$3f,a
     clr a a1,x0
     add x0,a
     asl a
     add #>control_3,a
     move a1,r0
     move r6,a
-    add #>10,a
+    add #10,a
     move a1,r1
     do #2,control_3_end
     move p:(r0)+,x0
@@ -162,17 +162,18 @@ control_3_end:
     move x0,x:(r6+$18)
     rts
 render:
+    ; M0..M5 are linear on entry (X.20 dispatcher P:$ac..$b2).
     move #>$ffffff,m6
     move x:(r6+$0),a
     tst a
     jeq silent
-    sub #>1,a
+    sub #1,a
     move a1,x:(r6+$0)
     move x:(r6+$1),a
     tst a
     jlt gate_ready
     jeq gate_begin
-    sub #>1,a
+    sub #1,a
     move a1,x:(r6+$1)
     jmp gate_ready
 gate_begin:
@@ -279,9 +280,10 @@ tone0_end:
     move x:(r6+$17),x0
     move x:(r6+$18),a
     add x0,a n4,x0
-    add x0,a
-    asr a
-    move a1,n4
+    sub x0,a
+    asr #5,a,a
+    move a1,n0
+    move x0,r0
     move x:(r6+$a),x0
     move x:(r6+$f),y0
     mpyr y0,x0,a
@@ -296,17 +298,19 @@ tone0_end:
     move x:(r6+$11),x0
     move a1,b
     move b1,x:(r6+$11)
-    add x0,b
-    asr b
-    move b1,x0
-    move n4,y1
+    sub x0,b
+    asr #5,b,b
+    move b1,n1
+    move x0,r1
+    move r0,y1
     move #>mds_scratch_x,r3
     move #>mds_scratch_y,r5
     do #32,mix_end
     move x:(r3)+,x1 y:(r5)+,y0
-    mpy y0,x0,a
-    asl a
-    mac y1,x1,a
+    mpy y0,x0,a  (r1)+n1
+    asl a  r1,x0
+    mac y1,x1,a  (r0)+n0
+    move r0,y1
     move a,y:(r7)+
 mix_end:
     rts

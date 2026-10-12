@@ -38,7 +38,7 @@
       "linked": false
     }
   ],
-  "machine_version": "2.0",
+  "machine_version": "2.1",
   "max_track_cycles": 3944,
   "program": {
     "abi_version": 1,
@@ -62,91 +62,91 @@
       },
       {
         "symbol": "init",
-        "word_delta": 46
+        "word_delta": 45
       },
       {
         "symbol": "init",
-        "word_delta": 53
+        "word_delta": 51
       },
       {
         "symbol": "init",
-        "word_delta": 73
+        "word_delta": 71
       },
       {
         "symbol": "init",
-        "word_delta": 87
+        "word_delta": 85
       },
       {
         "symbol": "init",
-        "word_delta": 162
+        "word_delta": 178
       },
       {
         "symbol": "init",
-        "word_delta": 189
+        "word_delta": 207
       },
       {
         "symbol": "init",
-        "word_delta": 211
+        "word_delta": 230
       },
       {
         "symbol": "init",
-        "word_delta": 225
+        "word_delta": 243
       },
       {
         "symbol": "init",
-        "word_delta": 241
+        "word_delta": 258
       },
       {
         "symbol": "init",
-        "word_delta": 250
+        "word_delta": 268
       }
     ],
     "imports": [
       {
         "symbol": "init",
-        "word_delta": 160,
+        "word_delta": 169,
         "abi_symbol": 8,
         "kind": 4
       },
       {
         "symbol": "init",
-        "word_delta": 173,
+        "word_delta": 189,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 185,
+        "word_delta": 201,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 187,
+        "word_delta": 203,
         "abi_symbol": 8,
         "kind": 4
       },
       {
         "symbol": "init",
-        "word_delta": 206,
+        "word_delta": 225,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 220,
+        "word_delta": 238,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 237,
+        "word_delta": 254,
         "abi_symbol": 7,
         "kind": 3
       },
       {
         "symbol": "init",
-        "word_delta": 239,
+        "word_delta": 256,
         "abi_symbol": 8,
         "kind": 4
       }
@@ -164,21 +164,21 @@
       "init_end": 8,
       "trigger": 12,
       "control_1_end": 37,
-      "control_2_end": 56,
-      "render": 82,
-      "noise_end": 171,
-      "filter_end": 203,
-      "tone0_end": 217,
-      "tone1_end": 232,
-      "mix_end": 247,
-      "silent": 248,
-      "zero_end": 252,
-      "control_1": 253,
-      "control_2": 509,
-      "metal_table": 1085
+      "control_2_end": 54,
+      "render": 80,
+      "noise_end": 186,
+      "filter_end": 220,
+      "tone0_end": 235,
+      "tone1_end": 249,
+      "mix_end": 265,
+      "silent": 266,
+      "zero_end": 270,
+      "control_1": 271,
+      "control_2": 527,
+      "metal_table": 1103
     },
-    "program_words": 1277,
-    "program_sha256": "28415d7b974e1ba5813833ed44b17a8bb352eff5dee756e84919495852dc8d79",
+    "program_words": 1295,
+    "program_sha256": "9d22860e9f252505d3e140ff4c4e7f1207143df81f07f8de78766848508a7c6c",
     "instructions": "Assemble at origin 0 with Kitbasher packs/assembly.py and asm56, supplying import_symbols. Pass packed big-endian 24-bit words and symbols to upstream MDS tools/mds_pack.py, then export with tools/mds_to_syx.py --slot 5."
   },
   "_controls": [
@@ -191,125 +191,91 @@
     }
   ],
   "_validation": {
-    "status": "Control reorder verified against previous release; version 2.0 hardware audition pending.",
+    "status": "Simulator-qualified smooth-envelope revision; hardware audition pending.",
+    "hardware_tested": false,
     "timing": {
-      "measured_model_max_clocks": 3927,
+      "measured_model_max_clocks": 3935,
       "declared_max_clocks": 3944,
       "limit": 3951,
       "scope": "Actual X.20 dispatcher P:$6b through P:$e1, DMA handshakes ready, empty 8x128 instruction cache, additive interlocks, 3 waits per external instruction miss AND external data word, plus 64-clock output-transfer reserve. Busywait latency and interrupts are system scheduling, not bounded here; no hardware timing claim.",
       "dispatcher_flags_tested": 128,
-      "cache_placements": "All 128 word alignments fit the eight cache sectors for every traced path.",
+      "cache_placements": "All 128 word alignments fit the eight cache sectors on every traced path.",
       "physical_wait_states_verified": false
     },
     "tests": {
+      "machine": "ch",
       "controls": 454,
       "samples": 1409216,
-      "peak": 0.6159934997558594,
+      "peak": 0.6212998628616333,
       "clipped_samples": 0,
       "guards_and_parameters": true,
       "dirty_entry_registers": true,
       "init_silent": true,
       "retrigger": true,
-      "tracer_audio_cycles_equal": true
+      "tracer_audio_cycles_equal": true,
+      "asm_sha256": "49edf22ddf460035212ae5952903c77ab8b0ef1b19a293b60707d7144ee9cfe8"
     },
+    "exported_source_sha256": "5f4e23afc69efeb459884da673467be865d3cb72c2e09d82847064318f3e3c62",
+    "comments_only_export_verified": true,
     "long_tail": {
-      "cases": 8,
+      "machine": "ch",
+      "controls": [
+        [
+          64,
+          89,
+          64
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          127,
+          127,
+          127
+        ],
+        [
+          0,
+          127,
+          64
+        ],
+        [
+          64,
+          89,
+          0
+        ]
+      ],
       "seeds": [
         1,
-        1193046,
         6317574,
         8388607
       ],
-      "samples": 2097152,
-      "peak": 0.5396333932876587,
+      "samples": 1967040,
+      "peak": 0.46883881092071533,
       "clipped_samples": 0,
-      "layer_contracts": true
+      "ends_silent": true,
+      "asm_sha256": "49edf22ddf460035212ae5952903c77ab8b0ef1b19a293b60707d7144ee9cfe8"
     },
-    "default_preservation": {
-      "reference": "Original version 1.0 installed bank; PR #21",
-      "method": "Bit-exact full-duration PCM at original default and maximum controls, with added controls at defaults; four RNG seeds.",
-      "results": [
-        {
-          "case": "default",
-          "seed": 1,
-          "sha256": "e3b23e2ce16d1cd9931f28953fa6ab9b7d7b5df90e3ab30acae239bfef5b28f2",
-          "bytes": 262144
-        },
-        {
-          "case": "default",
-          "seed": 1193046,
-          "sha256": "d524e7256b2a2c9d8b3a37a90e0372f1ae0ae9b85cd6e1d2e44a1685ea61eb37",
-          "bytes": 262144
-        },
-        {
-          "case": "default",
-          "seed": 6317574,
-          "sha256": "a95e563a28dd2812010d55d5d7d55cbda4387752f828857b1d07afa1fe8aa0a4",
-          "bytes": 262144
-        },
-        {
-          "case": "default",
-          "seed": 8388607,
-          "sha256": "67f4441a1ab8a407bd353fa7af3b8e61ed2a36af12f56846a0beb10eb734ae65",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 1,
-          "sha256": "5cb3159f02e5b9c0d0b276740d3bd57c33e3eb1f21081aa3cc844566c11aaefc",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 1193046,
-          "sha256": "6fe6ae45c2c4f45ea37efbd68eec2d38d4060d47c55a3f603204ef2050fcc291",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 6317574,
-          "sha256": "59de309b78328f41474faf9a3be1fc03b23b58ddd70b763b6bee41eab1dbfbe9",
-          "bytes": 262144
-        },
-        {
-          "case": "maximum",
-          "seed": 8388607,
-          "sha256": "4a39e15556984fd5b54ada67b6269bd56ea8f11b76f4f54a9c9eb462d69c5fa7",
-          "bytes": 262144
-        }
-      ]
-    },
-    "hardware_tested": false,
-    "control_order": {
-      "previous_version": "1.1",
-      "new_to_old_positions": [
-        2,
-        1,
-        3
-      ],
-      "changed_instruction_words": [
-        21,
-        37
-      ],
-      "cases": 17,
-      "samples": 557056,
-      "audio_sha256": "b2147ce37b7620c236cd3e8a4920b031e0f9d7e10055bc1f6cf6774a391f74b1",
-      "bitexact_audio": true,
-      "identical_emulator_cycles": true,
-      "unchanged_instruction_layout": true,
-      "unchanged_memory_requirements": true
+    "qualified_program_sha256": "9d22860e9f252505d3e140ff4c4e7f1207143df81f07f8de78766848508a7c6c",
+    "audio_sample_rate": 44100,
+    "instruction_optimization": {
+      "sweep_samples": 1409216,
+      "bit_exact": true,
+      "sha256": "3e6f6f0e2da9bfadaa7d2cc272ac5227d9e7f4beaa168a7fd05c04df8de4ceff"
     }
   },
   "_design": {
-    "strategy": "Expose existing layers without additional sample-loop synthesis. Preserve version 1.0 audio at new-control defaults.",
+    "strategy": "44.1 kHz audio with per-sample interpolation between gain-envelope endpoints. Pitch/control coefficients remain block-rate.",
     "source": "https://github.com/Fadedlimes/Simple606/tree/6aacda7a14a8c097d32836039fd356eb0976ba8e",
-    "license": "MIT; complete notice is embedded in the assembly source."
+    "license": "MIT; complete notice is embedded in the assembly source.",
+    "audio_sample_rate": 44100
   },
   "_send": {
     "file": "ch.syx",
     "destination_slot": 5,
     "bank_file": "../tx6-bank.syx",
-    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08. Version 2.0 has not been sent to hardware.",
-    "existing_kits": "Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) in existing kits to preserve their sound. No automatic kit conversion. Earlier compatibility notes: Existing kits may retain zero in formerly unused parameter positions. Set the new controls to their documented defaults to restore the version 1.0 sound; existing parameter indices are unchanged."
+    "instruction": "Choose the destination Machine Bank before sending. The bank installs U01-U08.",
+    "existing_kits": "Version 2.1 keeps the version 2.0 parameter order and defaults. Version 2.0: swap parameter values, parameter locks and modulation targets 1 and 2 (TUNE/DEC) in version 1.x kits to preserve their control meanings. No automatic kit conversion. Earlier compatibility notes: Existing kits may retain zero in formerly unused parameter positions. Set the new controls to their documented defaults to restore the version 1.0 sound; existing parameter indices are unchanged."
   }
 }
