@@ -596,9 +596,10 @@ test('firmware: discovery finds what each profile caches for the fix, and the fi
 // the same engine still gives the earlier 4c73c964... / e037e2ee...
 // golden_catalog.test.ts records the catalog these were built from, so CI notices a catalog change.
 // VADBD 3.0.0: regenerated after lowering its pitch table and metadata one octave.
+// NZEPL DEC 48 and default X.14 FX ORDER: rebuilt from owned firmware, 2026-10-14.
 const GOLDEN_OFF: Record<string, string> = {
-  'x14': '536a335efaf47c622e6577d30b768967975701f14bd6c408d0e222e4e5ea4698',
-  'stock-163-prepared': 'c17c25a2ca5957957802148da683ec61ecb7fde182a63d2da8d2da1de040dfa9',
+  'x14': '342dac60c51005e028845c907c7f534a34e626bd8c04c871bf6a5d69d0821fc5',
+  'stock-163-prepared': '4e429ba30f57503c0e71008262d4a10ee93cae2329d09aad1ca9193ee81b2a63',
 };
 
 test('firmware: --no-unmute-fix builds the image the build made before the fix', { skip: fwSkip }, async () => {

@@ -386,11 +386,12 @@ test('firmware: discovery finds the painter\'s draw on X.14 and 1.63 as cached; 
 // same engine still gives the earlier 1b0ec853... / d3c480df... / 77ff4079... / 84efea23...
 // A catalog change changes these: golden_catalog.test.ts records the catalog they were built from.
 // VADBD 3.0.0: regenerated after lowering its pitch table and metadata one octave.
+// NZEPL DEC 48 and default X.14 FX ORDER: rebuilt from owned firmware, 2026-10-14.
 const GOLDEN: Record<string, Record<string, string>> = {
-  'x14': { '': 'b205104c7a0b028b8a7d02c76d51a4cec2b75234821e63ebe3e52de707624c1d', '--no-pitch-labels': 'b205104c7a0b028b8a7d02c76d51a4cec2b75234821e63ebe3e52de707624c1d',
-         '--pitch-labels': 'baf24c31f8347f688260cf7b02e9a35d1369f76c6bd9582e01b2a837785be7f0' },
-  'stock-163-prepared': { '': '0e68d43d23b24f3579d8bff4437f994f4e0511c55a523701c718e37e3c1ca6e9', '--no-pitch-labels': '0e68d43d23b24f3579d8bff4437f994f4e0511c55a523701c718e37e3c1ca6e9',
-         '--pitch-labels': '9fd1cc5ac13b52813b01b4d9379f25be476d54559f2a1ca9d83a4abd0642fc67' },
+  'x14': { '': '7f4dc96f42ba9ff869eb145567a2bcd8169fe1339dbcb381015e958d4c9b2521', '--no-pitch-labels': '7f4dc96f42ba9ff869eb145567a2bcd8169fe1339dbcb381015e958d4c9b2521',
+         '--pitch-labels': '82b02926cfbb4a03f3fecc7eee1f11df66bacf719f2afd5d07a9fd64c23db674' },
+  'stock-163-prepared': { '': '7bafe089fe0c8bb4f8d6963f316413ca24fa33b78c2ee45dfea9a871599e76d4', '--no-pitch-labels': '7bafe089fe0c8bb4f8d6963f316413ca24fa33b78c2ee45dfea9a871599e76d4',
+         '--pitch-labels': '43935fd0c01dc00e074a386cce877ca2161d698abd2f3759a2acd061b2ad838b' },
 };
 
 test('firmware: builds without the option are main\'s byte for byte; with it, as recorded', { skip: fwSkip }, async () => {

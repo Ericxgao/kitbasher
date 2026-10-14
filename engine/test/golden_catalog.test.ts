@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 // everywhere. It fails when catalog/ is no longer the catalog the goldens were recorded from. After a
 // catalog change, rebuild the goldens with MD_FIRMWARE_DIR set, and record the new hashes and this
 // fingerprint in the same change.
-const GOLDEN_CATALOG = 'a2ba229623d0fc1e90321c227ddfb382a44916e4c3c25196abd48e22fd8da0cc';
+const GOLDEN_CATALOG = 'e15cace71528074d1b65c2a39126e5435e8793c134aa3b36e06782a8fb88f226';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 

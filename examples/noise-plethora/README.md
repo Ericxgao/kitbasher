@@ -11,6 +11,8 @@ Knobs, in order: **PTCH, DEC, MODE, X, Y, ATK, BPF, BPQ**.
 - **MODE** selects the program and relabels itself and the program's X and Y
   knobs (FREQ, SPRD, FM, PWID and so on).
 - **PTCH** and **DEC** come first, as on every other model; **ATK** is the attack.
+  DEC defaults to 48 for a shorter initial hit. The full decay range remains
+  available, and saved kits retain their own values.
 - **BPF** and **BPQ** set a band-pass filter after every program. BPF sets the
   center frequency, exponentially from 30 Hz to 7.3 kHz (default 80, about
   950 Hz). BPQ sets Q from 1 to 32. At BPQ 0 the signal passes dry at any BPF;

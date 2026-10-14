@@ -190,7 +190,7 @@ render:
 
 # Knob layout: PTCH and DEC first like every other model; a band-pass (BPF, BPQ) takes the
 # slots the original's DRIV and LEVL knobs used. Program code addresses the original slots; remap_controls() renumbers them.
-KNOBS=(('PTCH',64),('DEC',100),('MODE',0),('FREQ',32),('SPRD',30),('ATK',0),('BPF',80),('BPQ',0))
+KNOBS=(('PTCH',64),('DEC',48),('MODE',0),('FREQ',32),('SPRD',30),('ATK',0),('BPF',80),('BPQ',0))
 CONTROL_SLOTS={1:3,2:4,3:5,4:1,6:6,7:2}   # original slot -> new slot (MODE X Y PTCH ATK DEC)
 DRIV_DEFAULT=0                            # DRIV's slot (drive, or SMTH/PWID) now reads this raw value
 OUTPUT_LEVEL=100<<16                      # the former LEVL default, raw << 16
