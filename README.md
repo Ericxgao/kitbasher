@@ -72,6 +72,10 @@ makes an unmuted track play its next trig instead of about two steps later. See
 Some models use a sample in UW memory; the page lists those and offers the
 sample files with instructions.
 
+On X.14 and OS 1.63, **Add Swap Speeds setting** adds a mode in
+GLOBAL → CONTROL → MECH SETTINGS: turn fast normally and press for fine
+adjustment. See [Swap Speeds](docs/ENCODER-SPEED.md).
+
 A Machinedrum without the UW option takes the same OS update. Answer No to the UW
 question and the page leaves out what such a unit cannot use: models that play
 UW samples (marked *needs UW*) and machine IDs of 128 and up (a machine that

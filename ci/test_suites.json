@@ -1,5 +1,6 @@
 {
   "unit": [
+    "encoder_speed",
     "mds",
     "catalog",
     "golden_catalog",

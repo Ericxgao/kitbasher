@@ -1,0 +1,24 @@
+// Shared public/private post-build entry point; never changes a release in place.
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
+import {readFirmware} from '../engine/dist/src/container.js';
+import {resolveBase} from '../engine/dist/src/bases.js';
+import {loadBases} from '../engine/dist/src/node.js';
+import {installEncoderSettings} from '../engine/dist/src/encoder_settings_install.js';
+import {encodeSyx,decodeSyx} from '../engine/dist/src/syx.js';
+const [stockPath,inputPath,out]=process.argv.slice(2);
+if(!stockPath||!inputPath||!out)throw Error('Usage: node ci/add_encoder_settings.mjs <stock-base.bin> <built-private.bin> <new-output-directory>');
+if(fs.existsSync(out))throw Error('Output directory must be new');
+const root=fileURLToPath(new URL('../',import.meta.url));
+const stock=readFirmware(fs.readFileSync(stockPath)),{base}=await resolveBase(stock,loadBases(path.join(root,'bases')));
+const input=fs.readFileSync(inputPath),result=installEncoderSettings(stock,base,input);
+const container=result.image.subarray(0x4000,result.report.end),syx=encodeSyx(container);
+if(!Buffer.from(decodeSyx(syx)).equals(Buffer.from(container)))throw Error('SysEx roundtrip failed');
+const sha=b=>createHash('sha256').update(b).digest('hex');
+fs.mkdirSync(out,{recursive:true});
+fs.writeFileSync(path.join(out,'candidate.bin'),result.image);
+fs.writeFileSync(path.join(out,'Reverse-Encoder-Speed.syx'),syx);
+fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({...result.report,inputSha256:sha(input),binSha256:sha(result.image),syxSha256:sha(syx)},null,2));
+console.log(JSON.stringify({out,bytes:syx.length,headroom:0x100000-result.report.end,hardware:false}));
