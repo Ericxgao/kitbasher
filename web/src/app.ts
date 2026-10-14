@@ -5,8 +5,8 @@
 // re-plans the build
 // (engine/src/plan.ts: the same placement the build does, without packing). Users can select
 // freely; a selection that does not fit prompts for removing models or trimming samples.
-// Build firmware checks compressed slot capacity and opens the download. Sample editing and
-// category arrangement are optional tools on the Machines page.
+// Machines continues to Categories, then Build firmware opens Send or download.
+// Sample editing remains an optional tool on the Machines page.
 //
 // MDX X.20 B (engine/src/x20.ts): recognised by its file hash and taken through the same steps. Its
 // plan (planX20) drives the meters (DSP2 words at the chosen trim, machine IDs, the new-machine list,
@@ -149,10 +149,12 @@ function syncWizard(): void {
   $('room').hidden = !loaded() || step !== 3;
   const ready = planReady() && !packedCapacityProblem;
   const asked = gate(uwAnswer, loaded());
-  $('firmware-next').toggleAttribute('disabled', !uiReady || building);
+  for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-uw]')) {
+    button.disabled = !uiReady || !loaded() || building || sendingFirmware;
+  }
   $('file').toggleAttribute('disabled', !uiReady || building);
   $('project-file').toggleAttribute('disabled', !uiReady || building);
-  $('firmware-next').textContent = !loaded() ? 'Choose firmware' : !asked.ok ? 'Answer the UW question' : 'Choose machines';
+  $('uw-choice-help').textContent = loaded() ? 'Choose your model to continue to machines.' : 'Load firmware, then choose your model to continue.';
   $('firmware-loaded').hidden = !loaded();
   $('firmware-loaded').textContent = loaded() ? `Loaded: ${inputName}` : '';
   const modifiedMdx = !!x20 || base?.id === 'x14';
@@ -200,8 +202,8 @@ function status(msg: string, kind: 'info' | 'ok' | 'error' = 'info'): void {
 
 const boxes = (): HTMLInputElement[] => Array.from(document.querySelectorAll<HTMLInputElement>('#machines input[type=checkbox]'));
 
-// "Does your Machinedrum have the UW option?" (web/src/uw-mode.ts): asked on the first step, which
-// the page does not leave without a Yes or a No clicked in this visit. Nothing is pre-selected and
+// UW or Non-UW (web/src/uw-mode.ts): chosen with the first step's continue buttons.
+// The page does not leave without a model chosen in this visit. Nothing is pre-selected and
 // nothing is remembered in the browser; a restored file's answer is only a hint. A No means no
 // machine on IDs 128 and up and no model that plays a UW sample (engine/src/selection.ts
 // allocateIds). Saved in layout and project files.
@@ -216,11 +218,11 @@ function syncLayoutUw(): void {
     layoutEd.map = uw === undefined ? rest : { ...rest, uw };
   }
 }
-/** Only the user's click on Yes or No sets the answer. */
+/** Only the user's click on UW or Non-UW sets the answer. */
 function setUwAnswer(a: UwAnswer): void {
   if ($('status').dataset.uwError === 'true') status('');
   uwAnswer = a;
-  for (const r of Array.from(document.querySelectorAll<HTMLInputElement>('input[name=uw]'))) r.checked = r.value === a;
+  for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-uw]')) button.setAttribute('aria-pressed', String(button.dataset.uw === a));
   syncLayoutUw();
   applyNoUw();
   syncWizard();
@@ -237,9 +239,9 @@ function fileAnswer(uw: boolean | undefined, from: string): void {
   if (uw === undefined) return;
   const said = uw ? 'yes' : 'no';
   if (uwAnswer === null) {
-    status(`${from} was saved for a Machinedrum ${uw ? 'with' : 'without'} UW. Answer the UW question (Yes or No) to continue.`, 'info');
+    status(`${from} was saved for a Machinedrum ${uw ? 'with' : 'without'} UW. Choose UW or Non-UW to continue.`, 'info');
   } else if (said !== uwAnswer) {
-    status(`${from} was saved for a Machinedrum ${uw ? 'with' : 'without'} UW; you answered ${uwAnswer === 'yes' ? 'Yes' : 'No'}, so that is what this build uses. Change your answer on the first step if ${from} is right.`, 'error');
+    status(`${from} was saved for a Machinedrum ${uw ? 'with' : 'without'} UW; you chose ${uwAnswer === 'yes' ? 'UW' : 'Non-UW'}, so that is what this build uses. Change your answer on the first step if ${from} is right.`, 'error');
   }
 }
 
@@ -646,7 +648,7 @@ async function onFile(f: File): Promise<void> {
       if (pendingProject) applyProject(pendingProject.project, pendingProject.name);
       refresh();
       if (gate(uwAnswer, true).ok) showStep(3);
-      else { status('Answer the UW question to continue.'); $('status').dataset.uwError = 'true'; }
+      else { status('Choose UW or Non-UW to continue.'); $('status').dataset.uwError = 'true'; }
       return;
     }
     // an X.20 build Kitbasher made: not built on; its layout table comes back and the stock X.20 file is asked for
@@ -709,7 +711,7 @@ async function onFile(f: File): Promise<void> {
   }
   refresh();
   if (fw && gate(uwAnswer, true).ok) showStep(3);
-  else if (fw) { status('Answer the UW question to continue.'); $('status').dataset.uwError = 'true'; }
+  else if (fw) { status('Choose UW or Non-UW to continue.'); $('status').dataset.uwError = 'true'; }
 }
 
 /** Pack files the user chose: read locally, checked, merged with what is there (same bytes twice is fine). */
@@ -900,7 +902,7 @@ function needsUwAnswer(): boolean {
   status(asked.why!, 'error');
   $('status').dataset.uwError = 'true';
   if (step !== 1) { step = 1; for (let i = 1; i <= 5; i++) $(`step-${i}`).hidden = i !== 1; syncWizard(); }
-  $('uw-question').querySelector<HTMLInputElement>('input')?.focus();
+  $('uw-question').querySelector<HTMLButtonElement>('button')?.focus();
   return true;
 }
 
@@ -1113,18 +1115,18 @@ async function main(): Promise<void> {
     refresh();
   });
   layoutEd.onAdopt = (l, from) => fileAnswer(l.uw, from);
-  for (const r of Array.from(document.querySelectorAll<HTMLInputElement>('input[name=uw]'))) {
-    r.addEventListener('change', () => {
-      if (!r.checked) return;
-      setUwAnswer(r.value === 'yes' ? 'yes' : 'no');
+  for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-uw]')) {
+    button.addEventListener('click', () => {
+      if (!loaded() || building || sendingFirmware) return;
+      setUwAnswer(button.dataset.uw === 'yes' ? 'yes' : 'no');
       refresh();
+      showStep(3);
     });
   }
   setUwAnswer(null);                                   // never pre-selected: not from storage, not from a file
   document.querySelectorAll<HTMLButtonElement>('[data-step], [data-back]').forEach(b => {
     b.addEventListener('click', () => showStep(Number(b.dataset.step ?? b.dataset.back)));
   });
-  $('firmware-next').addEventListener('click', () => { if (!loaded()) { $('file').click(); return; } showStep(3); });
   $('samples-next').addEventListener('click', () => showStep(3));
   $('models-next').addEventListener('click', () => {
     if (!boxes().some(i => i.checked)) { $('machines').focus(); $('machines').scrollIntoView({ block: 'start' }); return; }

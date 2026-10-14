@@ -1,5 +1,5 @@
 // "Does your Machinedrum have the UW option?" The page asks before anything else and will not go on
-// without a Yes or a No clicked in this visit: nothing is pre-selected, no answer is remembered in the
+// without UW or Non-UW clicked in this visit: nothing is pre-selected, no answer is remembered in the
 // browser, and a restored layout, project or .syx that records one only shows a hint. The answer
 // decides what the build may use: a Machinedrum without UW takes 128 off any machine ID of 128 and
 // up, has no UW sample memory, and hides the ROM and RAM menu categories (engine/src/uw_menu.ts puts
@@ -17,9 +17,9 @@ export const UW_ONLY_CATEGORIES = 2;
 export const HOW_TO_CHECK = 'To check: on your current firmware, open the machine menu of any track. ' +
   'If it has ROM and RAM categories, your Machinedrum has the UW option. If it does not, it has no UW.';
 
-export const UNANSWERED = 'Answer Yes or No: does your Machinedrum have the UW option?';
+export const UNANSWERED = 'Choose UW or Non-UW to continue.';
 
-/** Whether the user may leave the first step: only with a Yes or a No. */
+/** Whether the user may leave the first step: only with a model selected. */
 export function gate(answer: UwAnswer, haveFirmware: boolean): { ok: boolean; why: string | null } {
   if (answer === 'yes' || answer === 'no') return { ok: haveFirmware, why: haveFirmware ? null : 'Load your OS file first.' };
   return { ok: false, why: UNANSWERED };
@@ -43,7 +43,7 @@ export const uwOf = (a: UwAnswer): boolean | undefined => (a === 'yes' ? true : 
 
 /**
  * The hint a restored file's `uw` shows next to the question. It never answers it: the user still
- * clicks Yes or No.
+ * clicks UW or Non-UW.
  */
 export function fileHint(uw: boolean | undefined): string | null {
   return uw === undefined ? null : `This layout was saved for a Machinedrum ${uw ? 'with' : 'without'} UW.`;

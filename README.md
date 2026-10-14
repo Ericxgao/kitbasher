@@ -26,11 +26,11 @@ See [FX order](docs/FX-ORDER.md).
 1. **Back up.** Keep the OS file you have installed now, and save your kits and
    patterns (GLOBAL › SYSEX SEND › ALL into a SysEx recorder). Sending that OS
    file again restores your machine.
-2. **Load your OS and answer the UW question.** Open [kitbasher.xyz](https://kitbasher.xyz),
-   drop in your OS file (`.syx` or `.bin`), and say whether your Machinedrum has
-   the UW option: Yes or No. To check, open the machine menu of any track on
+2. **Load your OS and choose your model.** Open [kitbasher.xyz](https://kitbasher.xyz),
+   drop in your OS file (`.syx` or `.bin`), then click **UW** or **Non-UW**
+   to continue to Machines. To check, open the machine menu of any track on
    your current firmware: if it has ROM and RAM categories, you have UW. Nothing
-   goes ahead, and nothing is built, until you click Yes or No; the page does
+   goes ahead, and nothing is built, until you choose UW or Non-UW; the page does
    not remember the answer or take it from a restored file, and saves it with
    your layout.
 

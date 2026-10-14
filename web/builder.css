@@ -1,23 +1,31 @@
 /* A short main path; editing tools stay available on demand. */
-body.simple-builder main{max-width:1320px;padding-top:20px}
+html{scrollbar-gutter:stable}
+body.simple-builder main{max-width:1180px;padding-top:20px}
 body.simple-builder .page-head{padding-bottom:12px;margin-bottom:10px}
 .simple-builder .site-nav{margin-bottom:16px;padding-bottom:8px}
-.simple-builder .wizard-steps{grid-template-columns:repeat(4,1fr);margin-bottom:22px}
+.simple-builder .wizard-steps{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:22px}
+.simple-builder .wizard-steps button{min-width:0;white-space:nowrap;text-align:center}
 .simple-builder #status:empty{display:none}
 .simple-builder #status[data-kind=ok]{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-body.simple-builder .upload{margin:0 auto;padding:24px;max-width:680px}
+body.simple-builder .upload{margin:0;padding:24px;max-width:none}
+.simple-builder .layout-panel{margin:0;padding:24px}
+.simple-builder .upload>h2,.simple-builder .section-head>h2,.simple-builder #step-5>h2{font-size:20px;line-height:1.3;font-weight:600;letter-spacing:0}
 body.simple-builder .upload #drop{margin:18px 0;padding:24px}
 .simple-builder .upload>details{margin:16px 0}
 .simple-builder summary{cursor:pointer;color:var(--muted);font-size:13px}
-.simple-builder .uw-question{margin:20px 0}
+.simple-builder .uw-question{display:block;min-width:0;margin:24px 0 0}
+.simple-builder .uw-question legend{float:none;margin:0 0 8px}
+.simple-builder .uw-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+.simple-builder .uw-actions button{padding:14px;border:1px solid var(--ink);background:var(--ink);color:var(--panel);font:inherit;font-weight:600}
+.simple-builder .uw-actions button:disabled{opacity:.45;cursor:default}
+.simple-builder .uw-actions button[aria-pressed=true]{outline:2px solid var(--ink);outline-offset:3px}
 .simple-builder .uw-help{margin-top:12px}
-.simple-builder #firmware-next{width:100%;margin-top:18px}
 .simple-builder :is(#qualification-note,#mdx-disclaimer){color:#975300}
 :root[data-theme=dark] .simple-builder :is(#qualification-note,#mdx-disclaimer){color:#ffbf69}
 .simple-builder .builder-tools{position:relative;margin:0 0 16px;width:max-content}
 .simple-builder .builder-tools>div{position:absolute;left:0;top:26px;z-index:4;width:220px;display:grid;gap:6px;padding:12px;border:1px solid var(--line);background:var(--panel);box-shadow:0 4px 12px #0002}
 .simple-builder .builder-tools button{font:inherit;padding:9px;text-align:left;background:var(--panel);color:var(--ink);border:1px solid var(--line)}
-.simple-builder #step-5{max-width:760px;margin:auto}
+.simple-builder #step-5{margin:0;padding:24px;border:1px solid var(--line);background:var(--panel)}
 .simple-builder #step-5>details{margin:22px 0}
 .simple-builder #step-5 .project-save{display:block}
 .simple-builder #step-5>p{margin:14px 0}
@@ -56,9 +64,10 @@ body.simple-builder .upload #drop{margin:18px 0;padding:24px}
 .simple-builder #step-5 #result details{margin:14px 0}
 .simple-builder .footer-note{margin-top:20px}
 .simple-builder :is(summary,button,input,select):focus-visible{outline:2px solid #5484a3;outline-offset:3px}
-body.simple-builder[data-view="3"] main{max-width:1180px}
 @media(max-width:760px){
  body.simple-builder main{padding:18px 16px}
- .simple-builder .wizard-steps{grid-template-columns:repeat(2,1fr);gap:6px}
- .simple-builder .wizard-steps button{padding:10px;font-size:13px}
+ .simple-builder .wizard-steps{gap:4px}
+ .simple-builder .wizard-steps button{padding:12px 4px;font-size:12px}
+ .simple-builder .step-number{display:none}
+ body.simple-builder .upload,.simple-builder .layout-panel,.simple-builder #step-5{padding:16px}
 }

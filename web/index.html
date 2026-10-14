@@ -21,32 +21,34 @@
 b.addEventListener('click',function(){r.dataset.theme=r.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem('kitbasher-theme',r.dataset.theme)}catch(e){}sync();});sync();})();</script>
 <nav class="site-nav" aria-label="Main navigation"><a href="index.html" aria-current="page">Firmware builder</a><a href="mds.html">MDS machines</a></nav>
 <nav class="wizard-steps" aria-label="Build progress">
-  <button type="button" data-step="1" aria-current="step">1. Firmware</button>
-  <button type="button" data-step="3" disabled>2. Machines</button>
-  <button type="button" data-step="4" disabled>3. Arrange categories</button>
-  <button type="button" data-step="5" disabled>4. Send or download</button>
+  <button type="button" data-step="1" aria-current="step"><span class="step-number" aria-hidden="true">1.</span> Firmware</button>
+  <button type="button" data-step="3" disabled><span class="step-number" aria-hidden="true">2.</span> Machines</button>
+  <button type="button" data-step="4" disabled><span class="step-number" aria-hidden="true">3.</span> Categories</button>
+  <button type="button" data-step="5" disabled aria-label="Send or download"><span class="step-number" aria-hidden="true">4.</span> Send</button>
 </nav>
 <div id="status" role="status" aria-live="polite">Loading machines…</div>
 <section id="step-1" class="wizard-page" aria-labelledby="firmware-title">
   <section class="panel upload">
-    <h2 id="firmware-title" tabindex="-1">Start with your firmware</h2>
+    <h2 id="firmware-title" tabindex="-1">Choose firmware</h2>
     <p>Choose your original Machinedrum firmware file. It stays on your computer.</p>
     <label id="drop"><input id="file" type="file" accept=".syx,.bin" aria-label="Choose firmware file"><strong>Choose firmware</strong><span class="fine">or drop the file here</span></label>
     <p id="firmware-loaded" hidden></p><p id="qualification-note" hidden></p>
     <details class="supported-files"><summary>Supported firmware</summary><p id="bases">OS 1.63, X.14 and beta md-26A09-132401. X.20 is currently not supported.</p></details>
     <details id="firmware-details" hidden><summary>Firmware compatibility details</summary><p class="fine" id="firmware-info"></p></details>
-    <fieldset id="uw-question" class="uw-question" aria-describedby="uw-help"><legend>Does your Machinedrum have the UW option?</legend>
-      <label><input type="radio" name="uw" value="yes" required> Yes</label>
-      <label><input type="radio" name="uw" value="no"> No</label>
-      <details class="uw-help"><summary>How do I check?</summary><p class="fine" id="uw-help">To check: on your current firmware, open the machine menu of any track. If it has ROM and RAM categories, your Machinedrum has the UW option. If it does not, it has no UW.</p></details>
-      <p class="fine" id="uw-file-hint" hidden></p>
-    </fieldset>
     <details id="restore" class="restore"><summary>Restore an earlier layout</summary>
       <p class="fine">Built with Kitbasher before? Drop that build's .syx (or your project or layout file) so your kits keep their machines.</p>
       <label id="restore-drop" class="restore-drop"><input id="project-file" type="file" accept=".syx,.bin,.json,application/json" aria-label="Restore an earlier layout: a Kitbasher .syx, a project or a layout file"><strong>Drop a Kitbasher .syx, project or layout file</strong>, or browse</label>
     </details>
     <p class="fine" id="project-status" role="status" aria-live="polite"></p>
-    <button type="button" id="firmware-next" class="wizard-primary" disabled>Choose firmware</button>
+    <fieldset id="uw-question" class="uw-question" aria-describedby="uw-choice-help"><legend>Choose your Machinedrum</legend>
+      <p class="fine" id="uw-choice-help">Load firmware, then choose your model to continue.</p>
+      <div class="uw-actions">
+        <button type="button" data-uw="yes" aria-pressed="false" disabled>UW</button>
+        <button type="button" data-uw="no" aria-pressed="false" disabled>Non-UW</button>
+      </div>
+      <details class="uw-help"><summary>How do I check?</summary><p class="fine" id="uw-help">To check: on your current firmware, open the machine menu of any track. If it has ROM and RAM categories, your Machinedrum has the UW option. If it does not, it has no UW.</p></details>
+      <p class="fine" id="uw-file-hint" hidden></p>
+    </fieldset>
   </section>
 </section>
 <section id="step-2" class="wizard-page" aria-labelledby="samples-title" hidden>
@@ -58,7 +60,7 @@ b.addEventListener('click',function(){r.dataset.theme=r.dataset.theme==='dark'?'
 </section>
 <section id="step-3" class="wizard-page" aria-labelledby="models-title" hidden>
   <div class="workspace">
-    <section class="panel selection-panel"><div class="section-head"><h2 id="models-title" tabindex="-1">Choose models</h2><span>Select to include. Click a name for details.</span></div><details class="builder-tools"><summary>Options</summary><div><button type="button" data-step="2">Edit drum samples</button></div></details><div id="machines" tabindex="0" role="region" aria-label="Available machines"></div>
+    <section class="panel selection-panel"><div class="section-head"><h2 id="models-title" tabindex="-1">Choose machines</h2><span>Select to include. Click a name for details.</span></div><details class="builder-tools"><summary>Options</summary><div><button type="button" data-step="2">Edit drum samples</button></div></details><div id="machines" tabindex="0" role="region" aria-label="Available machines"></div>
       <details class="pack-loader"><summary>Load model packs</summary><label class="fine">Catalog <select id="pack-mode" aria-label="Pack loading mode"><option value="add">Add to current catalog</option><option value="replace">Replace catalog</option></select></label><p class="fine">Replacing a catalog? Load core.json and its family packs together.</p><label class="fine" id="packs-load">Pack file(s) <input id="pack-files" type="file" accept=".json,application/json" multiple aria-label="Load pack files"></label><p class="fine" id="packs-status"></p></details>
     </section>
     <aside class="sidebar" id="machine-sidebar" aria-label="Selected machine details"><section class="panel inspector" id="inspector" aria-label="Machine details"><div class="inspector-head"><h2>Preview</h2><span id="model-family"></span></div><h3 id="model-name">Choose a machine</h3><p id="model-description">Select a model.</p><p id="model-needs" class="fine" hidden></p><div class="screen-caption"><span>Hover or tap a control</span><button type="button" id="enlarge-screen">Enlarge</button></div><div class="screen"><div class="lcd-glass"><canvas id="model-lcd" width="128" height="64" role="img" aria-label="Machinedrum screen preview"></canvas></div></div></section></aside>
@@ -78,7 +80,7 @@ b.addEventListener('click',function(){r.dataset.theme=r.dataset.theme==='dark'?'
   <div class="wizard-actions"><button type="button" data-back="3">Back to machines</button><button type="button" id="categories-next" class="wizard-primary">Build firmware</button></div>
 </section>
 <section id="step-5" class="wizard-page" aria-labelledby="download-title" hidden>
-  <h2 id="download-title" tabindex="-1">Your firmware is ready</h2>
+  <h2 id="download-title" tabindex="-1">Send or download</h2>
   <p id="download-summary"></p>
   <p id="mdx-disclaimer" class="note" hidden></p>
   <button id="build" type="button" class="wizard-primary" disabled>Create download</button>

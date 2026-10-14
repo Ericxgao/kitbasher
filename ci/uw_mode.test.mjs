@@ -12,7 +12,7 @@ const app = readFileSync(new URL('../web/src/app.ts', import.meta.url), 'utf8');
 
 test('the first step cannot be left without a Yes or a No; there is no third answer', () => {
   assert.equal(U.gate(null, true).ok, false);
-  assert.match(U.gate(null, true).why, /Yes or No.*UW option/);
+  assert.match(U.gate(null, true).why, /UW or Non-UW/);
   for (const other of ['unsure', 'maybe', undefined, '', true]) assert.equal(U.gate(other, true).ok, false);
   assert.equal(U.gate('yes', true).ok, true);
   assert.equal(U.gate('no', true).ok, true);
@@ -24,20 +24,21 @@ test('the page asks on step 1 with nothing pre-selected, and every way forward g
   assert.ok(q, 'the question is on the page');
   const step1 = html.slice(html.indexOf('<section id="step-1"'), html.indexOf('<section id="step-2"'));
   assert.ok(step1.includes('id="uw-question"'), 'on the first step');
-  const radios = [...q[0].matchAll(/<input type="radio" name="uw" value="(\w+)"([^>]*)>/g)];
-  assert.deepEqual(radios.map((r) => r[1]), ['yes', 'no']);
-  assert.ok(radios.every((r) => !/checked/.test(r[2])), 'no answer is pre-selected');
+  const buttons = [...q[0].matchAll(/<button type="button" data-uw="(\w+)"([^>]*)>([^<]+)<\/button>/g)];
+  assert.deepEqual(buttons.map(b => [b[1], b[3]]), [['yes', 'UW'], ['no', 'Non-UW']]);
+  assert.ok(buttons.every(b => /aria-pressed="false"/.test(b[2]) && /disabled/.test(b[2])));
+  assert.doesNotMatch(q[0], /type="radio"/);
   assert.doesNotMatch(html, /Not sure/);
   // Optional help keeps the same hardware identification instructions.
   assert.ok(q[0].includes(`<p class="fine" id="uw-help">${U.HOW_TO_CHECK}</p>`));
-  assert.match(html, /id="firmware-next" class="wizard-primary" disabled/);
+  assert.doesNotMatch(html, /id="firmware-next"/);
   // showStep refuses any step past the first, and the Next button follows the same gate
   const show = app.slice(app.indexOf('function showStep('), app.indexOf('function status('));
   assert.match(show, /n > 1 && needsUwAnswer\(\)/);
   const needs = app.slice(app.indexOf('function needsUwAnswer('), app.indexOf('async function onBuild('));
   assert.match(needs, /gate\(uwAnswer, !!fw\)/);
-  assert.match(app, /\$\('firmware-next'\)\.toggleAttribute\('disabled', !uiReady \|\| building\)/);
-  assert.match(app, /if \(!loaded\(\)\) \{ \$\('file'\)\.click\(\); return; \} showStep\(3\)/);
+  assert.match(app, /button\.disabled = !uiReady \|\| !loaded\(\) \|\| building \|\| sendingFirmware;/);
+  assert.match(app, /setUwAnswer\(button\.dataset\.uw === 'yes' \? 'yes' : 'no'\);\n\s+refresh\(\);\n\s+showStep\(3\);/);
 });
 
 test('answers are saved in files; nothing pre-fills the answer, not storage and not a file', () => {
@@ -48,9 +49,9 @@ test('answers are saved in files; nothing pre-fills the answer, not storage and 
   for (const k of ['readStored', 'UW_STORAGE_KEY', 'answerOf']) assert.equal(k in U, false, k);
   assert.doesNotMatch(app, /kitbasher\.uw|UW_STORAGE_KEY|readStored/);
   assert.match(app, /setUwAnswer\(null\);/);                         // the page starts unanswered
-  // the answer is set in one place only, from the user's click on a radio
+  // the answer is set in one place only, from the user's click on a model button
   assert.deepEqual([...app.matchAll(/setUwAnswer\(([^)]*)\)/g)].map((m) => m[1]).sort(),
-    ["a: UwAnswer", "null", "r.value === 'yes' ? 'yes' : 'no'"].sort());
+    ["a: UwAnswer", "null", "button.dataset.uw === 'yes' ? 'yes' : 'no'"].sort());
   assert.equal(U.noUwOf('no'), true);
   assert.equal(U.noUwOf('yes'), false);
 });
@@ -69,7 +70,7 @@ test("a restored file's answer is a hint only: the gate stays closed and the bui
 test('the build and download refuse without an answer, whatever path reached them', () => {
   assert.equal(U.uwForBuild('yes'), true);
   assert.equal(U.uwForBuild('no'), false);
-  for (const a of [null, undefined, 'unsure']) assert.throws(() => U.uwForBuild(a), /Yes or No/);
+  for (const a of [null, undefined, 'unsure']) assert.throws(() => U.uwForBuild(a), /UW or Non-UW/);
   // the build takes the answer through uwForBuild (and engine build refuses a missing uw too)
   const bw = app.slice(app.indexOf('function buildWith('), app.indexOf('function showStorage('));
   assert.match(bw, /const uw = uwForBuild\(uwAnswer\);/);
