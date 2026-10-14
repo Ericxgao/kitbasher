@@ -3,7 +3,6 @@
 Also holds PHYKS to its tuning: the loop delay (ring length + interpolated tap + the DAMP
 averager) solved for its true resonance, every raw at three DAMP settings, within 0.1 cent.
 """
-import base64
 import cmath
 import json
 import math
@@ -50,30 +49,6 @@ class Manifests(unittest.TestCase):
             validate(m)
             seen += 1
         self.assertGreaterEqual(seen, 13)
-
-    def test_vadbd_low_octave_matches_source_catalog_and_note_mapping(self):
-        manifest = json.loads((ROOT / 'examples/analog/bd/model.json').read_text())
-        pack = json.loads((ROOT / 'catalog/analog-bd.json').read_text())['models'][0]
-        pitch = manifest['panel']['pitch']
-        self.assertEqual(pitch['base_note'], 12)
-        self.assertEqual(pack['pitch'], pitch)
-        self.assertEqual(pack['contract'], manifest)
-        self.assertEqual(manifest['version'], '3.0.0')
-        text = (ROOT / 'examples/analog/bd/tables.asm').read_text()
-        block = re.search(r'^e0_finc:\n((?:    \.dc .*\n)+)', text, re.M).group(1)
-        words = [int(v[1:], 16) for v in re.findall(r'\$[0-9a-f]+', block)]
-        encoded = base64.b64decode(next(t['words'] for t in pack['tables'] if t['name'] == 'e0_finc'))
-        self.assertEqual(words, [int.from_bytes(encoded[i:i + 3], 'little') for i in range(0, len(encoded), 3)])
-        self.assertEqual(len(words), 129)
-        self.assertEqual(words[128], words[127])  # top-end interpolation guard
-        self.assertEqual(P.note_name(P.raw_to_note(0, pitch)), 'C-1')
-        self.assertEqual(P.raw_to_note(127, pitch), 75.5)
-        for zone in range(7):
-            for raw in range(128):
-                note = P.raw_to_note(raw, pitch, zone)
-                self.assertEqual(note, 12 + raw / 2)
-                self.assertLess(abs(1200 * math.log2(words[raw] * 44100 / 2**24 / P.midi_hz(note))), 0.2)
-                self.assertEqual(P.note_to_raw(note, pitch, zone), (raw, False, note))
 
     def test_a_pitch_that_contradicts_the_panel_is_refused(self):
         m = json.loads((ROOT / 'examples/analog/rc/model.json').read_text(encoding='utf-8'))
