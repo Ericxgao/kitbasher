@@ -45,6 +45,8 @@ import { placeDsp2 } from './dsp2_place.js';
  *                image, with every reference to the stock entry repointed at it.
  */
 export interface Features {
+  /** X.14: global pre/post-filter placement of DIST and SRR. */
+  fxOrder?: boolean;
   /** Clean subsequent triggers after overload; may cut existing voices/tails. */
   cleanRecovery?: boolean;
   dynLabels?: boolean;

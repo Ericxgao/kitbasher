@@ -9,6 +9,7 @@ import { findLoopSkip } from './ctr_controlall.js';
 import { menuRefreshSite } from './menu_refresh.js';
 import { readBootRamWrites } from './boot_safety.js';
 import { chromaRewritten } from './midi_chroma.js';
+import { fxOrderGateSites } from './fx_order.js';
 
 // ---- the ColdFire ISA_A gate (engine/src/isa.ts): our code and every patched instruction ----------
 
@@ -70,6 +71,9 @@ export function isaGate(baseFw: Firmware, base: Base, out: Firmware,
   // Validate counts, ranges and destinations before walking or allocating from
   // the emitted routine. The builder's intended patch list is not evidence.
   const patches = readBootRamWrites(fl, routine, B.sram);
+  const fx=fxOrderGateSites(codeImages(baseFw,base),patches);
+  const dataSites=fx?.dataSites??[];
+  if(fx)replaced=[...replaced,...fx.ranges.filter(([lo,hi])=>!replaced.some(([a,b])=>a===lo&&b===hi))];
   const copies: [number, number, number][] = [];
   let o = routine;
   while (u32(fl, o) >>> 16 === 0x41f9 && u32(fl, o + 6) >>> 16 === 0x43f9 && u32(fl, o + 12) >>> 16 === 0x203c) {
@@ -109,7 +113,7 @@ export function isaGate(baseFw: Firmware, base: Base, out: Firmware,
   for (const [s] of patches) {
     // a site inside a region whose CODE we replaced is not held to the base's instruction shape:
     // that is the point of the replacement. The new bytes are decoded linearly below instead.
-    if (walked.has(s) || (s >= dt && s < dt + 4 * 193)) continue;
+    if (walked.has(s) || (s >= dt && s < dt + 4 * 193) || dataSites.includes(s)) continue;
     if (replaced.some(([lo, hi]) => s >= lo - 4 && s < hi)) continue;
     const m = mem.find((x) => s >= x.ram && s + 4 <= x.ram + x.bytes.length);
     const m0 = orig.find((x) => s >= x.ram && s + 4 <= x.ram + x.bytes.length);
@@ -144,7 +148,7 @@ export function isaGate(baseFw: Firmware, base: Base, out: Firmware,
   return {
     ok, rejects,
     detail: `ISA_A (MCF5206e): ${r.ours.length} instructions of ours (${ours.map(([lo, hi], i) => `${h(lo)}..${h(hi)}: ${covered[i]}`).join(', ')}), ` +
-            `${walked.size} patched words in walked code + ${new Set(local.map((p) => p.site)).size} in code decoded in place (${patches.length - walked.size - new Set(local.map((p) => p.site)).size - unplaced.length} are the descriptor table's data)` +
+            `${walked.size} patched words in walked code + ${new Set(local.map((p) => p.site)).size} in code decoded in place (${patches.length - walked.size - new Set(local.map((p) => p.site)).size - unplaced.length} are verified table data)` +
             (unplaced.length ? `; not inside any instruction: ${unplaced.map(h).join(', ')}` : '') + '; ' +
             `${r.scan.insns.size} instructions walked, ${rejects.length} rejects` + (baseRej.size ? `; the base itself has ${baseRej.size} rejects` : ''),
   };

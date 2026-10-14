@@ -23,6 +23,7 @@
     "model_selection",
     "recover",
     "dsp1_drive",
+    "fx_order",
     "uw_needs",
     "uw_answer",
     "handoff",

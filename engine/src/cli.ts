@@ -33,6 +33,7 @@
 //                        DSP1 upload (engine/src/watchdog.ts)
 //   --no-stub-trim       keep the base's DSP2 silence stub. By default its pad is cut from 50 passes to 1
 //                        (one DSP2 word, about 460 cycles back per idle track per block; engine/src/stub_trim.ts)
+//   --no-fx-order        omit GLOBAL > ROUTING > FX ORDER (included on X.14)
 //   --clean-recovery     ordered recovery, output pacing, emergency voice retirement, CPU! indicator
 //                        and the control-all fix. Overload can cut sounding voices; later triggers
 //                        start cleanly
@@ -138,7 +139,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 const SWITCHES = new Set(['no-dyn-labels', 'no-dsp1', 'no-align', 'family-menus', 'cache-align', 'host-reorder', 'no-host-reorder',
                           'clean-recovery', 'dsp1-recover', 'no-dsp1-recover', 'cpu-indicator', 'no-cpu-indicator',
-                          'allow-id-move', 'prepare-163', 'ctr-control-all', 'no-stub-trim', 'no-uw', 'uw',
+                          'allow-id-move', 'prepare-163', 'ctr-control-all', 'no-stub-trim', 'no-fx-order', 'no-uw', 'uw',
                           'unmute-fix', 'no-unmute-fix', 'midi-chroma', 'no-midi-chroma', 'pitch-labels', 'no-pitch-labels', 'encoder-settings', 'no-encoder-settings']);
 const REPEATABLE = new Set(['packs']);
 
@@ -339,6 +340,7 @@ async function main(): Promise<void> {
     stubTrim: a['no-stub-trim'] ? false : undefined,
     dsp1Watchdog: a['dsp1-watchdog'] === undefined ? undefined : Number(a['dsp1-watchdog']),
     features: {
+      fxOrder: base.id === 'x14' && !a['no-fx-order'],
       cleanRecovery:!!a['clean-recovery'],
       dynLabels: a['no-dyn-labels'] ? false : undefined,
       dsp1Drive: a['no-dsp1'] ? false : undefined,
