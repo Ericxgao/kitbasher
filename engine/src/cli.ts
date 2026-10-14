@@ -137,7 +137,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 const SWITCHES = new Set(['no-dyn-labels', 'no-dsp1', 'no-align', 'family-menus', 'cache-align', 'host-reorder', 'no-host-reorder',
                           'clean-recovery', 'dsp1-recover', 'no-dsp1-recover', 'cpu-indicator', 'no-cpu-indicator',
-                          'allow-id-move', 'prepare-163', 'ctr-control-all', 'no-stub-trim', 'no-uw', 'uw',
+                          'allow-id-move', 'prepare-163', 'ctr-control-all', 'no-stub-trim', 'no-fx-order', 'no-uw', 'uw',
                           'unmute-fix', 'no-unmute-fix', 'midi-chroma', 'no-midi-chroma', 'pitch-labels', 'no-pitch-labels']);
 const REPEATABLE = new Set(['packs']);
 
