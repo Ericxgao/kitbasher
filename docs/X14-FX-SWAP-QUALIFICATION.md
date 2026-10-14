@@ -38,5 +38,6 @@ After the owner confirmed receiver readiness with "go", the exact SysEx above
 was sent to **UM-ONE 1**, paced at MIDI wire speed with 0 ms additional gap.
 All 15,785 messages / 1,767,658 bytes completed in **590 seconds**, sender exit 0.
 The local `flash-receipt.json` records the file hash, timestamps and log hash.
-This confirms transmission only; device acceptance, restart and hardware
-playback remain pending owner observation.
+The owner subsequently reported **"these seem to work"** and requested merging
+the encoder and FX ORDER changes. This is owner confirmation of the combined
+candidate's observed behavior, not an exhaustive timing or all-model qualification.
