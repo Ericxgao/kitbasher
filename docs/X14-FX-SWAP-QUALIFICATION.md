@@ -31,3 +31,12 @@ Validation on the exact candidate:
 Transfer and device acceptance are separate results. Hardware boot and playback
 remain unconfirmed until the owner reports them. The local `release.json` and
 `flash.log` record transfer status.
+
+## UM-ONE transfer, 2026-10-14
+
+After the owner confirmed receiver readiness with "go", the exact SysEx above
+was sent to **UM-ONE 1**, paced at MIDI wire speed with 0 ms additional gap.
+All 15,785 messages / 1,767,658 bytes completed in **590 seconds**, sender exit 0.
+The local `flash-receipt.json` records the file hash, timestamps and log hash.
+This confirms transmission only; device acceptance, restart and hardware
+playback remain pending owner observation.
