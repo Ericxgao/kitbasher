@@ -45,7 +45,7 @@ import { recoverSession } from '../../engine/src/restore.js';
 import { parseLayout, type Layout } from '../../engine/src/layout.js';
 import { num } from '../../engine/src/bytes.js';
 import { select } from '../../engine/src/selection.js';
-import { parseRecipe, recipeFor, type X20Recipe, type X20RecipeFile } from '../../engine/src/x20_recipe.js';
+import { assertRecipeSupported, parseRecipe, recipeFor, type X20Recipe, type X20RecipeFile } from '../../engine/src/x20_recipe.js';
 import { buildX20, findX20Layout, planX20, readX20, trimX20Bank, X20_CATEGORIES, x20E12Bank, x20IdSlots, X20FlashError, type X20Plan, type X20Report, type X20Trimmed } from '../../engine/src/x20.js';
 import { sha256 } from '../../engine/src/bytes.js';
 
@@ -647,6 +647,7 @@ async function onFile(f: File): Promise<void> {
     // MDX X.20 and later: a fixed recipe for that exact file, found by its hash; then the same steps
     const recipe = recipeFor(data.bases.recipes, await sha256(bytes));
     if (recipe) {
+      assertRecipeSupported(recipe);
       const R = parseRecipe(recipe);
       const { bank0 } = readX20(bytes, R);
       if (request !== fileRequest) return;
@@ -673,8 +674,9 @@ async function onFile(f: File): Promise<void> {
     const builtX20 = findX20Layout(bytes, data.bases.recipes.map((r) => r.id));
     if (builtX20) {
       if (request !== fileRequest) return;
-      adoptLayout(builtX20, f.name);
       const was = data.bases.recipes.find((r) => r.id === builtX20.base)!;
+      assertRecipeSupported(was);
+      adoptLayout(builtX20, f.name);
       status(`That's a Kitbasher build for ${was.name}: layout restored. Now drop the stock ${was.name} file it was built on.`, 'info');
       refresh();
       return;

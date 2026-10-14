@@ -29,7 +29,7 @@ import { select, type Family, type IdMove, type Selected } from './selection.js'
 import { decodeSyx, encodeSyx, OS_START } from './syx.js';
 import { uclPack } from './ucl.js';
 import { cacheOpsIn, dsp2BootLoader, ID_MASK_THUNKS, ID_SUB_THUNKS, isCode, siteBytes, stageCode, windowA, writeList, x20Map, type WindowFeatures } from './x20_cf.js';
-import { idAllowedOnX20, parseRecipe, type ParsedSite, type X20FeatureName, type X20Recipe, type X20RecipeFile } from './x20_recipe.js';
+import { assertRecipeSupported, idAllowedOnX20, parseRecipe, type ParsedSite, type X20FeatureName, type X20Recipe, type X20RecipeFile } from './x20_recipe.js';
 import { MENU_CODES, menuCategory, menuOrder } from './sound_catalog.js';
 import { fromBase64 } from './bytes.js';
 import { decodeLayout, encodeLayout, LAYOUT_FORMAT, type IdSlot, type Layout, type MachinePlace } from './layout.js';
@@ -590,6 +590,7 @@ export function findX20Layout(file: Uint8Array, recipeIds: string[]): Layout | n
 }
 
 export async function buildX20(input: Uint8Array, recipeFile: X20RecipeFile, packs: Pack[], core: CorePack, opt: X20Options): Promise<{ output: Uint8Array; report: X20Report }> {
+  assertRecipeSupported(recipeFile);
   const R = parseRecipe(recipeFile);
   if (await sha256(input) !== R.file.identify.syx_sha256) throw new Error(`not ${R.name} (the .syx hash differs): this recipe patches that exact file only`);
   const gates: X20Report['gates'] = [];

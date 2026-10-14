@@ -14,7 +14,8 @@ import { Asm } from '../src/cf_asm.js';
 import { VERSION_WORDS } from '../src/firmware_version.js';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
-const file = (): X20RecipeFile => JSON.parse(readFileSync(join(ROOT, 'bases/x20.json'), 'utf8'));
+// Keep offline implementation coverage while the shipped recipe is disabled.
+const file = (): X20RecipeFile => ({ ...JSON.parse(readFileSync(join(ROOT, 'bases/x20.json'), 'utf8')), refuse: undefined });
 const R = parseRecipe(file());
 
 test('x20 recipe: parses, and keeps every model off X.20\'s user-machine IDs (192 and up freeze the OS)', () => {

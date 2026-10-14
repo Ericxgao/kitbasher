@@ -10,7 +10,7 @@ removing any stock machine.
 | OS 1.63, prepared | `bases/stock-163-prepared.json` | Patched directly |
 | OS X.14 | `bases/x14.json` | Patched directly, chaining onto X.14's own add-on |
 | Beta firmware (md-26A09-132401) | `bases/beta-26a09.json` | Patched directly, chaining onto its add-on; nothing after the DSP1 slot moves |
-| MDX X.20 B (public beta) | `bases/x20.json` | Exact-release recipe; see [X.20 B](#mdx-x20-b-public-beta) |
+| MDX X.20 B (public beta) | `bases/x20.json` | Currently not supported; patching temporarily disabled |
 
 X.13 is no longer supported: an OS tagged `X13 ` is refused before anything else.
 Em's DEV builds, including md-26912-190450 and md-26A01-183521, are also retired:
@@ -188,8 +188,12 @@ The menu-refresh hook is signature-checked and included in the emulated build.
 
 ## MDX X.20 B (public beta)
 
-X.20 B is jmamma's community OS. It is still a public beta, so X.14, OS 1.63 and beta 26A09
-stay supported alongside it. Its loader streams a packed OS through the DSPs and
+**X.20 is currently not supported.** Patching is temporarily disabled in the
+browser, CLI and engine by the recipe's `refuse` field. The recipe and offline
+implementation tests are retained for future re-enablement. The details below
+describe that retained implementation.
+
+X.20 B is jmamma's community OS and remains a public beta. Its loader streams a packed OS through the DSPs and
 gets the ColdFire image back at boot, so nothing can be discovered in the file:
 Kitbasher patches this one release with a fixed recipe, [`bases/x20.json`](../bases/x20.json),
 and recognises the file by its SHA-256 (any other X.20 file is refused). The recipe

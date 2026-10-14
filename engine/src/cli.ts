@@ -128,7 +128,7 @@ import { select } from './selection.js';
 import { recoverSession } from './restore.js';
 import { decodeProject } from './project.js';
 import { containerOf, encodeSyx } from './syx.js';
-import { recipeFor } from './x20_recipe.js';
+import { assertRecipeSupported, recipeFor } from './x20_recipe.js';
 import { buildX20, findX20Layout } from './x20.js';
 import { sha256 } from './bytes.js';
 
@@ -223,6 +223,7 @@ async function main(): Promise<void> {
   // MDX X.20 and later: a fixed per-release recipe, found by the file's hash (engine/src/x20.ts)
   const recipe = recipeFor(bases.recipes, await sha256(input));
   if (recipe) {
+    assertRecipeSupported(recipe);
     console.log(`base: ${recipe.name} [${recipe.qualification.level}: ${recipe.qualification.by}]${recipe.qualification.unproven ? ` (${recipe.qualification.unproven})` : ''}`);
     if (a['midi-chroma'] || a['pitch-labels']) console.log('  not available on this OS (ignored): --midi-chroma, --pitch-labels');
     const load = a['dsp2-load'] as 'preboot' | 'upload' | undefined;

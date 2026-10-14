@@ -41,6 +41,8 @@ export interface X20RecipeFile {
   id: string;
   name: string;
   about?: string;
+  /** Temporarily disable patching while retaining identification and research data. */
+  refuse?: string;
   identify: { syx_sha256: string; container_bytes: number; stage_sha256: string };
   qualification: { level: 'hardware-proven' | 'emulator-gated'; by: string; unproven?: string };
   loader: {
@@ -229,4 +231,9 @@ export const idAllowedOnX20 = (id: number): boolean => id >= 0 && id <= 191 && !
 /** The recipe whose OS file has this SHA-256, if any. */
 export function recipeFor(recipes: X20RecipeFile[], sha256: string): X20RecipeFile | null {
   return recipes.find((f) => f.identify.syx_sha256 === sha256) ?? null;
+}
+
+/** Shared refusal for the browser, CLI and direct engine builds. */
+export function assertRecipeSupported(recipe: X20RecipeFile): void {
+  if (recipe.refuse) throw new Error(recipe.refuse);
 }

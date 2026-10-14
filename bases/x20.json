@@ -2,6 +2,7 @@
  "format": "md-recipe/1",
  "id": "x20",
  "name": "MDX OS X.20 B",
+ "refuse": "X.20 is currently not supported.",
  "about": "The Machinedrum SPS-1 UW community OS X.20 B (by jmamma). Its loader decodes the OS at boot, so the build never reads the OS image: it re-packs the loader's stage image with a boot routine that writes the sites below once the loader has decoded the OS. The anchors (the bytes X.20 B has at each site) are checked offline against a decoded X.20 B (engine/test/x20.test.ts with KB_X20_OS); the build only accepts the exact X.20 B file (identify.syx_sha256). Addresses, anchors and hashes only: no firmware bytes.",
  "identify": {
   "syx_sha256": "dae8210a03f91135c1ce20c741ea32c9b572686f066bb5db99cf8a1c52f381cc",

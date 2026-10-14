@@ -230,6 +230,7 @@ export class NotPatchable extends Error {
  */
 const UNSUPPORTED: Record<string, string> = {
   'X13 ': 'OS X.13 is not supported. Load an OS X.14 file.',
+  'X20 ': 'X.20 is currently not supported.',
   'DEV ': "Em's DEV firmware is no longer supported. Load md-26A09-132401-beta.syx instead.",
 };
 

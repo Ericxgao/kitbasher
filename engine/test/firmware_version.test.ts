@@ -18,7 +18,8 @@ import { nrv2bDecode } from '../src/nrv2b.js';
 import { sha256, u32, be32, concat } from '../src/bytes.js';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
-const recipe = (): X20RecipeFile => JSON.parse(readFileSync(join(ROOT, 'bases/x20.json'), 'utf8'));
+// Keep offline implementation coverage while the shipped recipe is disabled.
+const recipe = (): X20RecipeFile => ({ ...JSON.parse(readFileSync(join(ROOT, 'bases/x20.json'), 'utf8')), refuse: undefined });
 const R = parseRecipe(recipe());
 const ascii = (b: Uint8Array): string => new TextDecoder().decode(b).split('\0')[0];
 
