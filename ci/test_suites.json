@@ -13,6 +13,7 @@
     "model_contract",
     "aliases",
     "model_runtime",
+    "beta_base",
     "menu_refresh",
     "uw_menu",
     "unsupported_base",

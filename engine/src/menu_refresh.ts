@@ -1,4 +1,4 @@
-// DEV's kit editor draws the new category using the previous category's cached
+// The beta's kit editor draws the new category using the previous category's cached
 // length. Refresh that cache before drawing, using the base's own list counter.
 import { be32, concat, hex, u32 } from './bytes.js';
 import type { Base } from './bases.js';
@@ -8,8 +8,8 @@ export interface MenuRefreshSite {
 }
 
 export function menuRefreshSite(base: Base, main: Uint8Array): MenuRefreshSite | null {
-  // Qualified separately from the older DEV and stock menu implementations.
-  if (base.id !== 'dev-26a01') return null;
+  // Qualified for this beta's menu implementation by the signatures below.
+  if (base.id !== 'beta-26a09') return null;
   const images = [{ram:base.os.cfBase,bytes:main}, ...base.segments];
   const find = (pattern: Uint8Array) => images.flatMap(image => {
     const found: {at:number; bytes:Uint8Array; offset:number}[] = [];
@@ -25,9 +25,9 @@ export function menuRefreshSite(base: Base, main: Uint8Array): MenuRefreshSite |
   const draw = find(hex('28390028b9c02a390028c2d82c390028b7302039002818dae58841f9007001aa2e300800'));
   const counter = find(concat([hex('20390028b72ce7882040d1fc'),be32(base.os.familyTable+4),
     hex('20504280600252804a9866fa23c00028c2d84e75')]));
-  if (draw.length!==1 || counter.length!==1) throw new Error('DEV menu refresh requires one verified drawer and list counter');
+  if (draw.length!==1 || counter.length!==1) throw new Error('Beta menu refresh requires one verified drawer and list counter');
   const hook=draw[0].at, patch=hook&~3, offset=draw[0].offset-(hook-patch);
-  if (offset<0) throw new Error('DEV menu refresh hook lacks surrounding instruction bytes');
+  if (offset<0) throw new Error('Beta menu refresh hook lacks surrounding instruction bytes');
   return {hook,patch,original:draw[0].bytes.slice(offset,offset+8),count:counter[0].at};
 }
 

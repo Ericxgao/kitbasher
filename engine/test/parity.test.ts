@@ -23,14 +23,12 @@ const profiles = readdirSync('bases').filter((f) => f.endsWith('.json'))
 const EXEMPT: Record<string, Record<string, string>> = {
   'stock-163-prepared': { hostSend: 'silent output in the emulator' },
   x14: { hostSend: 'not qualified' },
-  'dev-26912': { unmuteFix: 'the sequencer is entered from DEV\'s add-on', midiChroma: 'MIDI via DEV\'s per-block queue',
-    pitchLabels: 'the knob-value draw is DEV\'s own TONAL hook' },
-  'dev-26a01': { unmuteFix: 'the sequencer is entered from DEV\'s add-on', midiChroma: 'MIDI via DEV\'s per-block queue', hostSend: 'not qualified',
-    pitchLabels: 'the knob-value draw is DEV\'s own TONAL hook' },
+  'beta-26a09': { unmuteFix: 'the beta replaces the sequencer', midiChroma: 'the beta has its own MIDI queue', hostSend: 'not qualified',
+    pitchLabels: 'the beta has its own TONAL hook' },
 };
 
 test('parity: every profile qualifies every gated option with evidence, or refuses it with a reason', () => {
-  assert.deepEqual(profiles.map((p) => p.id).sort(), ['dev-26912', 'dev-26a01', 'stock-163-prepared', 'x14']);
+  assert.deepEqual(profiles.map((p) => p.id).sort(), ['beta-26a09', 'stock-163-prepared', 'x14']);
   const rows: string[] = [];
   for (const p of profiles) {
     for (const k of Object.keys(PROFILE_GATED)) {

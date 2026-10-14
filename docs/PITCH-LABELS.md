@@ -99,8 +99,9 @@ its own two 12-character tables, with its own 3x5 glyphs for the quarter tones,
 and DEV's own machines show some other knobs as relative intervals. That label
 follows DEV's TONAL law and setting, not a model's pitch metadata, so on an added
 model it would name the wrong note. Putting our routine in front of DEV's has not
-been run, so the option is not offered on DEV 26912 or DEV 26A01; `--discover`
-names DEV's routine (`0x2d500c` and `0x2d4eae`).
+been run. Those DEV builds are now retired. The supported beta 26A09 retains
+its own TONAL draw at `0x2d4e9c`, so this option remains unavailable there;
+`--discover` reports that call.
 
 ## Testing
 

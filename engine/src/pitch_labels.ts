@@ -24,7 +24,8 @@
 // a glyph of a 3x5 font of its own (a plus, or a plus with bars after a sharp); knobs 5 to 7 of
 // some of its own machines get relative "+7", "-3Q" or "OFF". That labelling follows DEV's TONAL
 // law (raw 0 is its "C#1") and DEV's TONAL setting, not a model's pitch metadata, so on DEV the
-// option is not offered (bases/dev-*.json): the call it hooks is DEV's already.
+// option is not offered. The supported beta keeps this hook at 0x2d4e9c
+// (bases/beta-26a09.json); the earlier DEV profiles have been retired.
 //
 // The hook. The painter (0x228a24 on X.14 and 1.63: `paint(knob, value)`, knob in d6 and value in
 // d4 for its whole body) ends the number's draw with `jsr <draw>.l` (font, framebuffer, x, y, -1,

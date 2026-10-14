@@ -81,27 +81,19 @@
   },
   "modelRuntimes": [
     {
+      "id": "beta-26a09",
+      "abi": "md-voice/1",
+      "dsp2": "e1d845a772f87b04e1681130f3e3eab2db20dc4d047489375a3be93870c591bc",
+      "sram": "e4230c932b2d77cd518eda754338a6a8be2d836dfb45cbdc46215b9da134c7b7",
+      "extensions": "4db841bc0121d843b159a915d778e2d2c8ab267f9f0c5d8462a56a3ef8fcb72d",
+      "evidence": "docs/BASES.md#beta-26a09: full-catalog emulator audio checks, 2026-10-13; hardware untested"
+    },
+    {
       "id": "stock-163-prepared",
       "abi": "md-voice/1",
       "dsp2": "e1d845a772f87b04e1681130f3e3eab2db20dc4d047489375a3be93870c591bc",
       "sram": "1610aaa23af4da050de182fd6890a20fe3c3f6e2fa762be1c7953fd94b6b3d14",
       "extensions": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "evidence": "docs/BASES.md"
-    },
-    {
-      "id": "dev-26912",
-      "abi": "md-voice/1",
-      "dsp2": "e1d845a772f87b04e1681130f3e3eab2db20dc4d047489375a3be93870c591bc",
-      "sram": "8d4d9ded76d547d252a9cbdb2bcd0f032ebe9dcb18f34ae3e9974d1d74a57aec",
-      "extensions": "8d2819cfdf0d6c26da2fca530759f10f12dca78495f6b6d0b6f2df2f780c880a",
-      "evidence": "docs/BASES.md"
-    },
-    {
-      "id": "dev-26a01",
-      "abi": "md-voice/1",
-      "dsp2": "e1d845a772f87b04e1681130f3e3eab2db20dc4d047489375a3be93870c591bc",
-      "sram": "37aff7574ad780e4a51eafce61eb0091ddbfbfbfc19d66a1fc7803526bbcb1a1",
-      "extensions": "ee824ef4ca1db5c264c27222eca6351cc4792f4030d2c090391da68fad3bae29",
       "evidence": "docs/BASES.md"
     },
     {
