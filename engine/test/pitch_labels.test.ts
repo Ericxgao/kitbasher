@@ -351,7 +351,7 @@ async function firmware(): Promise<Map<string, { bytes: Uint8Array; resolved: Re
   return out;
 }
 
-test('firmware: discovery finds the painter\'s draw on X.14 and 1.63 as cached; on DEV it is DEV\'s own, and the option is refused', { skip: fwSkip }, async () => {
+test('firmware: discovery finds the painter\'s draw on X.14 and 1.63 as cached; the beta\'s own draw is refused', { skip: fwSkip }, async () => {
   const all = await firmware();
   assert.ok(all.size, `no profiled OS file in ${FW}`);
   for (const [id, { bytes, resolved }] of all) {
@@ -363,13 +363,13 @@ test('firmware: discovery finds the painter\'s draw on X.14 and 1.63 as cached; 
     assert.equal(resolved.base.support.pitchLabels.ok, offered, `${id}: ${resolved.base.support.pitchLabels.why}`);
     assert.equal(!!resolved.base.features.pitchLabels, offered, id);
     const imgs = codeImages(readFirmware(bytes), resolved.base);
-    if (id.startsWith('dev-')) {
-      // the call DEV hooks for its TONAL labels, the same one this option hooks
-      const dev = id === 'dev-26912' ? 0x2d500c : 0x2d4eae;
+    if (id === 'beta-26a09') {
+      // The beta's own TONAL labels use the same call this option hooks.
+      const dev = 0x2d4e9c;
       assert.throws(() => findPitchLabels(imgs), (e: Error) => e instanceof NoPitchLabels && e.message.includes(`calls 0x${dev.toString(16)}, not the OS's string draw 0x211384`));
-      assert.match(resolved.base.support.pitchLabels.why, /^refused on this base: DEV already replaces the knob-value draw/);
+      assert.match(resolved.base.support.pitchLabels.why, /^refused on this base: The beta already replaces the knob-value draw/);
       const hook = imgs.flatMap((im) => findSig([im], '4ab9 002818de 6600 .... 2039 002818da 0c80 00000010')).filter((x) => x.at === dev);
-      assert.equal(hook.length, 1, 'DEV\'s routine tests page 0 and a track below 16 first');
+      assert.equal(hook.length, 1, 'the beta\'s routine tests page 0 and a track below 16 first');
     } else {
       assert.deepEqual(findPitchLabels(imgs), S);
       assert.deepEqual(pitchLabelValues(S), Object.fromEntries(cached.map(([k, v]) => [k, v.split(',').map((x) => Number(x))])));

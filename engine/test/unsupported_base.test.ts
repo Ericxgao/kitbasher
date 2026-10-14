@@ -21,8 +21,19 @@ test('an OS tagged X13 is refused before anything is hashed or discovered', asyn
   });
 });
 
-test('no base profile or model runtime is for X.13, and supported tags are not refused', () => {
+test('retired DEV firmware is refused before discovery, including unprofiled DEV builds', async () => {
+  await assert.rejects(resolveBase({ tag: 'DEV ' } as Firmware, set), (e: unknown) => {
+    assert.ok(e instanceof NotPatchable);
+    assert.equal(e.discovery, null);
+    assert.match(e.message, /no longer supported.*md-26A09-132401-beta.syx/);
+    return true;
+  });
+});
+
+test('no base profile or model runtime is for a retired base, and supported tags are not refused', () => {
   assert.ok(!set.profiles.some((p) => p.id === 'x13' || unsupported(p.identify.tag)));
-  assert.ok(!(set.lineage.modelRuntimes ?? []).some((r) => r.id === 'x13'));
+  assert.ok(!(set.lineage.modelRuntimes ?? []).some((r) => r.id === 'x13' || r.id.startsWith('dev-')));
   assert.equal(unsupported('X14 '), null);
+  assert.equal(unsupported('BETA'), null);
+  assert.equal(set.profiles.find(p => p.id === 'beta-26a09')?.identify.tag, 'BETA');
 });

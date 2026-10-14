@@ -9,11 +9,11 @@ function fixture() {
   const main=new Uint8Array(128), segment=new Uint8Array(128);
   main.set(hex('20390028b72ce7882040d1fc0025239a20504280600252804a9866fa23c00028c2d84e75'),16);
   segment.set(hex('4e7528390028b9c02a390028c2d82c390028b7302039002818dae58841f9007001aa2e300800'),0);
-  const base={id:'dev-26a01',os:{cfBase:0x200000,familyTable:0x252396},segments:[{ram:0x2c0000,bytes:segment}]} as unknown as Base;
+  const base={id:'beta-26a09',os:{cfBase:0x200000,familyTable:0x252396},segments:[{ram:0x2c0000,bytes:segment}]} as unknown as Base;
   return {main,segment,base};
 }
 
-test('DEV menu hook is signature-bound and preserves the neighbouring return',()=>{
+test('beta menu hook is signature-bound and preserves the neighbouring return',()=>{
   const {main,base}=fixture(), site=menuRefreshSite(base,main)!;
   assert.equal(site.hook,0x2c0002);
   assert.equal(site.count,0x200010);
@@ -26,7 +26,7 @@ test('DEV menu hook is signature-bound and preserves the neighbouring return',()
   assert.equal(code.length,30);
 });
 
-test('unqualified bases are unchanged and ambiguous or altered DEV code fails closed',()=>{
+test('unqualified bases are unchanged and ambiguous or altered beta code fails closed',()=>{
   const {main,segment,base}=fixture();
   assert.equal(menuRefreshSite({...base,id:'stock-163'},main),null);
   assert.equal(menuRefreshSite({...base,id:'dev-26912'},main),null);

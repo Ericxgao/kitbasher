@@ -9,17 +9,21 @@ removing any stock machine.
 | OS 1.63 (stock) | `bases/stock-163.json` | Prepared once with a boot hook, then patched as the prepared base |
 | OS 1.63, prepared | `bases/stock-163-prepared.json` | Patched directly |
 | OS X.14 | `bases/x14.json` | Patched directly, chaining onto X.14's own add-on |
-| Em's DEV firmware (md-26912-190450) | `bases/dev-26912.json` | Patched directly, chaining onto DEV's add-on; nothing after the DSP2 slot moves |
-| Em's DEV firmware (md-26A01-183521) | `bases/dev-26a01.json` | Patched directly, as for the earlier DEV build |
+| Beta firmware (md-26A09-132401) | `bases/beta-26a09.json` | Patched directly, chaining onto its add-on; nothing after the DSP1 slot moves |
+| MDX X.20 B (public beta) | `bases/x20.json` | Exact-release recipe; see [X.20 B](#mdx-x20-b-public-beta) |
 
 X.13 is no longer supported: an OS tagged `X13 ` is refused before anything else.
+Em's DEV builds, including md-26912-190450 and md-26A01-183521, are also retired:
+every `DEV ` tag is refused before discovery, with a request to load
+`md-26A09-132401-beta.syx`. Removing their profiles alone would let them fall
+back to unprofiled discovery; the tag refusal prevents that.
 
-Each profile also records how far that base has been tested. DEV 26912 images
-have been tested on hardware (Machinedrum MKII +Drive UW), and so have X.14
-images (Machinedrum with UW), including the unmute-latency fix and MIDI
-chromatic note input. Prepared 1.63 and DEV 26A01 have passed the engine's
-gates and emulator checks of controls, labels, kits, memory and audio. The page and the build report show the
-level for the base you load.
+Each profile records how far that base has been tested. X.14 images have been
+tested on hardware (Machinedrum with UW), including the unmute-latency fix and
+MIDI chromatic note input. Prepared 1.63 has passed engine and emulator checks.
+The beta's evidence is recorded [below](#beta-26a09); it does not inherit the
+retired DEV releases' qualification. The page and build report show the level
+for the base you load.
 
 ## How a base is recognised
 
@@ -82,12 +86,12 @@ Some options also need the profile to record them as working on that base
 (`options` in the profile: qualified with the evidence, or refused with the
 reason):
 
-| Option | Prepared 1.63 | X.14 | DEV 26912 | DEV 26A01 |
-|---|---|---|---|---|
-| Unmute-latency fix (`--unmute-fix`) | yes | yes | no: DEV enters its add-on from the sequencer | no: as DEV 26912 |
-| MIDI chromatic note input (`--midi-chroma`) | yes | yes | no: MIDI goes through DEV's per-block queue | no: as DEV 26912 |
-| Pitch note names (`--pitch-labels`) | yes | yes | no: the knob-value draw is DEV's own TONAL label | no: as DEV 26912 |
-| Reordered DSP2 host sender (`--host-reorder`) | no: silences output in the emulator | no: not qualified | yes | no: not qualified |
+| Option | Prepared 1.63 | X.14 | Beta 26A09 |
+|---|---|---|---|
+| Unmute-latency fix (`--unmute-fix`) | yes | yes | no: the beta replaces the sequencer |
+| MIDI chromatic note input (`--midi-chroma`) | yes | yes | no: the beta uses its own MIDI queue |
+| Pitch note names (`--pitch-labels`) | yes | yes | no: the beta uses its own TONAL labels |
+| Reordered DSP2 host sender (`--host-reorder`) | no: silences output in the emulator | no: not qualified | no: not qualified |
 
 A parity check (`engine/test/parity.test.ts`) runs with the tests: every profile
 must qualify each of these options or refuse it with a reason, and the list of
@@ -133,24 +137,58 @@ X.14 has its own profile and runtime entry. Two details matter to the patcher:
   with the same behaviour; DEV reads MIDI through its own queue, which it does
   not patch.
 
-## DEV 26A01
+## Beta 26A09
 
-DEV 26A01 keeps the earlier DEV build's DSP2 program but changes the ColdFire
-code, DSP1 and the add-on, which now unpacks 21 pieces instead of 19. Discovery
-finds the new patch sites; nothing is reused from the older DEV profile.
+The supported file is `md-26A09-132401-beta.syx`, tagged `BETA`, with SHA-256
+`31be0d9b6ae9e6a49734909328f3dd2cb42e253c2d95e103d7489fc31a9bc6bd`.
+The profile's hashes and cached patch sites come from this file; the runtime
+fingerprint covers its DSP2, SRAM and all executable extension segments.
 
-- The base ends at flash `0xfec13`, leaving about 5 KB of flash after it for the
-  patch. Larger selections still have to pass the normal storage check.
-- DSP1's own upload occupies `P:0xa10..0xa3e`, where the drive dispatcher used to
-  sit. The linker now places drive code in the free span after it, leaving 219
-  words below the recovery handler. Other bases keep their original placement.
-- DEV 26A01's kit editor draws a newly chosen category with the previous
-  category's cached length. The patch refreshes that cache first, so the list of
-  added machines draws in full.
+- The add-on unpacks 21 scatter pieces. The base ends at flash `0xfeb9c`,
+  leaving 5,220 bytes; larger selections still have to pass the storage check.
+- The base uploads 4,096 DSP2 words into `P:0x13b600..0x13c5ff` at boot.
+  Discovery reserves that entire span, so added models start after `0x13c5ff`
+  when placed in that region. The old DEV free-space boundary is not reused.
+- DSP1's drive window starts at `P:0xa3f`; its own upload remains intact.
+- The kit editor still draws a newly selected category using the previous
+  category's cached length. The patch matches the beta's drawer and list-counter
+  signatures and refreshes the count before drawing.
+
+Validation on 2026-10-13 uses the bundled catalog and the exact input above:
+the full-catalog UW emulator image has SHA-256
+`155d0224d9517756254d770e8508606a8d34a318ce9eb7cef2efafc794edf4e6`.
+It was built with the CLI's defaults and `--uw --catalog catalog`, using the
+beta's OS container in a stock 1.63 flash image for the emulator. The final
+profile produces exactly the same bytes as the tested candidate.
+
+- All engine build gates pass, including readback, ISA checks, DSP placement,
+  unchanged add-on/scatter contents and the discovered patch sites.
+- Headless `mdLevelMeter` boots the full 25-machine UW build and plays all
+  21 self-contained generators above -60 dBFS. WAVTB, WAVCH and WAVMR require
+  their UW sample data; NFX4P requires input audio. Their sound is not qualified
+  by this check.
+- `mdIdProbe 6,13,40,74,76` passes assignment, first-hit audio, knob changes,
+  kit dumps, kit save/load and a fresh boot for each ID (VADBD, FMS4O, OSCAC,
+  VOXFR, PHYKS). Stock ROM/RAM IDs still assign and ROM01 still plays.
+- `engine/test/beta_base.test.ts`, with `MD_FIRMWARE_DIR` pointing to a directory
+  containing the original SysEx, checks fresh discovery against every cached
+  site and builds both UW and non-UW selections. No firmware is committed.
+
+Hardware validation on 2026-10-13: the owner built
+`kitbasher-K.01-beta-26a09.syx` in the local Kitbasher instance, transferred it
+through UM-ONE, and confirmed that it works well on the Machinedrum. The sent
+SysEx SHA-256 is
+`37b2ab8ad4939062589399e16a02276e80c35c85b2f64b35a488d6668ccba7fd`.
+The base is therefore marked **hardware-proven**, with this owner-reported
+successful flash and operation as its hardware evidence.
+
+Detailed hardware coverage of added-model UW sample playback, external-input
+effects, sustained overload/timing and visual category redraw was not recorded.
+The menu-refresh hook is signature-checked and included in the emulated build.
 
 ## MDX X.20 B (public beta)
 
-X.20 B is jmamma's community OS. It is still a public beta, so X.14, OS 1.63 and DEV
+X.20 B is jmamma's community OS. It is still a public beta, so X.14, OS 1.63 and beta 26A09
 stay supported alongside it. Its loader streams a packed OS through the DSPs and
 gets the ColdFire image back at boot, so nothing can be discovered in the file:
 Kitbasher patches this one release with a fixed recipe, [`bases/x20.json`](../bases/x20.json),

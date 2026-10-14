@@ -228,7 +228,10 @@ export class NotPatchable extends Error {
  * OS tags Kitbasher does not support, and what it says. Refused before discovery, so such an OS
  * (stock, or a build made on it) is never patched or taken for another base.
  */
-const UNSUPPORTED: Record<string, string> = { 'X13 ': 'OS X.13 is not supported. Load an OS X.14 file.' };
+const UNSUPPORTED: Record<string, string> = {
+  'X13 ': 'OS X.13 is not supported. Load an OS X.14 file.',
+  'DEV ': "Em's DEV firmware is no longer supported. Load md-26A09-132401-beta.syx instead.",
+};
 
 /** Why an OS with this tag is not supported, or null. */
 export function unsupported(tag: string): string | null {
@@ -238,7 +241,7 @@ export function unsupported(tag: string): string | null {
 /**
  * Identify and discover. A profile matches by its slot hashes (and add-on, when it has one); with
  * none, the base is still discovered and labelled 'discovered'. A profile with `refuse` (stock
- * 1.63) turns the build away with its message; an unsupported tag (X.13) is refused first.
+ * 1.63) turns the build away with its message; unsupported tags (X.13 and DEV) are refused first.
  */
 export async function resolveBase(fw: Firmware, set: BaseSet): Promise<Resolved> {
   const no = unsupported(fw.tag);
