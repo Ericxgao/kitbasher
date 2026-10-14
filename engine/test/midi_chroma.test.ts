@@ -721,11 +721,12 @@ test('firmware: on X.14 the 1.63 signatures for the OS routines find the address
 // the same engine still gives the earlier 1b0ec853... / 62a23f9f... / 77ff4079... / ec931869...
 // A catalog change changes these: golden_catalog.test.ts records the catalog they were built from.
 // VADBD 3.0.0: regenerated after lowering its pitch table and metadata one octave.
+// NZEPL DEC 48 and default X.14 FX ORDER: rebuilt from owned firmware, 2026-10-14.
 const GOLDEN: Record<string, Record<string, string>> = {
-  'x14': { '': 'b205104c7a0b028b8a7d02c76d51a4cec2b75234821e63ebe3e52de707624c1d', '--no-midi-chroma': 'b205104c7a0b028b8a7d02c76d51a4cec2b75234821e63ebe3e52de707624c1d',
-         '--midi-chroma': '48714361a6ae9f20250157c80af1eb53895b3b290b3fed3a5c520f75a8f77ca6' },
-  'stock-163-prepared': { '': '0e68d43d23b24f3579d8bff4437f994f4e0511c55a523701c718e37e3c1ca6e9', '--no-midi-chroma': '0e68d43d23b24f3579d8bff4437f994f4e0511c55a523701c718e37e3c1ca6e9',
-         '--midi-chroma': 'cabdc27b9b9568d5af2f6b758163b3e706ae637f714c62caf6555f33b5e34052' },
+  'x14': { '': '7f4dc96f42ba9ff869eb145567a2bcd8169fe1339dbcb381015e958d4c9b2521', '--no-midi-chroma': '7f4dc96f42ba9ff869eb145567a2bcd8169fe1339dbcb381015e958d4c9b2521',
+         '--midi-chroma': '586399e8d36a454aad193ff93d26053b0d299692cea04809c8c54f43a0994c2d' },
+  'stock-163-prepared': { '': '7bafe089fe0c8bb4f8d6963f316413ca24fa33b78c2ee45dfea9a871599e76d4', '--no-midi-chroma': '7bafe089fe0c8bb4f8d6963f316413ca24fa33b78c2ee45dfea9a871599e76d4',
+         '--midi-chroma': 'a0090e2bf6d5ea5e1ebfa99cf162d98161bbd0af2313e35b81f8cf98bf9fecc0' },
 };
 
 test('firmware: builds without the option are main\'s byte for byte; X.14 with it too', { skip: fwSkip }, async () => {
