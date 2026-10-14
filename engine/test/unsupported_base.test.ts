@@ -6,10 +6,24 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NotPatchable, resolveBase, unsupported } from '../src/bases.js';
 import type { Firmware } from '../src/container.js';
-import { loadBases } from '../src/node.js';
+import { loadBases, loadPacks } from '../src/node.js';
+import { assertRecipeSupported, recipeFor } from '../src/x20_recipe.js';
+import { buildX20 } from '../src/x20.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const set = loadBases(resolve(ROOT, 'bases'));
+
+test('X.20 remains identifiable but is refused by the shipped recipe and direct builds', async () => {
+  const recipe = set.recipes.find(r => r.id === 'x20')!;
+  const message = 'X.20 is currently not supported.';
+  assert.equal(recipe.refuse, message);
+  assert.equal(recipeFor(set.recipes, recipe.identify.syx_sha256), recipe);
+  assert.throws(() => assertRecipeSupported(recipe), { message });
+  const { packs, core } = loadPacks(resolve(ROOT, 'catalog'));
+  await assert.rejects(buildX20(new Uint8Array(), recipe, packs, core,
+    { uw: true, trim: { db: -30, minSeconds: 0.5, cap: 0.55 } }), { message });
+  await assert.rejects(resolveBase({ tag: 'X20 ' } as Firmware, set), { message });
+});
 
 test('an OS tagged X13 is refused before anything is hashed or discovered', async () => {
   const fw = { tag: 'X13 ' } as unknown as Firmware;            // no slots: the tag alone decides

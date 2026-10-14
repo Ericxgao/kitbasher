@@ -4,9 +4,11 @@ Kitbasher adds new sound models to your Elektron Machinedrum's OS. Pick the
 machines you want, and it builds an OS update that keeps every stock machine and
 adds yours alongside them.
 
-It works on stock OS 1.63, X.14, beta md-26A09-132401 and MDX X.20 B (public beta), and runs entirely in
+It works on stock OS 1.63, X.14 and beta md-26A09-132401, and runs entirely in
 your browser at **[kitbasher.xyz](https://kitbasher.xyz)**. Your firmware never leaves your
 computer: nothing is uploaded, and there is no server-side build.
+
+X.20 is currently not supported. Patching is temporarily disabled.
 
 Kitbasher is a community project. It is not affiliated with or endorsed by Elektron.
 Kitbasher is not affiliated with MDX. Its modified X.14 and X.20 builds are not
@@ -90,7 +92,7 @@ would be. See [Machinedrum without UW](docs/BASES.md#machinedrum-without-uw).
 | OS 1.63 (stock) | Prepared automatically with a small boot hook, then patched; tested in the emulator |
 | OS X.14 | Patched directly; tested on hardware |
 | Beta firmware (md-26A09-132401) | Patched directly; tested on hardware and in the emulator; see [beta validation](docs/BASES.md#beta-26a09) |
-| MDX X.20 B (public beta) | Fixed per-release recipe; tested in the emulator, not yet on hardware. USR machines keep working; INTERNAL sample replacement is off |
+| MDX X.20 B (public beta) | Currently not supported; patching temporarily disabled |
 
 Em's earlier DEV firmware is no longer supported. Load `md-26A09-132401-beta.syx` instead.
 

@@ -18,7 +18,8 @@ import { osOfRecipe, osProblem } from '../src/project.js';
 import { needsUwSamples } from '../src/packs.js';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
-const file = (): X20RecipeFile => JSON.parse(readFileSync(join(ROOT, 'bases/x20.json'), 'utf8'));
+// Keep offline implementation coverage while the shipped recipe is disabled.
+const file = (): X20RecipeFile => ({ ...JSON.parse(readFileSync(join(ROOT, 'bases/x20.json'), 'utf8')), refuse: undefined });
 const R = parseRecipe(file());
 const { packs } = loadPacks([join(ROOT, 'catalog')]);
 const models = select(packs, {}).fams.flatMap((f) => f.models.map((m) => ({ m, family: f.name })));
