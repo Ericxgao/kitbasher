@@ -11,12 +11,12 @@
   "addon_sha256": "7aff54a22961eabef253a8666663604f8a07053438679023d09d8addceb3928d"
  },
  "qualification": {
-  "level": "emulator-gated",
-  "by": "Emulator: 21 self-contained catalog models audible; five representative IDs pass assignment, knob changes, kit dump/save/load and fresh-boot audio; stock ROM/RAM checks pass. Hardware untested.",
+  "level": "hardware-proven",
+  "by": "Owner confirmed successful flashing and operation on hardware on 2026-10-13, after transfer through UM-ONE. Emulator audio, assignment, controls and kit checks also passed; see the recorded build hash and scope in docs/BASES.md.",
   "evidence": [
    "docs/BASES.md#beta-26a09"
   ],
-  "unproven": "Not tested on hardware; added-model UW sample playback, external-input effects, sustained overload/timing and visual category redraw were not exercised."
+  "unproven": "Detailed hardware coverage of added-model UW sample playback, external-input effects, sustained overload/timing and visual category redraw was not recorded."
  },
  "options": {
   "hostSend": {

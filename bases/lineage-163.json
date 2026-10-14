@@ -86,7 +86,7 @@
       "dsp2": "e1d845a772f87b04e1681130f3e3eab2db20dc4d047489375a3be93870c591bc",
       "sram": "e4230c932b2d77cd518eda754338a6a8be2d836dfb45cbdc46215b9da134c7b7",
       "extensions": "4db841bc0121d843b159a915d778e2d2c8ab267f9f0c5d8462a56a3ef8fcb72d",
-      "evidence": "docs/BASES.md#beta-26a09: full-catalog emulator audio checks, 2026-10-13; hardware untested"
+      "evidence": "docs/BASES.md#beta-26a09: full-catalog emulator audio checks and owner-confirmed successful flashing and operation on hardware, 2026-10-13"
     },
     {
       "id": "stock-163-prepared",

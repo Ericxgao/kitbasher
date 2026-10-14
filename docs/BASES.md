@@ -174,10 +174,17 @@ profile produces exactly the same bytes as the tested candidate.
   containing the original SysEx, checks fresh discovery against every cached
   site and builds both UW and non-UW selections. No firmware is committed.
 
-This is emulator qualification only. Hardware, added-model UW sample playback,
-external-input effects and sustained overload/timing have not been tested on
-this beta. The menu-refresh hook is signature-checked and included in the
-emulated build; its category redraw has not been visually verified.
+Hardware validation on 2026-10-13: the owner built
+`kitbasher-K.01-beta-26a09.syx` in the local Kitbasher instance, transferred it
+through UM-ONE, and confirmed that it works well on the Machinedrum. The sent
+SysEx SHA-256 is
+`37b2ab8ad4939062589399e16a02276e80c35c85b2f64b35a488d6668ccba7fd`.
+The base is therefore marked **hardware-proven**, with this owner-reported
+successful flash and operation as its hardware evidence.
+
+Detailed hardware coverage of added-model UW sample playback, external-input
+effects, sustained overload/timing and visual category redraw was not recorded.
+The menu-refresh hook is signature-checked and included in the emulated build.
 
 ## MDX X.20 B (public beta)
 

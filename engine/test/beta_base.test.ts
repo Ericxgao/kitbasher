@@ -19,7 +19,8 @@ test('beta 26A09 has its own runtime evidence and does not inherit DEV option qu
   const set = loadBases(join(ROOT, 'bases'));
   const profile = set.profiles.find(p => p.id === 'beta-26a09')!;
   assert.equal(profile.identify.tag, 'BETA');
-  assert.notEqual(profile.qualification?.level, 'hardware-proven');
+  assert.equal(profile.qualification?.level, 'hardware-proven');
+  assert.ok(profile.qualification?.evidence?.includes('docs/BASES.md#beta-26a09'));
   assert.ok(Object.values(profile.options!).every(o => !o.ok && o.why));
   const runtime = set.lineage.modelRuntimes!.find(r => r.id === profile.id)!;
   assert.equal(runtime.dsp2, profile.identify.dsp2_sha256);
