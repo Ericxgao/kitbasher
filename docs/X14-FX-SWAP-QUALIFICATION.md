@@ -28,9 +28,8 @@ Validation on the exact candidate:
 - Lab `tools/encoder_speed_check.py`: 200 checks passed, including both
   directions, press/release, all nine knobs, and simultaneous switch presses.
 
-Transfer and device acceptance are separate results. Hardware boot and playback
-remain unconfirmed until the owner reports them. The local `release.json` and
-`flash.log` record transfer status.
+Transfer and device acceptance are separate results. The local `release.json`
+records the owner's hardware observation; `flash.log` records transmission.
 
 ## UM-ONE transfer, 2026-10-14
 
