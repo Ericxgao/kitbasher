@@ -15,6 +15,10 @@ official MDX releases and are not supported by the MDX creator.
 Generated builds use Kitbasher's own **K.01** version, with the original OS
 recorded separately. See [firmware versioning](docs/VERSIONING.md).
 
+X.14 builds also add **GLOBAL → ROUTING → FX ORDER**: place DIST and SRR
+before or after the filter for all tracks, saved per global slot.
+See [FX order](docs/FX-ORDER.md).
+
 ## Using it
 
 1. **Back up.** Keep the OS file you have installed now, and save your kits and
