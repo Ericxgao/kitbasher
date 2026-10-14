@@ -585,7 +585,7 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
     const at=img.length, code=encoderSettingsCode(settings,0x10000000+at);
     const hooks=encoderSettingsPatches(live,settings,code.labels);
     const clash=patches.some(([a])=>hooks.patches.some(([b])=>a<b+4&&b<a+4));
-    gate('encoder-settings-sites',!clash,'Mechanical-settings draw/edit and data-entry speed hooks are exclusive');
+    gate('encoder-settings-sites',!clash,'Mechanical-settings draw/edit and encoder speed hooks are exclusive');
     img.push(code.bytes); patches.push(...hooks.patches); checks.push(...hooks.checks);
     encoder={at,code,hooks};
   }
@@ -825,7 +825,7 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
 
   // ---- every added instruction, and every one a patched word lands in, is ColdFire ISA_A
   if (encoder) gate('encoder-settings',equal(back.flash.subarray(encoder.at,encoder.at+encoder.code.bytes.length),encoder.code.bytes),
-    'Reverse Encoder Speed in MECH SETTINGS; saved per global slot; data-entry encoders only');
+    'Swap Speeds in MECH SETTINGS; saved per global slot; data-entry encoders and LEVEL');
   const isa = isaGate(fw, base, back,encoder?.hooks.ranges);
   gate('isa', isa.ok, isa.detail + (isa.rejects.length ? `; ${isa.rejects.slice(0, 3).map((i) => `${h(i.at)} ${i.name}: ${i.why}`).join('; ')}` : ''));
 

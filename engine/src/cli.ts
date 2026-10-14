@@ -75,7 +75,7 @@
 //                        A project restored with --restore that had the option on turns it on with
 //                        its own channel; --midi-chroma [--midi-chroma-channel] overrides that
 //   --no-midi-chroma     off, even when the restored project had it on
-//   --encoder-settings  add Reverse Encoder Speed to MECH SETTINGS (saved per global slot)
+//   --encoder-settings  add Swap Speeds to MECH SETTINGS (saved per global slot)
 //   --no-encoder-settings omit it when restoring a project
 //   --pitch-labels       pitch note names (X.14, prepared 1.63): on the parameter page the pitch knob of
 //                        a model with a quarter or chromatic pitch law shows the note it plays (C-3,
