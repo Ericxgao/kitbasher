@@ -85,9 +85,10 @@ calls only to the OS's string draw and width.
 **Memory.** The routine and its table go at the end of the RAM image (after
 MIDI chromatic input's routines when both are on), which must end inside the
 span earlier images ran from on hardware (`0x2bc000..0x2bce14`). For the bundled
-catalog that is 518 bytes of code and 158 of data (`0x2bcb1c..0x2bcdc0` on
+catalog that is 518 bytes of code and 218 of data (`0x2bcb1c..0x2bcdfc` on
 X.14), so three descriptors move to flash to make room (OSCPW, WAVTB, OSCSW);
-with MIDI chromatic input as well, fourteen do. A selection with no labelled
+with MIDI chromatic input as well, sixteen do. VADBD's lower pitch base uses a
+distinct law, so more entries need explicit law indices. A selection with no labelled
 pitch knob builds no routine and no hook. With the option off, the image is the
 same byte for byte as a build without it.
 

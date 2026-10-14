@@ -595,9 +595,10 @@ test('firmware: discovery finds what each profile caches for the fix, and the fi
 // NZEPL footprint and WALK fix: catalog/np.json re-exported, 2,199 DSP2 words smaller; with the earlier np.json
 // the same engine still gives the earlier 4c73c964... / e037e2ee...
 // golden_catalog.test.ts records the catalog these were built from, so CI notices a catalog change.
+// VADBD 3.0.0: regenerated after lowering its pitch table and metadata one octave.
 const GOLDEN_OFF: Record<string, string> = {
-  x14: 'cb8591e66b86ec79dbe90e2a261000da5b3c99bba82513904adfc7d8a5bf2ba8',
-  'stock-163-prepared': '760c4f9d79bac77e99c622e93c3f44f147934dd3b10cd4506cc19a58842a0516',
+  'x14': '536a335efaf47c622e6577d30b768967975701f14bd6c408d0e222e4e5ea4698',
+  'stock-163-prepared': 'c17c25a2ca5957957802148da683ec61ecb7fde182a63d2da8d2da1de040dfa9',
 };
 
 test('firmware: --no-unmute-fix builds the image the build made before the fix', { skip: fwSkip }, async () => {
