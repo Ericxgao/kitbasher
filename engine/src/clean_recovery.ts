@@ -15,7 +15,7 @@ import type {Base} from './bases.js';
 
 /** The fixes the browser patcher applies by default. Other combinations remain available as explicit options. */
 export function currentFirmwareFixes(): Pick<Selection,'ctrControlAll'|'features'> {
-  return {ctrControlAll:true,features:{cleanRecovery:true,hostReorder:false}};
+  return {ctrControlAll:true,features:{cleanRecovery:true,hostReorder:false,fxOrder:true}};
 }
 
 /** Expand --clean-recovery into the recovery options it implies; throws on a conflicting option. */

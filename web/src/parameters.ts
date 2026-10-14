@@ -65,6 +65,7 @@ const common: Record<string, Help> = {
  NBAL:['Neighbour balance','Blends the previous track with the track before it as the effect input.'], TON:['Noise tone','Tunes the noise filter; in ping mode, tunes the resonator.'], NLEV:['Noise level','Sets the noise contribution. Has no effect in tom ping mode.'], NDEC:['Noise decay / snap','Shapes the noise tail or snap, depending on the tom mode.'],
 };
 const overrides: Record<string, Record<string, Help>> = {
+ VADBD:{PTCH:['Pitch','Tunes all seven kick modes from C-1 (16.35 Hz) to 640.49 Hz in quarter-tone steps.']},
  NZEPL:{FREQ:['Program control X','The first control of the selected program, usually its base frequency. Its name changes with MODE.'],SPRD:['Program control Y','The second control of the selected program. Its name and function change with MODE.']},
  OSCAC:{RAND:['Random intervals','Sets how often, and how far, the next note jumps to a random interval.']},
  VOXFR:{FRMT:['Formant','Sets the formant ratio of the oscillator, folding up by octaves as it rises.']},

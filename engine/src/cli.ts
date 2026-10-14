@@ -33,6 +33,7 @@
 //                        DSP1 upload (engine/src/watchdog.ts)
 //   --no-stub-trim       keep the base's DSP2 silence stub. By default its pad is cut from 50 passes to 1
 //                        (one DSP2 word, about 460 cycles back per idle track per block; engine/src/stub_trim.ts)
+//   --no-fx-order        omit GLOBAL > ROUTING > FX ORDER (included on X.14)
 //   --clean-recovery     ordered recovery, output pacing, emergency voice retirement, CPU! indicator
 //                        and the control-all fix. Overload can cut sounding voices; later triggers
 //                        start cleanly
@@ -75,6 +76,8 @@
 //                        A project restored with --restore that had the option on turns it on with
 //                        its own channel; --midi-chroma [--midi-chroma-channel] overrides that
 //   --no-midi-chroma     off, even when the restored project had it on
+//   --encoder-settings  add Swap Speeds to MECH SETTINGS (saved per global slot)
+//   --no-encoder-settings omit it when restoring a project
 //   --pitch-labels       pitch note names (X.14, prepared 1.63): on the parameter page the pitch knob of
 //                        a model with a quarter or chromatic pitch law shows the note it plays (C-3,
 //                        C#3, C+3 for a quarter tone) under its dial instead of a number, as Elektron's
@@ -136,8 +139,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 const SWITCHES = new Set(['no-dyn-labels', 'no-dsp1', 'no-align', 'family-menus', 'cache-align', 'host-reorder', 'no-host-reorder',
                           'clean-recovery', 'dsp1-recover', 'no-dsp1-recover', 'cpu-indicator', 'no-cpu-indicator',
-                          'allow-id-move', 'prepare-163', 'ctr-control-all', 'no-stub-trim', 'no-uw', 'uw',
-                          'unmute-fix', 'no-unmute-fix', 'midi-chroma', 'no-midi-chroma', 'pitch-labels', 'no-pitch-labels']);
+                          'allow-id-move', 'prepare-163', 'ctr-control-all', 'no-stub-trim', 'no-fx-order', 'no-uw', 'uw',
+                          'unmute-fix', 'no-unmute-fix', 'midi-chroma', 'no-midi-chroma', 'pitch-labels', 'no-pitch-labels', 'encoder-settings', 'no-encoder-settings']);
 const REPEATABLE = new Set(['packs']);
 
 function args(argv: string[]): { a: Record<string, string>; many: Record<string, string[]> } {
@@ -213,6 +216,8 @@ async function main(): Promise<void> {
   let chroma: { channel: string } | undefined = a['midi-chroma'] ? { channel: a['midi-chroma-channel'] ?? MIDI_CHROMA_CHANNEL } : undefined;
   if (a['pitch-labels'] && a['no-pitch-labels']) throw new Error('--pitch-labels and --no-pitch-labels: choose one');
   // pitch note names: the flag, or a restored project's choice
+  if (a['encoder-settings'] && a['no-encoder-settings']) throw new Error('Choose --encoder-settings or --no-encoder-settings');
+  let encoderSettings = !!a['encoder-settings'];
   let pitchLabels: boolean | undefined = a['pitch-labels'] ? true : a['no-pitch-labels'] ? false : undefined;
   const bases = loadBases(a.bases ?? resolve(ROOT, 'bases'));
   if (a.catalog && many.packs?.length) throw new Error('--catalog selects a complete set; do not combine it with --packs');
@@ -228,6 +233,7 @@ async function main(): Promise<void> {
     const load = a['dsp2-load'] as 'preboot' | 'upload' | undefined;
     if (load && load !== 'preboot' && load !== 'upload') throw new Error('--dsp2-load: preboot or upload');
     // the layout: --map, or --restore (a layout or project file, or an X.20 .syx Kitbasher built: its layout table)
+    if (encoderSettings) throw new Error('Reverse Encoder Speed is not yet supported on X.20');
     let x20Layout = a.map ? parseLayout(readFileSync(a.map, 'utf8')) : undefined;
     if (a.restore) {
       const bytes = readFileSync(a.restore);
@@ -289,6 +295,7 @@ async function main(): Promise<void> {
           chroma = p.midiChroma;
           console.log(`the restored project has MIDI chromatic note input on (channel ${chroma.channel}): building with it (--no-midi-chroma to leave it out)`);
         }
+        if (p.encoderSettings && !a['no-encoder-settings']) encoderSettings = true;
         if (p.pitchLabels && pitchLabels === undefined) {
           pitchLabels = true;
           console.log('the restored project has pitch note names on: building with them (--no-pitch-labels to leave them out)');
@@ -333,6 +340,7 @@ async function main(): Promise<void> {
     stubTrim: a['no-stub-trim'] ? false : undefined,
     dsp1Watchdog: a['dsp1-watchdog'] === undefined ? undefined : Number(a['dsp1-watchdog']),
     features: {
+      fxOrder: base.id === 'x14' && !a['no-fx-order'],
       cleanRecovery:!!a['clean-recovery'],
       dynLabels: a['no-dyn-labels'] ? false : undefined,
       dsp1Drive: a['no-dsp1'] ? false : undefined,
@@ -346,6 +354,7 @@ async function main(): Promise<void> {
       unmuteFix,
       midiChroma: chroma,
       pitchLabels: pitchLabels || undefined,
+      encoderSettings: encoderSettings || undefined,
     },
   });
   writeFileSync(a.out, output);

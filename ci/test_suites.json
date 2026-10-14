@@ -1,5 +1,6 @@
 {
   "unit": [
+    "encoder_speed",
     "mds",
     "catalog",
     "golden_catalog",
@@ -22,6 +23,7 @@
     "model_selection",
     "recover",
     "dsp1_drive",
+    "fx_order",
     "uw_needs",
     "uw_answer",
     "handoff",

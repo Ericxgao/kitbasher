@@ -1,0 +1,32 @@
+// Optional real-firmware qualification. Inputs and outputs stay outside git.
+// node ci/fx-order-build.mjs <x14.bin> <output-directory>
+import fs from 'node:fs';
+import path from 'node:path';
+import {readFirmware} from '../engine/dist/src/container.js';
+import {identify,codeImages} from '../engine/dist/src/bases.js';
+import {loadBases,loadPacks} from '../engine/dist/src/node.js';
+import {build} from '../engine/dist/src/build.js';
+import {fxOrderCode} from '../engine/dist/src/fx_order.js';
+import {fxOrderDsp} from '../engine/dist/src/fx_order_dsp.js';
+import {wordsLE} from '../engine/dist/src/bytes.js';
+import {records} from '../engine/dist/src/dsp.js';
+import {linkDrive} from '../engine/dist/src/features.js';
+const [inputFile,out]=process.argv.slice(2);
+if(!inputFile||!out)throw new Error('usage: fx-order-build.mjs <x14.bin> <output-directory>');
+fs.mkdirSync(out,{recursive:true});
+const input=fs.readFileSync(inputFile),fw=readFirmware(input);
+const {base}=await identify(fw,loadBases('bases'));
+if(base.id!=='x14')throw new Error('This qualification requires X.14');
+const {packs,core}=loadPacks('catalog');
+const selected=packs.map(p=>({...p,models:p.models.filter(m=>m.key==='VAD/BD')})).filter(p=>p.models.length);
+const result=await build(input,base,selected,core,{uw:true,features:{fxOrder:true,cleanRecovery:true},trim:{db:-30,minSeconds:0.5,cap:0.55}});
+fs.writeFileSync(path.join(out,'public.bin'),result.output);
+fs.writeFileSync(path.join(out,'public-report.json'),JSON.stringify(result.report,null,2));
+const w=wordsLE(fw.slots[2].raw),patch=fxOrderDsp(w);
+const native=records(w).recs.map(r=>({space:r.tag,addr:r.addr,words:w.slice(r.index+3,r.index+3+r.count)}));
+const laws=new Map([...core.dsp1.laws,...packs.flatMap(p=>p.dsp1_laws??[])].map(l=>[l.name,l]));
+const drives=[...laws.keys()].map(name=>({name,...linkDrive(core.dsp1,laws,[name])}));
+fs.writeFileSync(path.join(out,'dsp-test.json'),JSON.stringify({base:native,patch,drives}));
+const cf=fxOrderCode(codeImages(fw,base),0x100e0000,base.features.dsp1Drive.sender);
+fs.writeFileSync(path.join(out,'cf-labels.json'),JSON.stringify(cf.code.labels,null,2));
+console.log(`${result.report.gates.length} build gates passed; ${patch.words.length} DSP words, ${cf.code.bytes.length} ColdFire bytes`);

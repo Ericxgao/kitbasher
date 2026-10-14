@@ -17,6 +17,7 @@ import { records } from './dsp.js';
 import { trimBank, type TrimEntry, type TrimOptions } from './e12.js';
 import { applySwaps, bankRun, type SampleEdits } from './samples.js';
 import { codeImages } from './bases.js';
+import { findEncoderSettings } from './encoder_speed.js';
 import { handlerAt } from './recover.js';
 import { findSite, stub, type Parts, type Site, type Stub } from './indicator.js';
 import { callCode, drivePairs, dsp1Transport, dynSegment, linkDrive, type DriveLink, type Dsp1Law, type DynMachine } from './features.js';
@@ -44,6 +45,8 @@ import { placeDsp2 } from './dsp2_place.js';
  *                image, with every reference to the stock entry repointed at it.
  */
 export interface Features {
+  /** X.14: global pre/post-filter placement of DIST and SRR. */
+  fxOrder?: boolean;
   /** Clean subsequent triggers after overload; may cut existing voices/tails. */
   cleanRecovery?: boolean;
   dynLabels?: boolean;
@@ -84,6 +87,8 @@ export interface Features {
    * before the option existed.
    */
   pitchLabels?: boolean;
+  /** Add Reverse Encoder Speed to the native mechanical-settings page. */
+  encoderSettings?: boolean;
 }
 
 /** The default chromatic channel: the first one above the four base channels (channel 5 with base channel 1). */
@@ -648,6 +653,10 @@ export function plan(fw: Firmware, base: Base, packs: Pack[], core: CorePack, op
   const main = fw.slots[0].raw;
   const { fams, shared, aliases } = select(packs, opt);
   const problems: string[] = [];
+  if (opt.features?.encoderSettings) {
+    try { findEncoderSettings(codeImages(fw,base)); }
+    catch(e) { problems.push((e as Error).message); }
+  }
   // a map saved before a model was renamed names it by its former key
   const lay = opt.layout && resolveLayout(opt.layout, aliases);
   const noUw = !!opt.noUw || opt.uw === false || (opt.uw === undefined && lay?.uw === false);

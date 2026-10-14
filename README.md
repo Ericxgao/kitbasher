@@ -15,6 +15,10 @@ official MDX releases and are not supported by the MDX creator.
 Generated builds use Kitbasher's own **K.01** version, with the original OS
 recorded separately. See [firmware versioning](docs/VERSIONING.md).
 
+X.14 builds also add **GLOBAL → ROUTING → FX ORDER**: place DIST and SRR
+before or after the filter for all tracks, saved per global slot.
+See [FX order](docs/FX-ORDER.md).
+
 ## Using it
 
 1. **Back up.** Keep the OS file you have installed now, and save your kits and
@@ -67,6 +71,10 @@ makes an unmuted track play its next trig instead of about two steps later. See
 
 Some models use a sample in UW memory; the page lists those and offers the
 sample files with instructions.
+
+On X.14 and OS 1.63, **Add Swap Speeds setting** adds a mode in
+GLOBAL → CONTROL → MECH SETTINGS: turn fast normally and press for fine
+adjustment. See [Swap Speeds](docs/ENCODER-SPEED.md).
 
 A Machinedrum without the UW option takes the same OS update. Answer No to the UW
 question and the page leaves out what such a unit cannot use: models that play

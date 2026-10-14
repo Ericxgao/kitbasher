@@ -8,6 +8,7 @@ import { checkUnmuteCode, unmutePatches } from './unmute.js';
 import { reader } from './sig.js';
 import { checkChromaCode, chromaPatches, chromaRanges } from './midi_chroma.js';
 import { checkLabelCode, labelPatches } from './pitch_labels.js';
+import { findEncoderSettings, encoderSettingsCode, encoderSettingsPatches } from './encoder_speed.js';
 export { isaGate, rewrittenCode } from './isa_gate.js';
 // Build orchestration: discovered base + relocatable packs -> gated OS image.
 // Planning owns placement; selection.ts owns catalog/IDs; isa_gate.ts independently reads
@@ -52,6 +53,8 @@ import { checkRecover, recoverRecords, wdHalt } from './recover.js';
 import { checkIndicator, hookPatches, HOLD, CUE, PUT, DSP1_ISR, checkTable, putTable } from './indicator.js';
 import * as REC from './recover.js';
 import { drivePlacementProblems } from './features.js';
+import { fxOrderDsp } from './fx_order_dsp.js';
+import { fxOrderCode } from './fx_order.js';
 import { findWatchdog } from './watchdog.js';
 import { alignOf, inMask, SECTOR } from './align.js';
 import {recoveryFeatures,patchRetirement,cleanDsp1Records,cleanDsp1Sites,checkCleanRecovery} from './clean_recovery.js';
@@ -113,6 +116,7 @@ export interface BuildReport {
   ctr_control_all: { sites: string[] | null; loop_skip: string | null; patched: boolean; ids: [number, number] };
   notes: string[];
   features: { dyn_labels: { bytes: number; free: number; page_sites: number } | null; dsp1_drive: { machines: number; entry: string; laws: string[] } | null;
+              fx_order?: { page:number; code:string; dsp:string; saved:'global' };
               host_reorder: { entry: string; bytes: number; old: string; sites: string[] } | null;
               /** the unmute-latency fix: where its routines are and the sites that call them (its bytes are not in dyn_labels) */
               unmute_fix: { at: string; bytes: number; code_bytes: number; home: 'dyn' | 'own'; sites: string[] } | null;
@@ -336,6 +340,7 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
   // already has. It rebuilds the slot on its own, with or without the drive.
   const wdN = opt.dsp1Watchdog;
   const baseW1 = wordsLE(d1.raw);
+  const fxDsp = opt.features?.fxOrder && base.id === 'x14' ? fxOrderDsp(baseW1) : null;
   const wdBase = wdN === undefined ? null : setWatchdog(baseW1, wdN);
   // --dsp1-recover: a replacement DMA0 handler in DSP1's free program RAM, and the vector's target
   // word pointed at it (engine/src/recover.ts). Off by default.
@@ -343,17 +348,18 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
   if (pl.ram.dsp1) {
     const D = base.features.dsp1Drive!;
     const conflicts = drivePlacementProblems(baseW1, pl.ram.dsp1.link, D.hook, D.ret,
-      [...(rec ?? []), ...(opt.features?.cleanRecovery ? cleanDsp1Records() : [])]);
+      [...(rec ?? []), ...(opt.features?.cleanRecovery ? cleanDsp1Records() : []),...(fxDsp?.records??[])]);
     gate('dsp1-drive-layout', conflicts.length === 0, conflicts.length ? conflicts.slice(0, 8).join('; ')
       : `drive in P:${h(D.program[0])}..${h(D.program[1])}; existing base words outside P:${h(D.hook)}..${h(D.ret)} preserved; no overlap with recovery`);
   }
-  if (pl.ram.dsp1 || wdN !== undefined || rec) {
+  if (pl.ram.dsp1 || wdN !== undefined || rec || fxDsp) {
     const w1 = wdBase === null ? baseW1 : wdBase.words;
     const { entryAt: e1 } = records(w1);
     const n1: number[] = w1.slice(0, e1);
     if (pl.ram.dsp1) for (const r of pl.ram.dsp1.link.records) n1.push(r.space, r.addr, r.words.length, ...r.words);
     if (rec) for (const r of rec) n1.push(r.space, r.addr, r.words.length, ...r.words);
     if (opt.features?.cleanRecovery) for (const r of cleanDsp1Records()) n1.push(r.space,r.addr,r.words.length,...r.words);
+    if (fxDsp) for (const r of fxDsp.records) n1.push(r.space,r.addr,r.words.length,...r.words);
     n1.push(...w1.slice(e1));
     newDsp1 = fromWordsLE(n1);
     if (wdN !== undefined) {
@@ -361,7 +367,8 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
       gate('dsp1-watchdog (debug: overruns glitch instead of halting)', wc.ok, wc.detail);
     }
     if (rec) {
-      const rc = checkRecover(baseW1, wordsLE(newDsp1), pl.ram.dsp1?.link ?? null, wordsLE(d2.raw), wordsLE(newDsp2), !!opt.features?.cleanRecovery, opt.features?.cleanRecovery?cleanDsp1Sites():[]);
+      const rc = checkRecover(baseW1, wordsLE(newDsp1), pl.ram.dsp1?.link ?? null, wordsLE(d2.raw), wordsLE(newDsp2), !!opt.features?.cleanRecovery,
+        [...(opt.features?.cleanRecovery?cleanDsp1Sites():[]),...(fxDsp?[0x135,0x136,0x21f,0x26f]:[])]);
       gate('dsp1-recover', rc.ok, rc.detail);
     }
     if(opt.features?.cleanRecovery) {
@@ -455,8 +462,12 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
   }
 
   // ---- the patch list, and what each site must hold before it
+  if(fxDsp) img.align(4,0xff);
+  const fx = fxDsp ? fxOrderCode(codeImages(fw,base),alias+img.length,ram.dsp1?.entry??base.features.dsp1Drive!.sender) : null;
+  if(fx) img.push(fx.code.bytes);
   const patches: [number, number][] = [[O.heap.site, E]];
   const checks: [number, number][] = [[O.heap.site, O.heap.old]];
+  if(fx) { patches.push(...fx.patches); checks.push(...fx.checks); }
   if (ram.menuRefresh) {
     const {site,entry}=ram.menuRefresh;
     patches.push(...menuRefreshPatches(site,entry));
@@ -540,9 +551,9 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
     } catch (e) { uwOk = false; uwWhy = (e as Error).message; }
   }
   gate('uw-menu', uwOk, uwWhy);
-  if (ram.dsp1) {
+  if (ram.dsp1 || fx) {
     const F = base.features.dsp1Drive!;
-    for (const s of F.senderSites) { patches.push([s, ram.dsp1.entry]); checks.push([s, F.sender]); }
+    for (const s of F.senderSites) { patches.push([s, fx?.code.labels.sender??ram.dsp1!.entry]); checks.push([s, F.sender]); }
   }
   // the host-command sender reorder: every reference to the base's DSP2 entry names the reordered copy
   if (ram.hostSend) {
@@ -577,6 +588,17 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
   // Each site is read where the base's boot puts it: the ColdFire slot (below the BSS its reset
   // code clears), the SRAM copy, the add-on, a scatter entry.
   const live = codeImages(fw, base);
+  let encoder: { at:number; code:ReturnType<typeof encoderSettingsCode>; hooks:ReturnType<typeof encoderSettingsPatches> } | null = null;
+  if (opt.features?.encoderSettings) {
+    const settings = findEncoderSettings(live);
+    img.align(4,0xff);
+    const at=img.length, code=encoderSettingsCode(settings,0x10000000+at);
+    const hooks=encoderSettingsPatches(live,settings,code.labels);
+    const clash=patches.some(([a])=>hooks.patches.some(([b])=>a<b+4&&b<a+4));
+    gate('encoder-settings-sites',!clash,'Mechanical-settings draw/edit and encoder speed hooks are exclusive');
+    img.push(code.bytes); patches.push(...hooks.patches); checks.push(...hooks.checks);
+    encoder={at,code,hooks};
+  }
   const holder = (site: number): [Uint8Array, number] | null => {
     for (const s of live) if (site >= s.ram && site + 4 <= s.ram + s.bytes.length) return [s.bytes, s.ram];
     return null;
@@ -812,7 +834,16 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
   }
 
   // ---- every added instruction, and every one a patched word lands in, is ColdFire ISA_A
-  const isa = isaGate(fw, base, back);
+  if(fx) {
+    const start=fx.code.labels.up-alias,bytes=back.flash.subarray(start,start+fx.code.bytes.length);
+    const listed=readBootRamWrites(back.flash,routine,base.boot.sram);
+    gate('fx-order',equal(bytes,fx.code.bytes) && fx.patches.every(([s,v])=>listed.some(([a,w])=>s===a&&v===w)) &&
+      decodeLinear(bytes.subarray(0,fx.code.labels.code_end-fx.code.labels.up),fx.code.labels.up).every(x=>x.ok),
+      'GLOBAL > ROUTING > FX ORDER: DIST/SRR pre or post filter, saved per global slot; native stages and custom drives');
+  }
+  if (encoder) gate('encoder-settings',equal(back.flash.subarray(encoder.at,encoder.at+encoder.code.bytes.length),encoder.code.bytes),
+    'Swap Speeds in MECH SETTINGS; saved per global slot; data-entry encoders and LEVEL');
+  const isa = isaGate(fw, base, back,encoder?.hooks.ranges);
   gate('isa', isa.ok, isa.detail + (isa.rejects.length ? `; ${isa.rejects.slice(0, 3).map((i) => `${h(i.at)} ${i.name}: ${i.why}`).join('; ')}` : ''));
 
   // the label segment's own bytes (with the CPU indicator stub, as before), without the unmute block after them
@@ -855,6 +886,7 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
       ...(ram.chroma ? { midi_chroma: { at: h(ram.chroma.at), end: h(ram.chroma.at + ram.chroma.code.bytes.length), code_bytes: ram.chroma.code.codeLen,
         data_bytes: ram.chroma.code.bytes.length - ram.chroma.code.codeLen, channel: ram.chroma.channel,
         machines: ram.chroma.table.perModel.map((p) => ({ id: p.id, name: p.name, plays: p.kind })) } } : {}),
+      ...(fx ? {fx_order:{page:63,code:h(fx.code.labels.up),dsp:h(fxDsp!.labels.entry),saved:'global' as const}} : {}),
       ...(ram.pitchLabels ? { pitch_labels: { at: h(ram.pitchLabels.at), end: h(ram.pitchLabels.at + ram.pitchLabels.code.bytes.length),
         code_bytes: ram.pitchLabels.code.codeLen, data_bytes: ram.pitchLabels.code.bytes.length - ram.pitchLabels.code.codeLen,
         site: h(ram.pitchLabels.site.site), machines: ram.pitchLabels.table.perModel } } : {}),
@@ -899,7 +931,8 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
             ...(ram.indicator === null ? {} : { cpu_indicator: true }),
             ...(opt.ctrControlAll ? { ctr_control_all: true } : {}),
             ...(ram.chroma ? { midi_chroma: ram.chroma.channel } : {}),
-            ...(ram.pitchLabels ? { pitch_labels: true } : {}) },
+            ...(ram.pitchLabels ? { pitch_labels: true } : {}),
+            ...(encoder ? { encoder_settings: true } : {}) },
     // present only with --host-reorder: the reordered DSP2 host-command sender, so a checker can
     // allow those patched words and verify the routine itself
     ...(ram.hostSend === null ? {} : { host_reorder: { entry: h(ram.hostSend.entry), bytes: ram.hostSend.bytes, old: h(ram.hostSend.old),
@@ -949,6 +982,7 @@ async function buildAttempt(input: Uint8Array, base: Base, packs: Pack[], core: 
                                            writes: um.patches.map(([a, v]) => [h(a), h(v)]),
                                            sites: base.features.unmute!.sites.map((s) => ({ name: s.name, at: h(s.at), bytes: s.old.length })) } }),
     ...(opt.features?.cleanRecovery?{clean_recovery:{version:1,threshold:64,diagnostics:false,modelCodeUnchanged:true}}:{}),
+    ...(encoder ? { encoder_settings: { at:h(encoder.at), bytes:encoder.code.bytes.length, patches:encoder.hooks.patches.map(([a,v])=>[h(a),h(v)]) } } : {}),
     flash: { addon: addonAt === null ? null : h(addonAt), os_end: h(osEnd), headroom: OS_LIMIT - osEnd },
   };
   return { output, kind: fw.kind, report, gateReport };
