@@ -19,6 +19,8 @@
 // bundled ones.
 
 import { baseSet, identify, NotPatchable, unsupported, type Base, type BaseProfileFile, type BaseSet, type LineageFile } from '../../engine/src/bases.js';
+import { codeImages } from '../../engine/src/bases.js';
+import { findEncoderSettings } from '../../engine/src/encoder_speed.js';
 import { prepare163 } from '../../engine/src/prepare.js';
 import { build, CompressedCapacityError, OsAreaCapacityError, type BuildReport, type BuildResult } from '../../engine/src/build.js';
 import { firmwareFilename } from '../../engine/src/firmware_version.js';
@@ -379,14 +381,19 @@ const chromaOn = (): boolean => !!base?.support.midiChroma?.ok && chromaTicked()
 /** the chromatic channel: the default, or what a loaded project chose (the page has no channel control) */
 let chromaChannel = MIDI_CHROMA_CHANNEL;
 /** Pitch note names (off by default): offered only on an OS whose knob-value painter the engine verified. */
+let encoderSettingsSupported = false;
+const encoderSettingsOn = (): boolean => encoderSettingsSupported && $<HTMLInputElement>('encoder-settings').checked;
 const labelsTicked = (): boolean => $<HTMLInputElement>('pitch-labels').checked;
 const labelsOn = (): boolean => !!base?.support.pitchLabels?.ok && labelsTicked();
 /** The Download-step options on top of the default fixes: the unmute-latency fix, MIDI chromatic input, pitch note names. */
 function firmwareOptions(): ReturnType<typeof currentFirmwareFixes> {
   const o = firmwareFixes();
-  return { ...o, features: { ...o.features, ...(chromaOn() ? { midiChroma: { channel: chromaChannel } } : {}), ...(labelsOn() ? { pitchLabels: true } : {}) } };
+  return { ...o, features: { ...o.features, ...(chromaOn() ? { midiChroma: { channel: chromaChannel } } : {}), ...(labelsOn() ? { pitchLabels: true } : {}), ...(encoderSettingsOn() ? { encoderSettings: true } : {}) } };
 }
 function syncChromaOption(): void {
+  encoderSettingsSupported = false;
+  if (fw && base && !x20) { try { findEncoderSettings(codeImages(fw, base)); encoderSettingsSupported = true; } catch {} }
+  $('encoder-settings-option').hidden = !encoderSettingsSupported;
   // on X.20 B the options are shown turned off, with the reason ($('x20-unavailable'))
   $('midi-chroma-option').hidden = !x20 && !base?.support.midiChroma?.ok;
   $('pitch-labels-option').hidden = !x20 && !base?.support.pitchLabels?.ok;
@@ -1046,6 +1053,7 @@ function projectNow(): Project {
     // (not on X.20 B, which has none of them)
     midiChroma: !x20 && chromaTicked() ? { channel: chromaChannel } : undefined,
     pitchLabels: !x20 && labelsTicked() ? true : undefined,
+    encoderSettings: encoderSettingsOn() ? true : undefined,
     // saved only when off, the default being on
     unmuteFix: $<HTMLInputElement>('unmute-fix').checked ? undefined : false,
   };
@@ -1112,6 +1120,7 @@ function applyProject(p: Project, name: string): boolean {
   $<HTMLInputElement>('midi-chroma').checked = !x20 && !!p.midiChroma;
   chromaChannel = p.midiChroma?.channel ?? MIDI_CHROMA_CHANNEL;
   $<HTMLInputElement>('pitch-labels').checked = !x20 && !!p.pitchLabels;
+  $<HTMLInputElement>('encoder-settings').checked = !!p.encoderSettings;
   projectUnmute = p.unmuteFix !== false;
   $<HTMLInputElement>('unmute-fix').checked = projectUnmute;
   const want = new Set(p.models);
@@ -1234,6 +1243,7 @@ async function main(): Promise<void> {
   $('unmute-fix').addEventListener('change', () => refresh());
   $('midi-chroma').addEventListener('change', () => refresh());
   $('pitch-labels').addEventListener('change', () => refresh());
+  $('encoder-settings').addEventListener('change', () => refresh());
   const packFiles = $('pack-files') as HTMLInputElement;
   packFiles.addEventListener('change', () => { if (packFiles.files?.length) void onPackFiles(Array.from(packFiles.files)); });
   uiReady = true;
