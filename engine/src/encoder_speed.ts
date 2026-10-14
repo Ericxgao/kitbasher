@@ -33,6 +33,9 @@ export function findEncoderSettings(images: CodeImage[]): EncoderSettings {
   // active multiplier. X.14 also has a separate 4x path; that is not this speed.
   const pressed=one(images,'41f9 <scales> 7407 118298b0 2803 e78c');
   one(images,`41f9 ${h(pressed.caps.scales.value).slice(2).padStart(8,'0')} 7201 118108b0`);
+  // LEVEL has its own switch handler and the ninth entry of the same table.
+  const levelScale=h(pressed.caps.scales.value+8).slice(2).padStart(8,'0');
+  one(images,`7401 13c2 ${levelScale} 6008 7607 13c3 ${levelScale}`);
   const arrow = (mask:string) => one(images, `206f0004 4280 10280008 7264 b280 647a 7278 b280 6722 2039 <keys> 4a80 660e 7067 23c0 ........ 2039 <keys2> 72${mask} 8280 23c1 <keys3> @nav 2039 <modal> 4a80 662e 2039 <page> 4a80 6670`);
   const up=stockSpeed?one(images,'2039 <keys> 7804 8084 23c0 <keys2> @nav 2039 <modal> 676e'):arrow('04');
   const down=stockSpeed?one(images,'2039 <keys> 7608 8083 23c0 <keys2> @nav 2039 <modal> 676e'):arrow('08');
@@ -87,9 +90,9 @@ export function encoderSettingsCode(s: EncoderSettings, org: number) {
   i('lea',abs(s.settings),'a0'); i('adda.l','d2','a0'); i('rts');
   a.label('speed');
   // Replaces muls.l (a3),d0; moveq #127,d2. d3 is the encoder index.
-  // Keep button state and all non-data-entry encoders intact; reverse only 1x/7x.
+  // Include the eight data-entry knobs and LEVEL; leave sound selection intact.
   i('lea','-16(a7)','a7'); i('movem.l','d1/a0-a1','(a7)'); i('move.l','d0','12(a7)');
-  i('move.l','(a3)','a1'); i('cmpi.l','#8','d3'); i('bcc.b','multiply');
+  i('move.l','(a3)','a1'); i('cmpi.l','#9','d3'); i('bcc.b','multiply');
   i('bsr.w','setting'); i('move.b','(a0)','d1'); i('btst','#6','d1'); i('beq.b','multiply');
   i('move.l','a1','d1'); i('cmpi.l','#1','d1'); i('beq.b','reverse');
   i('cmpi.l','#7','d1'); i('bne.b','multiply');

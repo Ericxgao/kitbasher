@@ -14,7 +14,7 @@ value is highlighted; the page has no navigation footer.
 The mode is saved separately in each global slot. Old global settings start
 with it off. Changing this mode does not alter encoder direction, parameter
 ranges, kit data, or press-to-lock events. It applies to the eight data-entry
-encoders; LEVEL and sound selection keep their existing behavior.
+encoders and LEVEL; sound selection keeps its existing behavior.
 
 The public builder offers this option only when all of its instruction
 signatures match. X.14 and prepared stock 1.63 are supported. X.20 is not yet
@@ -52,7 +52,7 @@ There is no new persistent structure or RAM allocation. Generated code runs
 from the runtime flash alias, reached only by the UI and encoder handler.
 
 The routine reverses multipliers 1 and 7 at turn time, leaving physical press
-events and other multipliers alone. The encoder index excludes LEVEL and
+events and other multipliers alone. The encoder index includes LEVEL and excludes
 sound selection. Separate adapters cover the X.14 and stock 1.63 register ABIs.
 Hook writes are checked for conflicts and read back; the generated code is
 decoded as MCF5206e ISA_A before use. Public builds also run the whole-image
