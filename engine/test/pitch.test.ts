@@ -74,12 +74,12 @@ test('every synth, FM, wavetable, vocal and physical model declares a pitch law'
   }
 });
 
-test('every absolute-pitch model uses the shared quarter law', () => {
+test('absolute-pitch models use quarter tones; VADBD starts one octave lower', () => {
   for (const m of models) {
     if (!m.pitch || !['quarter', 'chromatic'].includes(m.pitch.law)) continue;
     assert.equal(m.pitch.law, 'quarter', m.name);
     assert.equal(m.pitch.steps, 2, m.name);
-    assert.equal(m.pitch.base_note, 24, m.name);
+    assert.equal(m.pitch.base_note, m.key === 'VAD/BD' ? 12 : 24, m.name);
     assert.equal(m.defaults[m.pitch.knob!] % 2, 0, `${m.name}: default PTCH is not a semitone`);
   }
 });

@@ -22,14 +22,14 @@ controls mean. No UW sample is needed.
 
 ## Pitch
 
-PTCH follows the family's one law, raw = 2 × (MIDI − 24): raw 0 is MIDI 24 (C0,
+Most absolute PTCH controls follow the law, raw = 2 × (MIDI − 24): raw 0 is MIDI 24 (C0,
 32.70 Hz), every even value is a semitone (72 = C3, MIDI 60), every odd value the
 quarter tone between, and 127 is MIDI 87.5. Each manifest records it in
 `panel.pitch`.
 
 | Machine | PTCH | Default |
 |---|---|---:|
-| VADBD | The law (it was MIDI = raw − 12, down to 4 Hz) | 50 (MIDI 49, as before) |
+| VADBD | One octave below the general law: MIDI = 12 + raw / 2, C-1 (16.35 Hz) to MIDI 75.5 (640.49 Hz) | 50 (MIDI 37) |
 | VADSD | The law (it was MIDI = raw) | 80 (MIDI 64) |
 | VADRC | The law on both rims; on CLAP knob 1 is TONE, not a note | 80 |
 | VADPC | The law with each mode's own offset: MIDI = 24 + offset + raw / 2, offsets BOOM −29, TOM1 −21, TOM2 −14, TOM3 −8, CNGA −4, PING −10; BOOM holds MIDI 0 below raw 10 | 80 (every mode plays the note raw 64 played) |
@@ -40,7 +40,16 @@ VADBD, VADSD and VADRC read a regenerated 129-entry table and cost nothing extra
 VADPC and VADSY read their semitone table at the half step, interpolated (at most
 0.2 cent off at a quarter tone): two instructions per read, about +0.13 (VADPC) and
 +0.19 (VADSY) cycles a sample. VADHH and VADCY keep their code and only gain the
-metadata (1.1.0); every other machine is at version 2.0.0. Saved kits and pattern P-locks made with the 1.x sources play different notes on 2.0.0; nothing converts them.
+metadata (1.1.0); the other absolute-pitch machines are at version 2.0.0. Saved kits and pattern P-locks made with the 1.x sources play different notes on 2.0.0; nothing converts them.
+
+VADBD version 3.0.0 lowers all seven modes by one octave relative to 2.0.0.
+Quarter-tone steps and the stored default (50) stay the same, so existing kits,
+P-locks and newly assigned kicks sound one octave lower. Add 24 raw steps to
+restore a previous pitch when the result fits 0..127. The top of the range also
+moves down; this is not an extension preserving the old maximum. No kit
+conversion is applied. MIDI pitch mapping and note labels read the same updated
+`panel.pitch` metadata as the regenerated frequency table. DSP instructions,
+other coefficient tables and the per-hit detune are unchanged.
 
 ## Analog imperfections
 

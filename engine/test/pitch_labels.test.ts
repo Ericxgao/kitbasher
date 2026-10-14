@@ -268,7 +268,9 @@ test('the routine: ISA_A, branches only inside it, calls only the OS\'s string d
   assert.ok(!checkLabelCode(bad, c.codeLen, ORG, S).ok);
   // the bytes used for the full catalog, as documented
   assert.equal(c.codeLen, 518);
-  assert.equal(c.bytes.length - c.codeLen, 158);
+  // VADBD's lower base adds a distinct law, so more catalog entries need
+  // explicit law indices instead of the compact representation for law 0.
+  assert.equal(c.bytes.length - c.codeLen, 218);
 });
 
 test('the RAM image: off is exactly as before; on appends the routine and nothing else changes', () => {
@@ -383,11 +385,12 @@ test('firmware: discovery finds the painter\'s draw on X.14 and 1.63 as cached; 
 // NZEPL footprint and WALK fix: catalog/np.json re-exported, 2,199 DSP2 words smaller; with the earlier np.json the
 // same engine still gives the earlier 1b0ec853... / d3c480df... / 77ff4079... / 84efea23...
 // A catalog change changes these: golden_catalog.test.ts records the catalog they were built from.
+// VADBD 3.0.0: regenerated after lowering its pitch table and metadata one octave.
 const GOLDEN: Record<string, Record<string, string>> = {
-  x14: { '': '913d5db0979b1b06289653bda692c5bd659e8617e096249676283fd4115f8ee1', '--no-pitch-labels': '913d5db0979b1b06289653bda692c5bd659e8617e096249676283fd4115f8ee1',
-         '--pitch-labels': '47e48999598d3bc3824cbdbba56b25373dc0e9c4a54016a97d8a306cc06a0a91' },
-  'stock-163-prepared': { '': '041107bd27738e91cbd9e9a2eddfd69dd05add9778ae4aea5161ea8db115f3ea', '--no-pitch-labels': '041107bd27738e91cbd9e9a2eddfd69dd05add9778ae4aea5161ea8db115f3ea',
-                          '--pitch-labels': 'aac1641cbb725e507c0315b685249693b2be05deb226dc49e93d8ad852d51b5b' },
+  'x14': { '': 'b205104c7a0b028b8a7d02c76d51a4cec2b75234821e63ebe3e52de707624c1d', '--no-pitch-labels': 'b205104c7a0b028b8a7d02c76d51a4cec2b75234821e63ebe3e52de707624c1d',
+         '--pitch-labels': 'baf24c31f8347f688260cf7b02e9a35d1369f76c6bd9582e01b2a837785be7f0' },
+  'stock-163-prepared': { '': '0e68d43d23b24f3579d8bff4437f994f4e0511c55a523701c718e37e3c1ca6e9', '--no-pitch-labels': '0e68d43d23b24f3579d8bff4437f994f4e0511c55a523701c718e37e3c1ca6e9',
+         '--pitch-labels': '9fd1cc5ac13b52813b01b4d9379f25be476d54559f2a1ca9d83a4abd0642fc67' },
 };
 
 test('firmware: builds without the option are main\'s byte for byte; with it, as recorded', { skip: fwSkip }, async () => {

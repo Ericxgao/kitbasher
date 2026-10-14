@@ -25,6 +25,11 @@ All notable changes to Kitbasher are recorded here. The format follows
 
 ### Fixed
 
+- **VADBD reaches one octave lower.** All seven modes now span 16.35 Hz to
+  640.49 Hz (MIDI 12..75.5), retaining quarter-tone steps. The bundled model is
+  version 3.0.0. Saved PTCH values and P-locks sound one octave lower; adding
+  24 to a stored value restores its previous pitch where it fits 0..127.
+
 - **MDX X.20 B builds froze on the first Elektron logo on hardware.** The boot
   code read the machines' packed code through the flash alias the OS maps only
   later; it now reads flash at its own address (a gate checks it). The

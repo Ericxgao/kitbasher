@@ -720,10 +720,12 @@ test('firmware: on X.14 the 1.63 signatures for the OS routines find the address
 // NZEPL footprint and WALK fix: catalog/np.json re-exported, 2,199 DSP2 words smaller; with the earlier np.json
 // the same engine still gives the earlier 1b0ec853... / 62a23f9f... / 77ff4079... / ec931869...
 // A catalog change changes these: golden_catalog.test.ts records the catalog they were built from.
+// VADBD 3.0.0: regenerated after lowering its pitch table and metadata one octave.
 const GOLDEN: Record<string, Record<string, string>> = {
-  x14: { '': '913d5db0979b1b06289653bda692c5bd659e8617e096249676283fd4115f8ee1', '--no-midi-chroma': '913d5db0979b1b06289653bda692c5bd659e8617e096249676283fd4115f8ee1',
-         '--midi-chroma': '6ec5cbaa45e940c4d74166d70a83a929a9223932e5f268314f4d028c9be50a67' },
-  'stock-163-prepared': { '': '041107bd27738e91cbd9e9a2eddfd69dd05add9778ae4aea5161ea8db115f3ea', '--midi-chroma': '2a20f2116472fd5a72cfda701cbfd7c1185343ca6e378e225173677b08169993' },
+  'x14': { '': 'b205104c7a0b028b8a7d02c76d51a4cec2b75234821e63ebe3e52de707624c1d', '--no-midi-chroma': 'b205104c7a0b028b8a7d02c76d51a4cec2b75234821e63ebe3e52de707624c1d',
+         '--midi-chroma': '48714361a6ae9f20250157c80af1eb53895b3b290b3fed3a5c520f75a8f77ca6' },
+  'stock-163-prepared': { '': '0e68d43d23b24f3579d8bff4437f994f4e0511c55a523701c718e37e3c1ca6e9', '--no-midi-chroma': '0e68d43d23b24f3579d8bff4437f994f4e0511c55a523701c718e37e3c1ca6e9',
+         '--midi-chroma': 'cabdc27b9b9568d5af2f6b758163b3e706ae637f714c62caf6555f33b5e34052' },
 };
 
 test('firmware: builds without the option are main\'s byte for byte; X.14 with it too', { skip: fwSkip }, async () => {
